@@ -346,7 +346,11 @@ cmd_update() {
   require_module "${1:-}"
   local id="$1"
   step "Pulling newer images for $id"
-  compose "$id" pull
+  # `|| true`, because a module built from source has no image in any registry
+  # and the pull ends in "pull access denied for homebox-dashboard". Under the
+  # `set -e` at the top of this file that aborted `homebox update dashboard`
+  # before it ever reached the rebuild below — the update simply did not run.
+  compose "$id" pull || true
   step "Recreating"
   prime_binds "$id"
   # --build, because `up` builds only when the image is MISSING: once a

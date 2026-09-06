@@ -171,7 +171,15 @@ const pull = (id, { onLine = null } = {}) => compose(id, ['pull'], { timeout: 90
 
 async function update(id, { onLine = null } = {}) {
   if (onLine) onLine(`==> Pulling newer images for ${id}`, false);
-  await pull(id, { onLine });
+  // A module built from source has no image in any registry, so the pull ends
+  // in "pull access denied" and rejects — which used to abort the update
+  // before the rebuild below ever ran. A failed pull is not fatal here: the
+  // build is what actually produces the new image.
+  try {
+    await pull(id, { onLine });
+  } catch (err) {
+    if (onLine) onLine('==> Nothing to pull — this module builds from source', false);
+  }
   if (onLine) onLine(`==> Rebuilding and recreating ${id}`, false);
   // Same reason as install(): without --build, updating a module that builds
   // from source pulls new base layers and then runs the old image anyway.
