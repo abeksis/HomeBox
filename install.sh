@@ -368,11 +368,19 @@ step "Starting core and dashboard"
 
 # The dashboard has a login now, and this is the only place the token to
 # claim it appears. Printed last so it is the thing still on screen.
-BOOTSTRAP="$(node -e '
+# HOMEBOX_ROOT, not just argv: auth.js finds state/ through state-store, which
+# reads that variable. Passing the path only as an argument meant a non-default
+# HB_ROOT wrote the token into /opt/homebox instead of the install being made.
+BOOTSTRAP="$(HOMEBOX_ROOT="$HB_ROOT" node -e '
   require(process.argv[1] + "/dashboard/lib/auth.js").bootstrapToken()
     .then((t) => process.stdout.write(t || ""))
     .catch(() => process.stdout.write(""));
 ' "$HB_ROOT" 2>/dev/null || true)"
+
+# This runs as root and AFTER the chown -R above, so the file it just created
+# belongs to root and `homebox bootstrap-token` as the login user could not
+# read it back.
+[ -f "$HB_ROOT/state/auth.json" ] && $SUDO chown "$HB_USER:$HB_USER" "$HB_ROOT/state/auth.json" || true
 
 ADDRESS="$(hostname -I 2>/dev/null | awk '{print $1}')"
 cat <<EOF
