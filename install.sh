@@ -385,6 +385,25 @@ if [ -f "$HB_ROOT/state/auth.json" ]; then
   $SUDO chmod 600 "$HB_ROOT/state/auth.json"
 fi
 
+# A final ownership pass, after everything that runs as root has run.
+#
+# The chown during "Laying out" is not enough: `homebox install` and the
+# dashboard container both run as root afterwards and leave root-owned files
+# behind them — including .git, which makes `git pull` refuse with "detected
+# dubious ownership", and state/auth.json, which the CLI then cannot read.
+# Doing it last is the only ordering that holds.
+#
+# modules/*/config is deliberately skipped: those directories belong to the
+# apps, several of which run as their own uid and will not start if something
+# reassigns their data underneath them.
+step "Handing $HB_ROOT back to $HB_USER"
+$SUDO find "$HB_ROOT" -path "$HB_ROOT/modules/*/config" -prune -o -exec chown "$HB_USER:$HB_USER" {} + 2>/dev/null || true
+if [ -f "$HB_ROOT/state/auth.json" ]; then
+  $SUDO chmod 600 "$HB_ROOT/state/auth.json"
+fi
+printf '  %s
+' "$(stat -c '%U:%G' "$HB_ROOT" 2>/dev/null || echo '?')"
+
 ADDRESS="$(hostname -I 2>/dev/null | awk '{print $1}')"
 cat <<EOF
 
