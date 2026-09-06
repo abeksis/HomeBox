@@ -41,6 +41,38 @@ cd /opt/homebox && git pull && sudo bash install.sh
 `install.sh` is idempotent: it repairs what is missing and never regenerates a
 secret that already exists.
 
+### Uninstalling
+
+```bash
+sudo bash /opt/homebox/scripts/uninstall.sh
+```
+
+It prints an inventory of exactly what will go — containers, networks, images
+built here, and the size of each thing under `/opt/homebox` — then asks you to
+type `remove`. Options:
+
+| | |
+|---|---|
+| `--yes` | skip the confirmation, for scripts |
+| `--keep-data` | delete everything except `data/` and `backups/` |
+| `--keep-images` | leave the images built here in place |
+
+If the tree is already gone, run it straight from here:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/abeksis/HomeBox/main/scripts/uninstall.sh | sudo bash -s -- --yes
+```
+
+**Docker is left installed.** It was probably wanted anyway, and removing it
+would take any other containers on the machine with it.
+
+**Storage that is not under `/opt/homebox` is never touched.** If `HB_DATA_DIR`
+or `HB_MEDIA_ROOT` points somewhere else — a NAS mount, say — the script says
+so and leaves it completely alone. Uninstalling the dashboard must not mean
+deleting the media. For the same reason the systemd mount units written by
+`scripts/mount-remote.sh` are left in place; the script tells you where they
+are if you want them gone.
+
 ### What is NOT in this repository
 
 `.env`, `state/`, `backups/`, `data/` and every `modules/*/config/` — the
@@ -104,7 +136,7 @@ unit and the catalog entry. There is nothing to keep in sync, and the app's
 config directory lives in the module too — `modules/<id>/config/<app>`. Copy
 the folder and you have copied the app.
 
-## Installing
+## Installing apps
 
 ```bash
 homebox list                    # everything available, and what is running
@@ -157,13 +189,3 @@ next refresh.
 - **The dashboard has no npm dependencies.** Node builtins only, so the image
   builds without registry access and there is no dependency tree to audit for
   a process that holds a Docker socket.
-
-## Fresh install
-
-```bash
-git clone <this> /opt/homebox && sudo bash /opt/homebox/install.sh
-```
-
-Installs Docker and Node, lays out the tree, generates secrets, creates the
-networks, and starts core + dashboard. Idempotent — run it again after an
-upgrade and it repairs what is missing without touching what works.
