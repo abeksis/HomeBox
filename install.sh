@@ -28,9 +28,13 @@ else
   BOLD=''; DIM=''; RED=''; GREEN=''; YELLOW=''; RESET=''
 fi
 
-step() { printf '\n%s==>%s %s%s%s\n' "$GREEN" "$RESET" "$BOLD" "$*" "$RESET"; }
-warn() { printf '%s!! %s%s\n' "$YELLOW" "$*" "$RESET"; }
-die()  { printf '%sxx %s%s\n' "$RED" "$*" "$RESET" >&2; exit 1; }
+# One prefix on every line this script writes, so its own words stay
+# distinguishable from the output of apt, docker and compose running underneath.
+say()  { printf '%s[HomeBox]%s %s\n' "$GREEN" "$RESET" "$*"; }
+step() { printf '\n%s[HomeBox]%s %s%s%s\n' "$GREEN" "$RESET" "$BOLD" "$*" "$RESET"; }
+warn() { printf '%s[HomeBox]%s %s%s%s\n' "$YELLOW" "$RESET" "$YELLOW" "$*" "$RESET"; }
+die()  { printf '%s[HomeBox]%s %s%s%s\n' "$RED" "$RESET" "$RED" "$*" "$RESET" >&2; exit 1; }
+rule() { printf '%s============================================================%s\n' "$DIM" "$RESET"; }
 
 SUDO=""
 if [ "$(id -u)" -ne 0 ]; then
@@ -40,18 +44,73 @@ fi
 
 # --------------------------------------------------------------- 1. checks
 
-step "Checking the machine"
 . /etc/os-release 2>/dev/null || die "cannot read /etc/os-release"
-printf '  os        %s\n' "${PRETTY_NAME:-unknown}"
-printf '  arch      %s\n' "$(uname -m)"
-printf '  cpu       %s cores\n' "$(nproc)"
-printf '  memory    %s\n' "$(free -h | awk '/^Mem:/{print $2}')"
-printf '  disk      %s free on /\n' "$(df -h / | awk 'NR==2{print $4}')"
+
+# Everything worth knowing before anything is changed, in one block. Read it
+# and you know what this machine is and what is about to happen to it, which
+# is the moment to stop if the answer is not what you expected.
+hardware() {
+  local virt; virt="$(systemd-detect-virt 2>/dev/null || echo none)"
+  case "$virt" in
+    none) printf 'bare metal' ;;
+    kvm|qemu) printf 'virtual machine (%s)' "$virt" ;;
+    docker|lxc|podman) printf 'container (%s), unusual for this' "$virt" ;;
+    *) printf '%s' "$virt" ;;
+  esac
+}
+clock() {
+  case "$(timedatectl show -p NTPSynchronized --value 2>/dev/null)" in
+    yes) printf 'in sync' ;;
+    no)  printf 'NOT synchronised: certificates and 2FA will misbehave' ;;
+    *)   printf 'unknown (no timedatectl)' ;;
+  esac
+}
+
+# Every value is computed here rather than inside the heredoc below.
+# A command substitution in an unquoted heredoc needs its `$` escaped for
+# the shell but not for awk, and getting that backwards sends a literal
+# backslash to awk — which blanked the memory and disk rows while printing
+# an error nobody would connect to a layout string.
+PF_SYS="${PRETTY_NAME:-unknown} ($(uname -m))"
+PF_HW="$(hardware)"
+PF_CPU="$(nproc) cores"
+PF_MEM="$(free -h | awk "/^Mem:/{print \$2}")"
+PF_PARENT="$(dirname "$HB_ROOT")"
+PF_DISK="$(df -h "$PF_PARENT" | awk "NR==2{print \$4}")"
+PF_TZ="$(timedatectl show -p Timezone --value 2>/dev/null || echo unknown)"
+PF_CLOCK="$(clock)"
+if [ -f "$ENV_FILE" ]; then
+  PF_MODE='repair — existing install, secrets are kept'
+else
+  PF_MODE='fresh install'
+fi
+
+echo
+rule
+printf '  %sPREFLIGHT%s  what I found on this machine\n' "$BOLD" "$RESET"
+rule
+printf '  %-13s %s\n' "System:"     "$PF_SYS"
+printf '  %-13s %s\n' "Hardware:"   "$PF_HW"
+printf '  %-13s %s, %s\n' "Resources:" "$PF_CPU" "$PF_MEM"
+printf '  %-13s %s free at %s\n' "Disk:" "$PF_DISK" "$PF_PARENT"
+printf '  %-13s %s\n' "Install to:" "$HB_ROOT"
+printf '  %-13s %s\n' "Runs as:"    "$HB_USER"
+printf '  %-13s %s\n' "Timezone:"   "$PF_TZ"
+printf '  %-13s %s\n' "Clock:"      "$PF_CLOCK"
+printf '  %-13s %s\n' "Mode:"       "$PF_MODE"
+rule
 
 case "${ID:-}" in
   debian|ubuntu) ;;
-  *) warn "only Debian and Ubuntu are tested — continuing anyway" ;;
+  *) warn "only Debian and Ubuntu are tested, continuing anyway" ;;
 esac
+
+# 4GB is where the default module set stops being comfortable. Not a refusal:
+# a box running only the dashboard and a DNS blocker is fine on less.
+MEM_MB="$(awk '/^MemTotal:/{printf "%d", $2/1024}' /proc/meminfo 2>/dev/null || echo 0)"
+if [ "$MEM_MB" -gt 0 ] && [ "$MEM_MB" -lt 3500 ]; then
+  warn "${MEM_MB}MB of RAM: 4GB+ is recommended once you install more than a couple of modules"
+fi
 
 # --------------------------------------------------------------- 2. docker
 

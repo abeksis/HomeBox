@@ -36,11 +36,21 @@ if [ -t 1 ]; then
 else
   BOLD=''; DIM=''; RED=''; GREEN=''; YELLOW=''; RESET=''
 fi
-step() { printf '\n%s==>%s %s%s%s\n' "$GREEN" "$RESET" "$BOLD" "$*" "$RESET"; }
-warn() { printf '%s!! %s%s\n' "$YELLOW" "$*" "$RESET"; }
-die()  { printf '%sxx %s%s\n' "$RED" "$*" "$RESET" >&2; exit 1; }
+step() { printf '\n%s[HomeBox]%s %s%s%s\n' "$GREEN" "$RESET" "$BOLD" "$*" "$RESET"; }
+warn() { printf '%s[HomeBox]%s %s%s%s\n' "$YELLOW" "$RESET" "$YELLOW" "$*" "$RESET"; }
+die()  { printf '%s[HomeBox]%s %s%s%s\n' "$RED" "$RESET" "$RED" "$*" "$RESET" >&2; exit 1; }
 
-printf '%s\n' "${BOLD}HomeBox${RESET} ${DIM}bootstrap — ${HB_REPO}@${HB_REF}${RESET}"
+cat <<'BANNER'
+
+  _   _                     ____
+ | | | | ___  _ __ ___   ___| __ )  _____  __
+ | |_| |/ _ \| '_ ` _ \ / _ \  _ \ / _ \ \/ /
+ |  _  | (_) | | | | | |  __/ |_) | (_) >  <
+ |_| |_|\___/|_| |_| |_|\___|____/ \___/_/\_\
+
+ Your own apps, on your own box. Nothing phones home.
+BANNER
+printf ' %ssource:%s %s@%s\n' "$DIM" "$RESET" "$HB_REPO" "$HB_REF"
 
 # --------------------------------------------------------------- 1. checks
 
