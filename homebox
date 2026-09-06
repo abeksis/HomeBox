@@ -77,6 +77,13 @@ compose() {
   dk compose -p "$(project_of "$id")" -f "$(module_file "$id")" --env-file "$ENV_FILE" "$@"
 }
 
+# True when a module builds its image here rather than pulling one. Asking
+# compose is better than grepping for "build:", which would also match the
+# word inside a comment or an environment value.
+builds_from_source() {
+  compose "$1" config 2>/dev/null | grep -qE '^[[:space:]]+build:|^[[:space:]]+context:'
+}
+
 # --------------------------------------------------------------------------
 # A Docker bind mount is resolved when the container is CREATED, and Docker
 # CREATES a missing source directory rather than refusing. Start a module a few
@@ -252,15 +259,30 @@ cmd_install() {
     HB_ROOT="$HB_ROOT" bash "$setup"
   fi
 
-  step "Pulling images"
-  compose "$id" pull || true
+  # Skip the pull for a module built here. There is no such image in any
+  # registry, so compose prints "pull access denied for homebox-dashboard" and
+  # a red error line in the middle of a perfectly good install — which is the
+  # first thing anyone notices and the last thing that is actually wrong.
+  if builds_from_source "$id"; then
+    step "Building image"
+  else
+    step "Pulling images"
+    compose "$id" pull || true
+    step "Starting containers"
+  fi
 
-  step "Starting containers"
   prime_binds "$id"
   # --build, because `up` builds only when the image is MISSING: once a
   # stale tag exists it is reused and the install silently runs old code.
   # The dashboard is the module this bites. Harmless for image-only ones.
-  compose "$id" up -d --build --remove-orphans
+  #
+  # --quiet-pull and a filtered build log: compose's own output is a 40-line
+  # BuildKit table of layer hashes that buries the four lines this script
+  # prints. What is kept is what changed — the images and the containers.
+  compose "$id" up -d --build --quiet-pull --remove-orphans 2>&1 \
+    | grep -vE '^\s*=>|^\s*$|^\[\+\]|^time=|transferring|DONE|CACHED|resolve docker|load (metadata|build definition|local bake)' \
+    | sed 's/^ *//' \
+    || true
 
   mark_enabled "$id"
 
@@ -345,13 +367,15 @@ cmd_restart() {
 cmd_update() {
   require_module "${1:-}"
   local id="$1"
-  step "Pulling newer images for $id"
-  # `|| true`, because a module built from source has no image in any registry
-  # and the pull ends in "pull access denied for homebox-dashboard". Under the
-  # `set -e` at the top of this file that aborted `homebox update dashboard`
-  # before it ever reached the rebuild below — the update simply did not run.
-  compose "$id" pull || true
-  step "Recreating"
+  if builds_from_source "$id"; then
+    step "Rebuilding $id from source"
+  else
+    step "Pulling newer images for $id"
+    # `|| true` even so: a registry hiccup should not stop a module that
+    # already has its images locally from being recreated.
+    compose "$id" pull || true
+    step "Recreating"
+  fi
   prime_binds "$id"
   # --build, because `up` builds only when the image is MISSING: once a
   # stale tag exists it is reused and the install silently runs old code.
