@@ -27,7 +27,7 @@ EXPOSE 8443
 # Runs as root inside the container so it can open the host's docker socket,
 # which is group-owned by `docker` with a gid that differs from box to box.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:8443/api/metrics >/dev/null 2>&1 || exit 1
+  CMD wget -qO- http://127.0.0.1:8443/healthz >/dev/null 2>&1 || exit 1
 
 # tini reaps zombies and forwards SIGTERM, so `docker stop` is a clean exit
 # rather than a ten-second kill — and compose spawns real child processes here.

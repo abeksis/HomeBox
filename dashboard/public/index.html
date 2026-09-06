@@ -12,6 +12,42 @@
 </head>
 <body>
 
+<!-- ==================== LOGIN ====================
+     Present in the same document as the dashboard, hidden until
+     /api/auth/status says who you are. Nothing on the page behind it holds
+     data: every value arrives from an /api call the server gates. -->
+<div class="login-screen" id="login-screen" hidden>
+  <div class="login-card">
+    <img class="login-mark" src="icons/homebox.svg" alt="">
+    <h1 class="login-title" id="login-title">HomeBox</h1>
+    <p class="login-sub" id="login-sub">Checking&hellip;</p>
+
+    <form id="login-form" autocomplete="on">
+      <label class="login-field" id="login-token-field" hidden>
+        <span>Bootstrap token</span>
+        <input class="config-input" id="login-token" name="token" autocomplete="off"
+               spellcheck="false" placeholder="from the installer output">
+      </label>
+      <label class="login-field">
+        <span id="login-password-label">Password</span>
+        <input class="config-input" id="login-password" name="password" type="password"
+               autocomplete="current-password" required>
+      </label>
+      <label class="login-field" id="login-confirm-field" hidden>
+        <span>Confirm password</span>
+        <input class="config-input" id="login-confirm" name="confirm" type="password"
+               autocomplete="new-password">
+      </label>
+      <button type="submit" class="btn-pill primary login-btn" id="login-btn">Sign in</button>
+      <p class="login-error" id="login-error" role="alert" hidden></p>
+    </form>
+
+    <p class="login-hint" id="login-hint" hidden>
+      Lost the token? On the server run <code class="mono">homebox bootstrap-token</code>.
+    </p>
+  </div>
+</div>
+
 <!-- Backdrop: colour pools, grain and vignette. Purely decorative. -->
 <div class="atmo" aria-hidden="true"></div>
 
@@ -39,6 +75,7 @@
         <span class="topbar-stat" id="topbar-ram" title="How much memory is in use right now">RAM --</span>
         <span class="topbar-stat" id="topbar-disk" title="How full the system disk is">Disk --</span>
       </span>
+      <button type="button" class="topbar-signout" id="btn-signout" title="Sign out">Sign out</button>
       <span class="live-dot" id="live-dot" title="Live connection to the server">
         <span class="live-pip"></span><span class="live-label">live</span>
       </span>

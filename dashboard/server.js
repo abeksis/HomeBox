@@ -6,9 +6,14 @@
  * nothing but a node base image, and there is no dependency tree to audit
  * for a process that holds a Docker socket.
  *
- * There is no authentication, and this process CAN create and destroy
- * containers. It publishes 8443 on the LAN and joins no public network —
- * read docs/SECURITY.md before changing either.
+ * This process CAN create and destroy containers, so every route is behind a
+ * session — see lib/auth.js. The gate is deny-by-default: PUBLIC_PATHS lists
+ * the handful of things the login screen itself needs, and anything not on
+ * that list requires a signed-in cookie. A route added tomorrow is protected
+ * the moment it exists rather than the moment somebody remembers.
+ *
+ * It publishes 8443 on the LAN and joins no public network — read
+ * docs/SECURITY.md before changing either.
  */
 
 const http = require('http');
@@ -26,12 +31,32 @@ const config = require('./lib/config');
 const catalog = require('./lib/catalog');
 const icons = require('./lib/icons');
 const bookmarks = require('./lib/bookmarks');
+const auth = require('./lib/auth');
 const stats = require('./lib/stats');
 const state = require('./lib/state-store');
 
 const PORT = Number(process.env.PORT || 8443);
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const HOST_ADDRESS = process.env.HB_HOST_ADDRESS || 'localhost';
+
+/**
+ * The only paths reachable without a session: the login screen and the files
+ * it is built from. Listed explicitly rather than pattern-matched, so nothing
+ * becomes public by accident when a new asset is added.
+ */
+const PUBLIC_PATHS = new Set([
+  // Liveness only — no data. The container healthcheck runs before anyone has
+  // signed in and must not need a session; pointing it at a real endpoint
+  // instead made the dashboard report itself unhealthy the moment auth landed.
+  '/healthz',
+  '/',
+  '/index.html',
+  '/css/tokens.css',
+  '/css/themes.css',
+  '/css/app.css',
+  '/js/app.js',
+  '/icons/homebox.svg',
+]);
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -515,6 +540,65 @@ const server = http.createServer(async (req, res) => {
   const route = url.pathname;
 
   try {
+    // ---------------------------------------------------------------------
+    // THE GATE.
+    //
+    // Deny by default: everything below this block requires a session, and a
+    // new route is protected the moment it is added rather than the moment
+    // someone remembers to protect it. Only what is needed to log in, and the
+    // assets the login screen itself is made of, are open.
+    //
+    // The login screen lives in index.html, so index.html and the CSS/JS it
+    // pulls have to be reachable while signed out. They contain no data —
+    // every value on the page arrives from an /api call that IS gated.
+    // ---------------------------------------------------------------------
+    // Liveness. Deliberately says nothing beyond "this process answers".
+    if (route === '/healthz') {
+      return sendJson(res, 200, { ok: true, version: VERSION });
+    }
+
+    if (route.startsWith('/api/auth/')) {
+      try {
+        if (route === '/api/auth/status') return sendJson(res, 200, await auth.status(req));
+        if (req.method !== 'POST') return sendJson(res, 405, { error: 'method not allowed' });
+
+        if (route === '/api/auth/claim') {
+          const { cookie } = await auth.claim(req, await readBody(req));
+          res.setHeader('set-cookie', cookie);
+          activity.note({ name: 'dashboard', action: 'claimed', level: 'info' });
+          return sendJson(res, 200, { ok: true });
+        }
+        if (route === '/api/auth/login') {
+          const { cookie } = await auth.login(req, await readBody(req));
+          res.setHeader('set-cookie', cookie);
+          return sendJson(res, 200, { ok: true });
+        }
+        if (route === '/api/auth/logout') {
+          const { cookie } = await auth.logout(req);
+          res.setHeader('set-cookie', cookie);
+          return sendJson(res, 200, { ok: true });
+        }
+        // Changing a password is not a way IN, so it needs a session.
+        if (route === '/api/auth/password') {
+          if (!(await auth.isAuthenticated(req))) return sendJson(res, 401, { error: 'not signed in' });
+          const { cookie } = await auth.changePassword(req, await readBody(req));
+          res.setHeader('set-cookie', cookie);
+          return sendJson(res, 200, { ok: true });
+        }
+        return sendJson(res, 404, { error: 'no such endpoint' });
+      } catch (err) {
+        return sendJson(res, err.status || 400, { ok: false, error: err.message });
+      }
+    }
+
+    if (!PUBLIC_PATHS.has(route) && !(await auth.isAuthenticated(req))) {
+      // 401 for the API so the page can bounce to the login screen; for a
+      // document request, serve the page itself, which shows the login screen
+      // on its own once /api/auth/status answers.
+      if (route.startsWith('/api/')) return sendJson(res, 401, { error: 'not signed in' });
+      return serveIndex(res);
+    }
+
     // POST /api/containers/<name>/<action> — the Running list's buttons.
     const containerAction = /^\/api\/containers\/([^/]+)\/([^/]+)$/.exec(route);
     if (containerAction) {

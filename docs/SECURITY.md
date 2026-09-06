@@ -1,14 +1,31 @@
 # Security notes
 
-## The dashboard can create and destroy containers, and has no authentication
+## The dashboard can create and destroy containers
 
 This is the thing to understand before anything else. Installing an app means
 creating containers, so the `dashboard` container mounts `/var/run/docker.sock`
 **read-write**. Write access to the Docker socket is root on this box: it can
 start a privileged container that mounts the host filesystem.
 
-There is no login. Anyone who can reach the dashboard on port 8443 can install,
-stop and remove apps, and read every container's logs.
+The dashboard has a login. On first run it shows a one-time bootstrap token
+printed by the installer; you paste it, choose a password, and that claims the
+box. From then on every route except the login screen itself needs a session.
+
+Passwords are scrypt (N=16384, r=8, p=1) with a per-account salt, compared with
+`timingSafeEqual`. Sessions are 32 random bytes held server-side in
+`state/auth.json`, carried in an HttpOnly, SameSite=Lax cookie, and dropped
+entirely when the password changes. Failed attempts are rate limited per
+address: eight in fifteen minutes and that address waits.
+
+The cookie is only marked `Secure` when the request arrived over HTTPS. On a
+plain-HTTP LAN a Secure cookie is never sent, so setting it unconditionally
+would mean nobody could log in at all — the flag appears automatically behind
+a TLS proxy, which is the case where it does something.
+
+Lost the password? There is no reset by email, because there is no email.
+`sudo rm /opt/homebox/state/auth.json` on the server unclaims the box, then
+`homebox bootstrap-token` prints a fresh token. That requires shell access,
+which is the right bar for it.
 
 That is an acceptable trade on a trusted LAN and nothing more. Before putting
 it behind a proxy, on a hostname, or anywhere reachable from outside, put a

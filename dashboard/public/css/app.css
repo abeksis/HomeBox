@@ -2245,3 +2245,64 @@ code.mono {
 @media (prefers-reduced-motion: reduce) {
   .quick-item, .quick-go { transition: none; }
 }
+
+
+/* ==================================================================== LOGIN */
+
+.login-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: var(--bg-0);
+}
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  padding: 2rem 1.75rem;
+  border-radius: var(--radius);
+  background: var(--card-bg);
+  border: 1px solid var(--card-line);
+  box-shadow: var(--elev-3);
+  text-align: center;
+}
+.login-mark { width: 44px; height: 44px; margin-bottom: 0.85rem; }
+.login-title { margin: 0 0 0.3rem; font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; }
+.login-sub { margin: 0 0 1.5rem; font-size: 0.88rem; color: var(--text-muted); line-height: 1.5; }
+
+.login-field { display: block; text-align: left; margin-bottom: 0.85rem; }
+.login-field > span {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.login-btn { width: 100%; justify-content: center; margin-top: 0.4rem; }
+
+.login-error {
+  margin: 0.85rem 0 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  background: var(--bad-soft);
+  border: 1px solid var(--bad-line);
+  color: var(--bad);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  text-align: left;
+}
+.login-hint { margin: 1.1rem 0 0; font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; }
+
+.topbar-signout {
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.topbar-signout:hover { color: var(--text); border-color: var(--border-strong); }

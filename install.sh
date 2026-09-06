@@ -366,6 +366,14 @@ step "Starting core and dashboard"
 "$HB_ROOT/homebox" install core
 "$HB_ROOT/homebox" install dashboard
 
+# The dashboard has a login now, and this is the only place the token to
+# claim it appears. Printed last so it is the thing still on screen.
+BOOTSTRAP="$(node -e '
+  require(process.argv[1] + "/dashboard/lib/auth.js").bootstrapToken()
+    .then((t) => process.stdout.write(t || ""))
+    .catch(() => process.stdout.write(""));
+' "$HB_ROOT" 2>/dev/null || true)"
+
 ADDRESS="$(hostname -I 2>/dev/null | awk '{print $1}')"
 cat <<EOF
 
@@ -380,3 +388,23 @@ ${GREEN}${BOLD}HomeBox is up.${RESET}
   ${BOLD}homebox status${RESET}            what is running
 
 EOF
+
+if [ -n "$BOOTSTRAP" ]; then
+  rule
+  printf '  %sCLAIM THIS BOX%s
+' "$BOLD" "$RESET"
+  rule
+  printf '  The dashboard asks for this once, to prove the person opening it
+'
+  printf '  is the person who installed it:
+
+'
+  printf '      %s%s%s
+
+' "$GREEN$BOLD" "$BOOTSTRAP" "$RESET"
+  printf '  Then you pick a password. Lost it? %shomebox bootstrap-token%s
+' "$BOLD" "$RESET"
+  rule
+  printf '
+'
+fi

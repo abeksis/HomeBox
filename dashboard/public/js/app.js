@@ -1151,6 +1151,124 @@ async function backupCall(path, body, onOk) {
   }
 }
 
+/* ------------------------------------------------------------------- auth */
+
+/**
+ * Nothing on the page is real until the server says who you are.
+ *
+ * Two states beyond "signed in": a box that has never been claimed asks for
+ * the installer's one-time token plus a new password, and a claimed box asks
+ * for the password. The dashboard markup stays in the document either way —
+ * it holds no data, because every value on it comes from an API call the
+ * server refuses without a session.
+ */
+let authState = { authenticated: false, firstRun: false, minPassword: 8 };
+
+async function checkAuth() {
+  try {
+    authState = await (await fetch('api/auth/status')).json();
+  } catch {
+    authState = { authenticated: false, firstRun: false, minPassword: 8 };
+  }
+  if (authState.authenticated) showDashboard();
+  else showLogin();
+  return authState.authenticated;
+}
+
+function showLogin() {
+  const first = authState.firstRun;
+  $('#login-screen').hidden = false;
+  $('.shell').hidden = true;
+  $('.topbar').hidden = true;
+
+  $('#login-title').textContent = first ? 'Claim this HomeBox' : 'HomeBox';
+  $('#login-sub').textContent = first
+    ? `Paste the bootstrap token the installer printed, then pick a password (${authState.minPassword}+ characters).`
+    : 'Sign in to manage this server.';
+  $('#login-token-field').hidden = !first;
+  $('#login-confirm-field').hidden = !first;
+  $('#login-hint').hidden = !first;
+  $('#login-password-label').textContent = first ? 'New password' : 'Password';
+  $('#login-password').setAttribute('autocomplete', first ? 'new-password' : 'current-password');
+  $('#login-btn').textContent = first ? 'Claim' : 'Sign in';
+  // Whatever was typed before a bounce back here is not this person's.
+  $('#login-password').value = '';
+  $('#login-confirm').value = '';
+  $('#login-error').hidden = true;
+  (first ? $('#login-token') : $('#login-password')).focus();
+}
+
+function showDashboard() {
+  $('#login-screen').hidden = true;
+  $('.shell').hidden = false;
+  $('.topbar').hidden = false;
+}
+
+function loginError(message) {
+  const box = $('#login-error');
+  box.textContent = message;
+  box.hidden = false;
+}
+
+async function submitLogin(event) {
+  event.preventDefault();
+  const first = authState.firstRun;
+  const password = $('#login-password').value;
+  const button = $('#login-btn');
+
+  if (first && password !== $('#login-confirm').value) {
+    loginError('The two passwords do not match.');
+    return;
+  }
+  button.disabled = true;
+  button.classList.add('btn-busy');
+  $('#login-error').hidden = true;
+  try {
+    const res = await fetch(first ? 'api/auth/claim' : 'api/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(first ? { token: $('#login-token').value, password } : { password }),
+    });
+    const data = await res.json();
+    if (!data.ok) { loginError(data.error || 'That did not work.'); return; }
+    authState.authenticated = true;
+    authState.firstRun = false;
+    showDashboard();
+    await init();
+    toast(first ? 'Claimed. This box is yours.' : 'Signed in.', 'success');
+  } catch (err) {
+    loginError(err.message);
+  } finally {
+    button.disabled = false;
+    button.classList.remove('btn-busy');
+  }
+}
+
+async function signOut() {
+  try { await fetch('api/auth/logout', { method: 'POST' }); } catch { /* leaving anyway */ }
+  authState = { authenticated: false, firstRun: false, minPassword: 8 };
+  showLogin();
+}
+
+/**
+ * A session can end while the page is open — it expired, or somebody changed
+ * the password. Every fetch goes through here so that lands on the login
+ * screen rather than as a wall of failed requests.
+ */
+const rawFetch = window.fetch.bind(window);
+window.fetch = async (input, opts) => {
+  const res = await rawFetch(input, opts);
+  const url = String(typeof input === 'string' ? input : input.url || '');
+  if (res.status === 401 && url.includes('api/') && !url.includes('api/auth/')) {
+    if (authState.authenticated) {
+      authState.authenticated = false;
+      showLogin();
+      loginError('Your session ended. Sign in again.');
+    }
+  }
+  return res;
+};
+
 /* --------------------------------------------------- quick access (server) */
 
 /**
@@ -2396,6 +2514,7 @@ document.addEventListener('click', async (event) => {
     queueChange(queueBtn.dataset.queue);
     return;
   }
+  if (event.target.closest('#btn-signout')) { signOut(); return; }
   if (event.target.closest('#apps-apply-cancel')) { cancelPending(); return; }
   if (event.target.closest('#apps-apply-go')) { applyPending(); return; }
 
@@ -2663,6 +2782,13 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
+async function boot() {
+  // The dashboard is hidden until the server answers. Doing it the other way
+  // round flashes a full page of empty cards at someone who is not signed in.
+  $('#login-form').addEventListener('submit', submitLogin);
+  if (await checkAuth()) await init();
+}
+
 async function init() {
   try {
     applyPrefs(await (await fetch('api/prefs')).json());
@@ -2677,4 +2803,4 @@ async function init() {
   setInterval(() => loadModules(true), 20000);
 }
 
-init();
+boot();
