@@ -25,6 +25,7 @@ const backup = require('./lib/backup');
 const config = require('./lib/config');
 const catalog = require('./lib/catalog');
 const icons = require('./lib/icons');
+const bookmarks = require('./lib/bookmarks');
 const stats = require('./lib/stats');
 const state = require('./lib/state-store');
 
@@ -652,6 +653,21 @@ const server = http.createServer(async (req, res) => {
           const mod = modules.find((m) => m.id === body.id);
           return sendJson(res, 200, { ok: true, ...(await catalog.deleteApp(body.id, { installed: !!(mod && mod.installed) })) });
         }
+        return sendJson(res, 404, { error: 'no such endpoint' });
+      } catch (err) {
+        return sendJson(res, 400, { ok: false, error: err.message });
+      }
+    }
+
+    // --- Quick Access bookmarks ---
+    if (route.startsWith('/api/bookmarks')) {
+      try {
+        if (route === '/api/bookmarks' && req.method === 'GET') return sendJson(res, 200, await bookmarks.read());
+        if (req.method !== 'POST') return sendJson(res, 405, { error: 'method not allowed' });
+        const body = await readBody(req);
+        if (route === '/api/bookmarks') return sendJson(res, 200, { ok: true, item: await bookmarks.save(body) });
+        if (route === '/api/bookmarks/delete') return sendJson(res, 200, { ok: true, ...(await bookmarks.remove(body.id)) });
+        if (route === '/api/bookmarks/reorder') return sendJson(res, 200, { ok: true, ...(await bookmarks.reorder(body.ids)) });
         return sendJson(res, 404, { error: 'no such endpoint' });
       } catch (err) {
         return sendJson(res, 400, { ok: false, error: err.message });

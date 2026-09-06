@@ -25,6 +25,8 @@ const state = {
   // Read once at startup; the Launcher renders before Settings is opened.
   launcherPrefs: { hidden: [], custom: [], overrides: {} },
   catalog: null,
+  bookmarks: [],
+  bookmarkMax: 60,
   // Card clicks queue here instead of firing; the apply bar commits the set.
   pending: new Map(),
   containerFilter: 'all',
@@ -212,6 +214,7 @@ function show(page) {
   });
   if (target !== 'home') loadModules();
   if (target === 'settings') { loadBackups(); loadConfig(); loadCatalog(); }
+  if (target === 'settings' || target === 'home') loadBookmarks();
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
@@ -1146,6 +1149,138 @@ async function backupCall(path, body, onOk) {
     toast(err.message, 'error', 8000);
     return null;
   }
+}
+
+/* --------------------------------------------------- quick access (server) */
+
+/**
+ * Links to things that are NOT on this box.
+ *
+ * Kept on the server, unlike the Launcher's custom items. The two look
+ * similar and are not: hiding a launcher tile is one browser's view of the
+ * apps here, while a bookmark to a tracker is a fact about the setup and
+ * belongs on the phone too.
+ */
+async function loadBookmarks() {
+  try {
+    state.bookmarks = (await (await fetch('api/bookmarks')).json()).items || [];
+  } catch {
+    state.bookmarks = [];
+  }
+  renderQuickAccess();
+  renderQuickEditor();
+}
+
+function renderQuickAccess() {
+  const card = $('#quick-card');
+  const row = $('#quick-row');
+  if (!card || !row) return;
+  const items = state.bookmarks || [];
+
+  // Hidden rather than empty: a card that says "no bookmarks" is a card
+  // asking to be tidied away, on the page someone looks at every day.
+  card.hidden = items.length === 0;
+  if (!items.length) return;
+
+  $('#quick-meta').textContent = `${items.length} link${items.length === 1 ? '' : 's'}`;
+  row.innerHTML = items.map((b) => {
+    const mono = `<span class="quick-mono">${escapeHtml(String(b.name).slice(0, 2).toUpperCase())}</span>`;
+    return `<a class="quick-item" href="${escapeHtml(b.url)}" target="_blank" rel="noopener noreferrer"
+        title="${escapeHtml(b.url)}">
+        <span class="quick-icon">${iconArt(b.icon, mono, 'quick')}</span>
+        <span class="quick-text">
+          <span class="quick-name">${escapeHtml(b.name)}</span>
+          ${b.subtitle ? `<span class="quick-sub">${escapeHtml(b.subtitle)}</span>` : ''}
+        </span>
+        <span class="quick-go" aria-hidden="true">↗</span>
+      </a>`;
+  }).join('');
+}
+
+function renderQuickEditor() {
+  const list = $('#quick-editor-list');
+  if (!list) return;
+  const items = state.bookmarks || [];
+  $('#quick-editor-summary').textContent = items.length ? `${items.length} of ${state.bookmarkMax || 60}` : 'none yet';
+
+  list.innerHTML = items.map((b, i) => `
+    <div class="editor-row">
+      <span class="editor-row-info">
+        <span class="editor-row-name">${escapeHtml(b.name)}${b.subtitle ? `<span class="editor-badge">${escapeHtml(b.subtitle)}</span>` : ''}</span>
+        <span class="editor-row-meta">${escapeHtml(b.url)}</span>
+      </span>
+      <span class="editor-row-actions">
+        <button type="button" class="btn-pill" data-quick-up="${escapeHtml(b.id)}"${i === 0 ? ' disabled' : ''} title="Move up">↑</button>
+        <button type="button" class="btn-pill" data-quick-down="${escapeHtml(b.id)}"${i === items.length - 1 ? ' disabled' : ''} title="Move down">↓</button>
+        <button type="button" class="btn-pill" data-quick-edit="${escapeHtml(b.id)}">Edit</button>
+        <button type="button" class="btn-pill btn-danger" data-quick-delete="${escapeHtml(b.id)}">Delete</button>
+      </span>
+    </div>`).join('') || '<p class="activity-empty">No links yet — add one below.</p>';
+}
+
+function quickFormMode(item) {
+  const form = $('#quick-form');
+  form.reset();
+  form.elements.id.value = item ? item.id : '';
+  form.elements.name.value = item ? item.name : '';
+  form.elements.subtitle.value = item ? item.subtitle || '' : '';
+  form.elements.url.value = item ? item.url : '';
+  form.elements.icon.value = item ? item.icon || '' : '';
+  $('#quick-form-title').textContent = item ? `Edit ${item.name}` : 'Add a link';
+  $('#quick-save').textContent = item ? 'Save' : 'Add link';
+  $('#quick-cancel').hidden = !item;
+  $('#quick-status').textContent = '';
+}
+
+async function quickCall(path, body, okMessage) {
+  const status = $('#quick-status');
+  status.textContent = 'Saving…';
+  try {
+    const res = await fetch(`api/bookmarks${path}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      toast(data.error, 'error', 10000);
+      status.textContent = data.error;
+      return false;
+    }
+    if (okMessage) toast(okMessage, 'success');
+    status.textContent = '';
+    await loadBookmarks();
+    return true;
+  } catch (err) {
+    toast(err.message, 'error', 8000);
+    status.textContent = err.message;
+    return false;
+  }
+}
+
+async function submitQuickForm(event) {
+  event.preventDefault();
+  const form = $('#quick-form');
+  const body = Object.fromEntries(new FormData(form).entries());
+  const editing = !!body.id;
+  if (await quickCall('', body, editing ? `${body.name} updated.` : `${body.name} added to Quick access.`)) {
+    quickFormMode(null);
+  }
+}
+
+/** Swap a bookmark with its neighbour and persist the whole order. */
+function moveBookmark(id, delta) {
+  const items = [...(state.bookmarks || [])];
+  const at = items.findIndex((b) => b.id === id);
+  const to = at + delta;
+  if (at === -1 || to < 0 || to >= items.length) return undefined;
+  [items[at], items[to]] = [items[to], items[at]];
+  // Render immediately so the list does not appear to lag the click, then
+  // persist; loadBookmarks() re-reads the server's answer either way.
+  state.bookmarks = items;
+  renderQuickEditor();
+  renderQuickAccess();
+  return quickCall('/reorder', { ids: items.map((b) => b.id) }, null);
 }
 
 /* ------------------------------------------------- launcher contents (local) */
@@ -2366,6 +2501,30 @@ document.addEventListener('click', async (event) => {
     return backupCall('delete', { name }, () => { toast(`${name} deleted.`, 'success'); loadBackups(); });
   }
 
+  // --- quick access ---
+  const qEdit = event.target.closest('[data-quick-edit]');
+  if (qEdit) {
+    quickFormMode((state.bookmarks || []).find((b) => b.id === qEdit.dataset.quickEdit));
+    return undefined;
+  }
+  const qUp = event.target.closest('[data-quick-up]');
+  if (qUp) return moveBookmark(qUp.dataset.quickUp, -1);
+  const qDown = event.target.closest('[data-quick-down]');
+  if (qDown) return moveBookmark(qDown.dataset.quickDown, 1);
+  const qDel = event.target.closest('[data-quick-delete]');
+  if (qDel) {
+    const item = (state.bookmarks || []).find((b) => b.id === qDel.dataset.quickDelete);
+    const ok = await confirmDialog({
+      title: `Remove ${item ? item.name : 'this link'}?`,
+      body: 'It disappears from Quick access. Nothing else is affected.',
+      confirmLabel: 'Remove',
+      danger: true,
+    });
+    if (!ok) return undefined;
+    return quickCall('/delete', { id: qDel.dataset.quickDelete }, 'Link removed.');
+  }
+  if (event.target.closest('#quick-cancel')) { quickFormMode(null); return undefined; }
+
   // --- launcher contents ---
   const lToggle = event.target.closest('[data-launcher-toggle]');
   if (lToggle) {
@@ -2485,6 +2644,7 @@ document.addEventListener('input', (event) => {
 
 $('#launcher-add-form').addEventListener('submit', submitLauncherForm);
 $('#catalog-form').addEventListener('submit', submitCatalogForm);
+$('#quick-form').addEventListener('submit', submitQuickForm);
 state.launcherPrefs = readLauncherPrefs();
 
 $('#log-refresh').addEventListener('click', () => loadLogs());

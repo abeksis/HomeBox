@@ -166,6 +166,16 @@
           </ul>
         </div>
       </div>
+
+      <!-- QUICK ACCESS — links to things that are NOT on this box -->
+      <div class="bento-card bento-12 bento-quick" id="quick-card" style="--bento-delay:0ms" hidden>
+        <div class="card-header">
+          <span class="card-label">Quick access</span>
+          <span class="card-meta mono" id="quick-meta"></span>
+        </div>
+        <div class="quick-row" id="quick-row"></div>
+      </div>
+
     </div>
 
     <!-- Band 2: everything around the apps -->
@@ -318,6 +328,7 @@
 
     <div class="settings-tabs" id="settings-tabs">
       <button type="button" class="settings-tab active" data-stab="general">General</button>
+      <button type="button" class="settings-tab" data-stab="quick">Quick access</button>
       <button type="button" class="settings-tab" data-stab="launcher">Launcher</button>
       <button type="button" class="settings-tab" data-stab="catalog">App Store</button>
       <button type="button" class="settings-tab" data-stab="server">Server Config</button>
@@ -359,6 +370,39 @@
     </div>
 
     <!-- SERVER CONFIG -->
+    <!-- QUICK ACCESS -->
+    <div class="settings-panel" data-stab-panel="quick">
+      <div class="bento-card">
+        <div class="card-header">
+          <span class="card-label">Quick access</span>
+          <span class="card-meta mono" id="quick-editor-summary"></span>
+        </div>
+        <p class="hint">Links to things that are not on this box &mdash; trackers, the router, a NAS.
+          HomeBox cannot find these on its own, so they are typed in once.
+          <strong>Stored on the server</strong>, so they are the same on every device &mdash; unlike
+          Launcher contents, which is a per-browser view preference.</p>
+
+        <div class="editor-list" id="quick-editor-list"></div>
+
+        <form class="editor-form" id="quick-form">
+          <h3 class="editor-form-title" id="quick-form-title">Add a link</h3>
+          <input type="hidden" name="id">
+          <div class="editor-grid">
+            <label><span>Name</span><input class="config-input" name="name" maxlength="60" placeholder="Torrentleech" required></label>
+            <label><span>Subtitle</span><input class="config-input" name="subtitle" maxlength="60" placeholder="Private Tracker"></label>
+            <label class="is-wide"><span>Address</span><input class="config-input" name="url" type="url" maxlength="500" placeholder="https://torrentleech.org" required></label>
+            <label class="is-wide"><span>Icon &mdash; emoji or image URL (downloaded and kept here)</span>
+              <input class="config-input" name="icon" maxlength="500" placeholder="&#127760; or https://…/icon.png"></label>
+          </div>
+          <div class="editor-actions">
+            <button type="button" class="btn-pill" id="quick-cancel" hidden>Cancel</button>
+            <button type="submit" class="btn-pill primary" id="quick-save">Add link</button>
+            <span class="schedule-status" id="quick-status" role="status"></span>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- LAUNCHER CONTENTS -->
     <div class="settings-panel" data-stab-panel="launcher">
       <div class="bento-card">
