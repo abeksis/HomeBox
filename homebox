@@ -23,9 +23,13 @@ else
   BOLD=''; DIM=''; RED=''; GREEN=''; YELLOW=''; RESET=''
 fi
 
-die() { printf '%s%s%s\n' "$RED" "$*" "$RESET" >&2; exit 1; }
+die() { printf '%s[HomeBox]%s %s%s%s
+' "$RED" "$RESET" "$RED" "$*" "$RESET" >&2; exit 1; }
 info() { printf '%s\n' "$*"; }
-step() { printf '%s==>%s %s\n' "$GREEN" "$RESET" "$*"; }
+# Same prefix as install.sh: the two run one after the other during an
+# install, and two different styles read as two different programs.
+step() { printf '%s[HomeBox]%s %s
+' "$GREEN" "$RESET" "$*"; }
 
 # Decide once whether docker needs sudo. Probing per call is slower and, for
 # commands that print to stdout, a failed probe leaks a stray blank line into
