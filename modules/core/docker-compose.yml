@@ -1,0 +1,127 @@
+# ==========================================
+# HOMEBOX - Core Module
+# Nginx Proxy Manager + Portainer.
+# Always active — the reverse proxy that routes your domain to the right
+# service, and the container manager you reach for when something is wrong.
+# ==========================================
+
+x-homebox:
+  id: core
+  added_at: "2026-09-05"
+  title: "Core Infrastructure"
+  tagline: "The foundation of your server"
+  description: "A reverse proxy that routes a domain to the right app and gets free SSL certificates for it, plus a container manager for when you need to look under the hood. Every other module assumes these are here."
+  icon: "nginx-proxy-manager.svg"
+  category: "system"
+  required: true
+  default: true
+  ram: "~350MB"
+  theme:
+    emoji: "🏗️"
+    color: "#1f8fd6"
+    bg: "rgba(31,143,214,0.12)"
+  tips:
+    - "Nginx Proxy Manager's own admin UI is on port 81. That port is how someone takes over your proxy — do not expose it beyond the LAN"
+    - "The NPM admin account is seeded at first boot from the generated password; `homebox secrets core` prints it"
+    - "Portainer holds a read-write Docker socket, which is effectively root on this box. Same rule: LAN only"
+  env_vars:
+    NPM_ADMIN_PASSWORD:
+      label: "Proxy manager admin password"
+      type: "secret"
+      config_editable: false
+    PORTAINER_ADMIN_PASSWORD:
+      label: "Portainer admin password"
+      type: "secret"
+      config_editable: false
+  services:
+    npm:
+      friendly_name: "Proxy Manager"
+      color: "#f15833"
+      description: "Reverse proxy, domains and SSL certificates"
+      icon: "nginx-proxy-manager.svg"
+      port_map: 81
+      container_port: 81
+      url_scheme: "http"
+      first_login: "Signs in with the generated admin password — `homebox secrets core`."
+    portainer:
+      friendly_name: "Portainer"
+      color: "#13bef9"
+      description: "Full Docker management UI"
+      icon: "portainer.svg"
+      port_map: 9000
+      url_scheme: "http"
+      first_login: "The admin password is seeded from .env — `homebox secrets core`."
+
+services:
+  npm:
+    image: jc21/nginx-proxy-manager:2.15.1
+    container_name: npm
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      # The admin UI. Whoever reaches this owns every route on the box.
+      - "81:81"
+    environment:
+      - TZ=${TZ:-UTC}
+      - INITIAL_ADMIN_EMAIL=${NPM_ADMIN_EMAIL:-admin@homebox.local}
+      - INITIAL_ADMIN_PASSWORD=${NPM_ADMIN_PASSWORD:-}
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/core/config/npm/data:/data
+      - ${HB_ROOT:-/opt/homebox}/modules/core/config/npm/letsencrypt:/etc/letsencrypt
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.50'
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:81/api/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  portainer:
+    image: portainer/portainer-ce:2.45.0
+    # Seeding the admin password from a file means the setup screen is never
+    # left open for whoever reaches the box first.
+    command: ["--admin-password-file", "/run/secrets/portainer_admin_password"]
+    container_name: portainer
+    ports:
+      - "${PORTAINER_PORT:-9000}:9000"
+    environment:
+      - TZ=${TZ:-UTC}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${HB_ROOT:-/opt/homebox}/modules/core/config/portainer:/data
+      - ${HB_ROOT:-/opt/homebox}/modules/core/config/portainer-admin-password:/run/secrets/portainer_admin_password:ro
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.50'
+    security_opt:
+      - no-new-privileges:true
+    # No healthcheck: the image is distroless, with no shell and no HTTP
+    # client to run a probe with.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

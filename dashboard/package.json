@@ -1,0 +1,15 @@
+{
+  "name": "homebox-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "HomeBox dashboard - reads the module tree and the Docker socket, serves one page",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/yaml.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

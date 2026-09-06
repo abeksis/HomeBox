@@ -1,0 +1,79 @@
+# ==========================================
+# HOMEBOX - Files Module
+# File Browser: upload, rename and organise the shared data pool from a
+# browser, without SMB or SSH.
+# ==========================================
+
+x-homebox:
+  id: files
+  added_at: "2026-09-05"
+  title: "File Browser"
+  tagline: "Your files, from any browser"
+  description: "A web file manager over the shared data pool — upload, move, rename, delete, and share a link. It runs as the same user as the media apps, so anything you drop here is immediately visible to them."
+  icon: "filebrowser.svg"
+  category: "files"
+  required: false
+  default: true
+  ram: "~60MB"
+  theme:
+    emoji: "📁"
+    color: "#4b8bf4"
+    bg: "rgba(75,139,244,0.12)"
+  tips:
+    - "It opens on the whole data pool, not just media — books, photos and downloads are sibling folders you can browse from the same place"
+    - "The admin password is generated at install time; `homebox secrets files` prints it"
+    - "It runs as PUID:PGID from .env so files it writes are owned the same as everything else on the pool"
+  env_vars:
+    FILEBROWSER_ADMIN_PASSWORD:
+      label: "Admin password"
+      type: "secret"
+      config_editable: false
+  services:
+    filebrowser:
+      friendly_name: "File Browser"
+      color: "#4b8bf4"
+      description: "Web file manager"
+      icon: "filebrowser.svg"
+      port_map: 8086
+      container_port: 80
+      url_scheme: "http"
+      first_login: "User `admin`, with the generated password from `homebox secrets files`."
+
+services:
+  filebrowser:
+    image: gtstef/filebrowser:1.5.0-stable
+    container_name: filebrowser
+    user: "${PUID:-1000}:${PGID:-1000}"
+    ports:
+      - "8086:80"
+    environment:
+      - TZ=${TZ:-UTC}
+      - FILEBROWSER_CONFIG=/home/filebrowser/config.yaml
+      - FILEBROWSER_DATABASE=/home/filebrowser/data/filebrowser.db
+      - FILEBROWSER_ADMIN_PASSWORD=${FILEBROWSER_ADMIN_PASSWORD:-}
+      - FILEBROWSER_JWT_TOKEN_SECRET=${FILEBROWSER_JWT_SECRET:-}
+    volumes:
+      # The whole pool, not just media: books, photos and downloads are
+      # siblings of media/ and would be invisible if this bound one subfolder.
+      - ${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}:/folder
+      - ${HB_ROOT:-/opt/homebox}/modules/files/config/filebrowser/config.yaml:/home/filebrowser/config.yaml:ro
+      - ${HB_ROOT:-/opt/homebox}/modules/files/config/filebrowser/data:/home/filebrowser/data
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.50'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

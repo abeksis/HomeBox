@@ -1,0 +1,167 @@
+# ==========================================
+# HOMEBOX - Photos Module
+# Immich: photo and video backup with a phone app that uploads by itself.
+# ==========================================
+
+x-homebox:
+  id: photos
+  added_at: "2026-09-05"
+  title: "Immich"
+  tagline: "Your private Google Photos"
+  description: "Backs up every photo and video from your phone automatically, with albums, a map, timeline scrubbing and face recognition. The mobile apps are good enough that people actually stop paying Google for this."
+  icon: "immich.svg"
+  category: "photos"
+  required: false
+  default: false
+  ram: "~2GB"
+  theme:
+    emoji: "📷"
+    color: "#4250af"
+    bg: "rgba(66,80,175,0.12)"
+  tips:
+    - "The first account you register becomes the admin — do that before anyone else can reach it"
+    - "The machine-learning container is the RAM cost. Stop it and you keep timeline, albums and upload; you lose face grouping and smart search"
+    - "The library on disk and the database are one backup, not two — restoring only one of them gives you a broken library"
+  env_vars:
+    IMMICH_DB_PASSWORD:
+      label: "Database password"
+      type: "secret"
+      config_editable: false
+      dangerous: true
+  services:
+    immich-server:
+      friendly_name: "Immich"
+      color: "#4250af"
+      description: "Photo library server and web UI"
+      icon: "immich.svg"
+      port_map: 2283
+      url_scheme: "http"
+      first_login: "No default account — the first user you register becomes the admin."
+    immich-machine-learning:
+      friendly_name: "Immich ML"
+      description: "Face recognition and smart search"
+      icon: "immich.svg"
+      internal: true
+    immich-redis:
+      friendly_name: "Immich Cache"
+      description: "Job queue"
+      internal: true
+    immich-database:
+      friendly_name: "Immich Database"
+      description: "Postgres with vector search"
+      icon: "postgres.svg"
+      internal: true
+
+services:
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:v3.1.0
+    container_name: immich-server
+    environment:
+      - TZ=${TZ:-UTC}
+      - DB_HOSTNAME=immich-postgres
+      - DB_USERNAME=immich
+      - DB_PASSWORD=${IMMICH_DB_PASSWORD:-immich}
+      - DB_DATABASE_NAME=immich
+      - REDIS_HOSTNAME=immich-redis
+      - IMMICH_MACHINE_LEARNING_URL=http://immich-ml:3003
+    volumes:
+      # Immich owns its library outright and never hardlinks into the *arr
+      # pool, so it takes just its own folder rather than the whole root.
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}/${HB_MEDIA_PHOTOS:-photos}:/data
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "2283:2283"
+    depends_on:
+      - immich-redis
+      - immich-database
+    networks:
+      - homebox_proxy
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:v3.1.0
+    container_name: immich-ml
+    environment:
+      - TZ=${TZ:-UTC}
+    volumes:
+      - immich-model-cache:/cache
+    networks:
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  immich-redis:
+    image: docker.io/valkey/valkey:8-bookworm
+    container_name: immich-redis
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.50'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  immich-database:
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
+    container_name: immich-postgres
+    environment:
+      - POSTGRES_USER=immich
+      - POSTGRES_PASSWORD=${IMMICH_DB_PASSWORD:-immich}
+      - POSTGRES_DB=immich
+      - POSTGRES_INITDB_ARGS=--data-checksums
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/photos/config/postgres:/var/lib/postgresql/data
+    shm_size: 128mb
+    networks:
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+volumes:
+  immich-model-cache:
+
+networks:
+  homebox_proxy:
+    external: true
+  homebox_internal:
+    external: true

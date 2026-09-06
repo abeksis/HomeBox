@@ -1,0 +1,69 @@
+# ==========================================
+# HOMEBOX - Monitoring Module
+# Uptime Kuma: know a service is down before someone in the house tells you.
+# ==========================================
+
+x-homebox:
+  id: monitoring
+  added_at: "2026-09-05"
+  title: "Monitoring"
+  tagline: "Know before your family tells you"
+  description: "Uptime Kuma checks every service on a schedule and notifies you through Telegram, Discord, email, ntfy and 90-odd other channels when one stops answering. It also keeps the history, so you can see whether something is flaky or just went down once."
+  icon: "uptime-kuma.svg"
+  category: "system"
+  required: false
+  default: true
+  ram: "~180MB"
+  theme:
+    emoji: "📊"
+    color: "#30d158"
+    bg: "rgba(48,209,88,0.12)"
+  tips:
+    - "Start with a monitor for the HomeBox dashboard itself, then add apps from there"
+    - "For another app on this same box use the box's LAN IP and the app's port — `localhost` from inside this container means the container itself"
+    - "Pinned to an exact patch on purpose: 2.x migrates its history on first start and will not open it again on 1.x"
+  services:
+    uptime-kuma:
+      friendly_name: "Uptime Kuma"
+      color: "#5cdd8b"
+      description: "Uptime monitoring and alerting"
+      icon: "uptime-kuma.svg"
+      port_map: 3001
+      url_scheme: "http"
+      first_login: "Create the admin account on the first visit."
+
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:2.5.3
+    container_name: uptime-kuma
+    ports:
+      - "3001:3001"
+    environment:
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/monitoring/config/uptime-kuma:/app/data
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+          cpus: '0.50'
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3001/api/entry-page').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

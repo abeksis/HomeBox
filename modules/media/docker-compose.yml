@@ -1,0 +1,250 @@
+# ==========================================
+# HOMEBOX - Media Module
+# The *arr suite plus qBittorrent: find it, fetch it, name it, subtitle it.
+# ==========================================
+
+x-homebox:
+  id: media
+  added_at: "2026-09-05"
+  title: "Media Stack"
+  tagline: "Your library, kept current by itself"
+  description: "Radarr and Sonarr watch for the films and shows you follow, Prowlarr feeds them indexers, qBittorrent does the downloading and Bazarr fetches subtitles. Add something once and the stack keeps it up to date."
+  icon: "radarr.png"
+  category: "media"
+  required: false
+  default: false
+  ram: "~1.2GB"
+  theme:
+    emoji: "🎬"
+    color: "#e5a00d"
+    bg: "rgba(229,160,13,0.12)"
+  tips:
+    - "Set Prowlarr up first — it pushes indexers into Radarr and Sonarr so you never paste the same tracker twice"
+    - "Every container mounts the pool at the same path (/data), which is what lets downloads become hardlinks instead of copies. Change one mapping and your disk usage quietly doubles"
+    - "In Radarr and Sonarr set the root folder to /data/<Movies> and /data/<TV series>, and in qBittorrent set the save path to /data/<Downloads> - using the folder names from Settings > Server Config > Advanced > Media (by default /data/media/movies, /data/media/tv and /data/downloads)"
+  env_vars:
+    PUID:
+      label: "User ID for file ownership"
+      type: "text"
+      default: "1000"
+      config_editable: true
+    PGID:
+      label: "Group ID for file ownership"
+      type: "text"
+      default: "1000"
+      config_editable: true
+  services:
+    radarr:
+      friendly_name: "Radarr"
+      color: "#ffc230"
+      description: "Film collection manager"
+      icon: "radarr.png"
+      port_map: 7878
+      url_scheme: "http"
+    sonarr:
+      friendly_name: "Sonarr"
+      color: "#35c5f4"
+      description: "TV series collection manager"
+      icon: "sonarr.png"
+      port_map: 8989
+      url_scheme: "http"
+    prowlarr:
+      friendly_name: "Prowlarr"
+      color: "#e5a00d"
+      description: "Indexer manager for the *arr apps"
+      icon: "prowlarr.svg"
+      port_map: 9696
+      url_scheme: "http"
+    bazarr:
+      friendly_name: "Bazarr"
+      color: "#6b3fa0"
+      description: "Subtitle downloader"
+      icon: "bazarr.svg"
+      port_map: 6767
+      url_scheme: "http"
+    qbittorrent:
+      friendly_name: "qBittorrent"
+      color: "#2f67ba"
+      description: "BitTorrent client"
+      icon: "qbittorrent.svg"
+      port_map: 8080
+      url_scheme: "http"
+      first_login: "User `admin`; the first-run password is printed in the container log — `homebox logs qbittorrent`."
+    flaresolverr:
+      friendly_name: "FlareSolverr"
+      description: "Solves Cloudflare challenges for indexers"
+      internal: true
+      tip: "No UI worth opening — point Prowlarr at http://flaresolverr:8191"
+
+services:
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      - WEBUI_PORT=8080
+      - TORRENTING_PORT=28745
+    ports:
+      - "8080:8080"
+      - "28745:28745/tcp"
+      - "28745:28745/udp"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/media/config/qbittorrent:/config
+      # ONE mount for the whole pool, and it has to stay one.
+      #
+      # Binding downloads and the library separately makes them two vfsmounts,
+      # and do_linkat() compares the MOUNT, not the filesystem - so a hardlink
+      # between them fails with EXDEV even when both sides are the same disk,
+      # and every import silently becomes a full copy. Measured here: linking
+      # /data/downloads to /data/media/tv across two binds gave EXDEV, while
+      # the identical link on the host, where it is one mount, succeeded.
+      #
+      # So the HOST side is a single root and the categories are names inside
+      # it. Compose has no conditionals, which is the other reason: there is
+      # no way to express "bind these three only if they share a parent".
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/data
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    ports:
+      - "7878:7878"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/media/config/radarr:/config
+      # One mount, for the hardlink reason above.
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/data
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+          cpus: '1.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    ports:
+      - "8989:8989"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/media/config/sonarr:/config
+      # One mount, for the hardlink reason above.
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/data
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+          cpus: '1.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    ports:
+      - "9696:9696"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/media/config/prowlarr:/config
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    ports:
+      - "6767:6767"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/media/config/bazarr:/config
+      # One mount, for the hardlink reason above.
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/data
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:v3.4.2
+    container_name: flaresolverr
+    environment:
+      - TZ=${TZ:-UTC}
+      - LOG_LEVEL=info
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+          cpus: '1.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

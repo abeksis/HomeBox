@@ -1,0 +1,74 @@
+# ==========================================
+# HOMEBOX - Automation Module
+# n8n: wire your services together without writing a daemon.
+# ==========================================
+
+x-homebox:
+  id: automation
+  added_at: "2026-09-05"
+  title: "n8n"
+  tagline: "Glue your services together, visually"
+  description: "A workflow builder with several hundred integrations: watch a folder, call an API, post to Telegram, write to a database, on a schedule or a webhook. The usual home for the small automations that would otherwise be five cron scripts nobody documented."
+  icon: "n8n.svg"
+  category: "productivity"
+  required: false
+  default: false
+  ram: "~400MB"
+  theme:
+    emoji: "🔀"
+    color: "#ea4b71"
+    bg: "rgba(234,75,113,0.12)"
+  tips:
+    - "The encryption key is generated at install and stored in .env — lose it and every saved credential in n8n becomes unreadable"
+    - "Webhooks need N8N_HOST and WEBHOOK_URL to match the address callers actually use, or the URLs it hands out point nowhere"
+    - "SQLite is the default here and fine for home use; swap to Postgres only if a workflow starts timing out on writes"
+  env_vars:
+    N8N_ENCRYPTION_KEY:
+      label: "Credential encryption key"
+      type: "secret"
+      config_editable: false
+      dangerous: true
+  services:
+    n8n:
+      friendly_name: "n8n"
+      color: "#ea4b71"
+      description: "Workflow automation"
+      icon: "n8n.svg"
+      port_map: 5678
+      url_scheme: "http"
+      first_login: "The first visit asks you to create the owner account."
+
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:1.72.1
+    container_name: n8n
+    environment:
+      - TZ=${TZ:-UTC}
+      - GENERIC_TIMEZONE=${TZ:-UTC}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-}
+      - N8N_HOST=${HB_HOST_ADDRESS:-localhost}
+      - N8N_PORT=5678
+      - WEBHOOK_URL=http://${HB_HOST_ADDRESS:-localhost}:5678/
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_RUNNERS_ENABLED=true
+    ports:
+      - "5678:5678"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/automation/config/n8n:/home/node/.n8n
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

@@ -1,0 +1,76 @@
+# ==========================================
+# HOMEBOX - Git Module
+# Gitea: your own GitHub, SQLite-backed so it is one directory.
+# ==========================================
+
+x-homebox:
+  id: git
+  added_at: "2026-09-05"
+  title: "Gitea"
+  tagline: "Your own GitHub"
+  description: "Git hosting with pull requests, issues, releases and CI actions, light enough to run beside everything else. Good for the config repos and scripts you would rather not put on someone else's server."
+  icon: "gitea.svg"
+  category: "productivity"
+  required: false
+  default: false
+  ram: "~200MB"
+  theme:
+    emoji: "🌱"
+    color: "#5aa14a"
+    bg: "rgba(90,161,74,0.12)"
+  tips:
+    - "The first account registered becomes the admin, so register yours before turning signups off in the install page"
+    - "SSH is on 2222, not 22 — clone with ssh://git@<box>:2222/user/repo.git so it does not fight the box's own sshd"
+    - "It runs on SQLite here. That is the right call for a handful of repos and one user; add Postgres only if you outgrow it"
+  services:
+    gitea:
+      friendly_name: "Gitea"
+      color: "#5aa14a"
+      description: "Git hosting and code review"
+      icon: "gitea.svg"
+      port_map: 3030
+      container_port: 3000
+      url_scheme: "http"
+      first_login: "The first visit shows an install page; the first user you register becomes the admin."
+
+services:
+  gitea:
+    image: gitea/gitea:1.24.6
+    container_name: gitea
+    environment:
+      - TZ=${TZ:-UTC}
+      - USER_UID=${PUID:-1000}
+      - USER_GID=${PGID:-1000}
+      - GITEA__database__DB_TYPE=sqlite3
+      - GITEA__server__SSH_PORT=2222
+      - GITEA__server__SSH_LISTEN_PORT=22
+    ports:
+      - "3030:3000"
+      - "2222:22"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/git/config/gitea:/data
+      # Only /etc/localtime: on a systemd host /etc/timezone does not exist,
+      # and bind-mounting a missing path makes Docker create a directory there.
+      - /etc/localtime:/etc/localtime:ro
+      # This image ships no zone database. With TZ set to a NAME, musl looks
+      # the name up here and falls back to UTC when it is missing - ignoring
+      # /etc/localtime entirely. Lending it the host copy fixes the clock
+      # without patching an upstream image.
+      - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

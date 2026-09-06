@@ -1,0 +1,69 @@
+# ==========================================
+# HOMEBOX - Bookmarks Module
+# Linkding: somewhere to put a link that is not a browser tab.
+# ==========================================
+
+x-homebox:
+  id: bookmarks
+  added_at: "2026-09-05"
+  title: "Linkding"
+  tagline: "Bookmarks that outlive your browser"
+  description: "A fast, plain bookmark manager with tags, full-text search over saved pages, and browser extensions. Small enough that you forget it is running."
+  icon: "linkding.svg"
+  category: "productivity"
+  required: false
+  default: false
+  ram: "~90MB"
+  theme:
+    emoji: "🔖"
+    color: "#3b82f6"
+    bg: "rgba(59,130,246,0.12)"
+  tips:
+    - "The admin account is created on first start from LINKDING_SUPERUSER_NAME and the generated password — `homebox secrets bookmarks` prints it"
+    - "Turn on archiving in Settings and it keeps a readable snapshot of each page, so a dead link is still readable"
+  env_vars:
+    LINKDING_ADMIN_PASSWORD:
+      label: "Admin password"
+      type: "secret"
+      config_editable: false
+  services:
+    linkding:
+      friendly_name: "Linkding"
+      color: "#3b82f6"
+      description: "Bookmark manager"
+      icon: "linkding.svg"
+      port_map: 9090
+      url_scheme: "http"
+      first_login: "User `admin`, password from `homebox secrets bookmarks`."
+
+services:
+  linkding:
+    image: sissbruecker/linkding:1.36.0
+    container_name: linkding
+    environment:
+      - TZ=${TZ:-UTC}
+      - LD_SUPERUSER_NAME=admin
+      - LD_SUPERUSER_PASSWORD=${LINKDING_ADMIN_PASSWORD:-}
+    ports:
+      - "9090:9090"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/bookmarks/config/linkding:/etc/linkding/data
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.50'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

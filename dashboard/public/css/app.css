@@ -1,0 +1,2144 @@
+/* ==========================================================================
+   HomeBox — layout and components
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Any element given a `display` here outranks the browser's own
+   `[hidden] { display: none }`, so a hidden .bento-card would still show.
+   One rule closes it for every component. */
+[hidden] { display: none !important; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg-0);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ==========================================================================
+   ATMOSPHERE
+   A fixed, full-bleed layer behind everything: three slow-drifting colour
+   pools plus grain and a vignette. It is what stops a dark page reading as
+   flat black, and it is the thing the Background picker in Settings swaps.
+   ========================================================================== */
+
+.atmo {
+  position: fixed;
+  inset: -10%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(48% 38% at 14% 8%,   var(--mesh-1, transparent), transparent 64%),
+    radial-gradient(46% 40% at 88% 4%,   var(--mesh-2, transparent), transparent 66%),
+    radial-gradient(52% 46% at 70% 102%, var(--mesh-3, transparent), transparent 64%),
+    radial-gradient(40% 30% at 50% -6%,  var(--warm-glow), transparent 60%);
+  opacity: var(--atmo);
+  filter: saturate(118%);
+  animation: atmo-drift 34s ease-in-out infinite alternate;
+}
+
+@keyframes atmo-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(-2.2%, 1.6%, 0) scale(1.06); }
+}
+
+/* Grain and vignette. The grain stops the gradients banding on a cheap
+   panel; the vignette frames the page so cards read as separated. */
+.atmo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 90% at 50% 40%, transparent 58%, rgba(0, 0, 0, 0.42) 100%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/></svg>");
+  background-size: cover, 200px 200px;
+  mix-blend-mode: overlay;
+  opacity: 0.5;
+}
+:root[data-theme^='light'] .atmo::after { opacity: 0.25; mix-blend-mode: multiply; }
+
+@media (prefers-reduced-motion: reduce) { .atmo { animation: none; } }
+
+/* --- Background variants, set by Settings > Appearance ------------------ */
+
+:root[data-atmo='solid'] .atmo { opacity: 0; }
+:root[data-atmo='nebula'] .atmo { opacity: 1; filter: saturate(170%) brightness(1.1); }
+:root[data-atmo='deep'] body { background-color: color-mix(in srgb, var(--bg-0) 42%, #000); }
+:root[data-atmo='deep'] .atmo { opacity: 0.5; }
+:root[data-atmo='slate'] .atmo {
+  opacity: 1;
+  filter: none;
+  animation: none;
+  background: radial-gradient(120% 80% at 50% -12%, rgba(255, 255, 255, 0.07), transparent 58%);
+}
+:root[data-atmo='void'] body { background-color: #07090e; }
+:root[data-atmo='void'] .atmo { background: none; opacity: 1; filter: none; animation: none; }
+:root[data-atmo='void'] .atmo::after { opacity: 0.26; }
+
+/* Photo wallpapers: a dark centre with glow at the edges, so cards stay
+   readable on top of them. */
+:root[data-atmo^='wp-'] body { background-color: #08080d; }
+:root[data-atmo^='wp-'] .atmo {
+  opacity: 1;
+  filter: none;
+  animation: none;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+:root[data-atmo^='wp-'] .atmo::after { opacity: 0.34; }
+:root[data-atmo='wp-purple'] .atmo { background-image: url("../img/backgrounds/aurora-purple.jpg"); }
+:root[data-atmo='wp-blue'] .atmo { background-image: url("../img/backgrounds/deep-blue.jpg"); }
+
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+
+a { color: inherit; text-decoration: none; }
+
+code.mono {
+  background: var(--bg-2);
+  border-radius: 5px;
+  padding: 0.08em 0.38em;
+  font-size: 0.9em;
+}
+
+::selection { background: var(--accent-soft); }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ---------------------------------------------------------------- topbar */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: var(--topbar-h);
+  background: color-mix(in srgb, var(--bg-0) 72%, transparent);
+  backdrop-filter: blur(26px) saturate(180%);
+  -webkit-backdrop-filter: blur(26px) saturate(180%);
+  border-bottom: 1px solid var(--border-soft);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02), 0 10px 24px -18px rgba(0, 0, 0, 0.7);
+  /* Promote to its own layer: a sticky element with a live backdrop-filter
+     repaints the whole page behind it on every scroll frame otherwise. */
+  transform: translateZ(0);
+  will-change: backdrop-filter;
+}
+:root[data-theme='light'] .topbar {
+  background: rgba(255, 255, 255, 0.78);
+  border-bottom-color: var(--border);
+  box-shadow: 0 8px 24px -20px rgba(15, 17, 23, 0.35);
+}
+
+.topbar-inner {
+  height: 100%;
+  padding: 0 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.brand { display: inline-flex; align-items: center; gap: 0.55rem; font-weight: 800; font-size: 1.02rem; letter-spacing: -0.02em; color: var(--text); }
+.brand-mark { width: 28px; height: 28px; }
+
+.brand-version {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  background: var(--bg-2);
+  border-radius: var(--radius-pill);
+  padding: 0.1rem 0.45rem;
+}
+
+.topbar-left { display: flex; align-items: center; gap: 0.65rem; flex: none; }
+
+/* The tabs live in their own pill, and the group does NOT flex-grow — with
+   space-between on the bar that puts it in the middle, brand hard left. */
+.topbar-nav {
+  display: flex;
+  gap: 0.15rem;
+  padding: 4px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-pill);
+}
+.topbar-nav::-webkit-scrollbar { display: none; }
+:root[data-theme='light'] .topbar-nav {
+  background: rgba(15, 17, 23, 0.03);
+  border-color: rgba(15, 17, 23, 0.06);
+}
+
+.tab {
+  padding: 0.5rem 0.95rem;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  transition: color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+.tab:hover { color: var(--text); background: color-mix(in srgb, var(--text) 6%, transparent); }
+/* Active reads as a lifted surface rather than a coloured chip — the accent
+   is reserved for gauges and primary actions, so it still means something. */
+.tab.active { background: var(--bg-1); color: var(--text); box-shadow: var(--elev-1); }
+
+.topbar-right { display: flex; align-items: center; gap: 0.6rem; flex: none; }
+.topbar-stats { display: inline-flex; gap: 3px; }
+/* Small square-ish chips, not bordered pills. */
+.topbar-stat {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  border-radius: 5px;
+  padding: 0.22rem 0.5rem;
+  min-width: 44px;
+  text-align: center;
+  white-space: nowrap;
+}
+.topbar-stat[data-level='warn'] { color: var(--warn); background: var(--warn-soft); }
+.topbar-stat[data-level='bad'] { color: var(--bad); background: var(--bad-soft); }
+
+.live-dot { display: flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; color: var(--text-muted); }
+.live-pip { width: 7px; height: 7px; border-radius: 50%; background: var(--live); box-shadow: 0 0 6px var(--live-glow); }
+.live-dot[data-state='down'] .live-pip { background: var(--bad); box-shadow: 0 0 0 3px var(--bad-soft); }
+.live-dot[data-state='down'] .live-label { color: var(--bad); }
+
+/* ------------------------------------------------------------------ shell */
+
+.shell {
+  position: relative;
+  z-index: 1;
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  padding: 2rem 2rem 6rem;
+}
+
+.page { display: none; animation: rise 0.28s ease both; }
+.page.active { display: block; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page, .bento-card { animation: none !important; }
+  * { transition-duration: 0.01ms !important; }
+}
+
+.page-intro { margin-bottom: 2rem; }
+.page-intro h1 {
+  margin: 0 0 0.4rem;
+  font-size: 2.15rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  background: var(--title-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.page-intro p { margin: 0; color: var(--text-secondary); font-size: 1.05rem; line-height: 1.5; max-width: 520px; }
+
+.hint { color: var(--text-muted); font-size: 0.82rem; margin: 0 0 0.75rem; }
+
+/* -------------------------------------------------------------- home hero */
+
+.home-hero { text-align: center; margin: 0.5rem 0 1.5rem; }
+.hero-greeting h1 { margin: 0 0 4px; font-size: 32px; line-height: 38px; font-weight: 700; letter-spacing: -0.03em; color: var(--text); }
+.hero-greeting p { margin: 0; font-size: 15px; color: var(--text-secondary); }
+.hero-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 12px;
+  opacity: 0.9;
+  user-select: none;
+}
+.hero-brand-logo { width: 24px; height: 24px; border-radius: 7px; }
+.hero-brand-text { font-size: 0.95rem; font-weight: 600; letter-spacing: -0.01em; color: var(--text-muted); white-space: nowrap; }
+.hero-brand-text strong { color: var(--text); font-weight: 800; }
+
+/* The health banner. Deliberately outside the grid: it is the answer to the
+   question the page exists to answer, and it must not compete for space. */
+.status-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  position: relative;
+  overflow: hidden;
+  padding: 18px 22px;
+  margin-bottom: 28px;
+  border-radius: 16px;
+  background: var(--card-fill);
+  box-shadow: var(--elev-1);
+  border-left: 3px solid var(--live);
+}
+/* A wash of the current state across the banner, painted under the content
+   rather than mixed into the background so the level can change on its own. */
+.status-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--live) 12%, transparent), transparent 52%);
+}
+.status-hero[data-level='warn']::before {
+  background: linear-gradient(100deg, color-mix(in srgb, var(--warn) 14%, transparent), transparent 52%);
+}
+.status-hero[data-level='bad']::before {
+  background: linear-gradient(100deg, color-mix(in srgb, var(--bad) 14%, transparent), transparent 52%);
+}
+.status-hero > * { position: relative; }
+.status-hero[data-level='warn'] { border-left-color: var(--warn); }
+.status-hero[data-level='bad'] { border-left-color: var(--bad); }
+
+.sh-health { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.sh-icon {
+  width: 40px; height: 40px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  font-size: 1.6rem;
+  line-height: 1;
+  background: var(--bg-2);
+  color: var(--text-secondary);
+}
+.status-hero[data-level='good'] .sh-icon { color: hsl(142, 71%, 60%); background: rgba(34, 197, 94, 0.12); }
+.status-hero[data-level='warn'] .sh-icon { color: hsl(38, 92%, 60%); background: rgba(245, 158, 11, 0.12); }
+.status-hero[data-level='bad']  .sh-icon { color: hsl(0, 84%, 68%); background: rgba(239, 68, 68, 0.12); }
+
+.sh-title { font-size: 1.18rem; font-weight: 800; color: var(--text); letter-spacing: -0.015em; }
+.sh-sub { font-size: 0.88rem; color: var(--text-muted); margin-top: 2px; }
+.sh-cta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
+
+/* ------------------------------------------------------------ bento grid */
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--grid-gap);
+  /* Cards size to their content and hang from the top of the row. Stretching
+     them to match the tallest sibling leaves the launcher with a field of
+     empty space under it. */
+  align-items: start;
+}
+.bento-4 { grid-column: span 4; }
+.bento-8 { grid-column: span 8; }
+.bento-12 { grid-column: span 12; }
+.bento-col-right { display: flex; flex-direction: column; gap: 22px; }
+
+@media (max-width: 1100px) {
+  .bento-4, .bento-8 { grid-column: span 12; }
+}
+
+.bento-card {
+  /* Not flat --bg-1: a card is lifted off the page with its own border and a
+     deep shadow. That contrast is also what makes the recessed tiles inside
+     it read as wells rather than panels. */
+  background: var(--card-bg);
+  border: 1px solid var(--card-line);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+  padding: 18px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  position: relative;
+  transition: box-shadow 120ms ease-out, background 120ms ease-out;
+  opacity: 0;
+  transform: translateY(8px);
+  animation: bento-enter 420ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: var(--bento-delay, 0ms);
+}
+
+@keyframes bento-enter {
+  to { opacity: 1; transform: none; }
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--module-hairline);
+}
+.card-label {
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.card-meta {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------- launcher */
+
+.launcher { display: flex; flex-direction: column; gap: 0.6rem; flex: 1; }
+
+.launcher-category { padding: 0.4rem 0 0.7rem; border-bottom: 1px solid var(--module-hairline); }
+.launcher-category:last-child { border-bottom: none; padding-bottom: 0; }
+.launcher-category-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
+}
+
+.launcher-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 0.4rem; }
+
+.launch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.75rem 0.5rem;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.launch:hover { background: color-mix(in srgb, var(--text) 5%, transparent); }
+
+/* The keycap: a gradient rounded square holding the app's real icon at full
+   saturation. Brand colour lives in the icon, not the tile — a grid of
+   coloured squares reads as swatches, a grid of keycaps reads as a keyboard. */
+.keycap {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.55rem;
+  background: var(--keycap-bg);
+  box-shadow: var(--shadow-keycap);
+  overflow: visible;
+  transition: opacity 0.18s ease, transform 0.12s ease, filter 0.18s ease;
+}
+.keycap img { width: 30px; height: 30px; object-fit: contain; }
+/* Fallback when a module names an icon this install does not ship. */
+.keycap-mono {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+/* Hover is an opacity dip, not a colour swap — subtle, and it works on any
+   icon regardless of its own palette. */
+.launch:hover .keycap { opacity: 0.75; transform: translateY(-1px); }
+.launch:active .keycap { opacity: 0.6; transform: translateY(0); }
+/* A stopped or unhealthy app stays in place but visibly drains of colour. */
+.launch.is-down .keycap { filter: saturate(0.3) brightness(0.6); }
+
+.keycap-status {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  /* The ring is the card colour: it punches the dot out of the keycap so it
+     reads at any icon colour. */
+  border: 2px solid var(--bg-1);
+}
+.keycap-status[data-state='healthy'],
+.keycap-status[data-state='running'] { background: var(--live); animation: statusPulse 2s ease infinite; }
+.keycap-status[data-state='unhealthy'] { background: var(--bad); }
+.keycap-status[data-state='starting'] { background: var(--warn); }
+.keycap-status[data-state='stopped'] { background: var(--text-muted); }
+
+.launch-name {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------------------- gauges */
+
+.gauges { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+
+.gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 8px;
+  border-radius: 12px;
+  background: var(--tile-bg);
+  box-shadow: 0 0 0 1px var(--tile-ring);
+  text-align: center;
+}
+
+.ring { position: relative; width: 72px; height: 72px; }
+.ring svg { width: 100%; height: 100%; display: block; transform: rotate(-90deg); }
+.ring-bg { fill: none; stroke: color-mix(in srgb, var(--text) 9%, transparent); stroke-width: 3; }
+.ring-fg {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.7s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.3s;
+}
+/* One colour per metric, each with its own glow — so a glance at the card
+   tells you which ring you are reading before you read the label. */
+#ring-cpu .ring-fg { stroke: var(--accent); filter: drop-shadow(0 0 4px var(--accent-glow)); }
+#ring-ram .ring-fg { stroke: hsl(202, 100%, 67%); filter: drop-shadow(0 0 4px hsla(202, 100%, 67%, 0.35)); }
+#ring-disk .ring-fg { stroke: hsl(43, 100%, 60%); filter: drop-shadow(0 0 4px hsla(43, 100%, 60%, 0.35)); }
+
+/* Thresholds still win: a disk at 94% is red, not amber. */
+.ring[data-level='warn'] .ring-fg { stroke: var(--warn); filter: drop-shadow(0 0 4px var(--warn-soft)); }
+.ring[data-level='bad'] .ring-fg { stroke: var(--bad); filter: drop-shadow(0 0 4px var(--bad-soft)); }
+.ring-value {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+/* `.bento-system .gauge-uptime` in the source, which outranks the looser
+   single-class rules. Plain --text: the green belonged to a ring stroke that
+   this element does not have. */
+.uptime {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  padding: 0.4rem 0 0.15rem;
+  color: var(--text);
+}
+.gauge-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.gauge-detail { font-size: 0.66rem; color: var(--text-muted); }
+
+.quick-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 10px;
+}
+.quick-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  /* The page colour, so these read as cut into the card rather than sitting
+     on it — the same recessed logic as the tiles above. */
+  background: var(--bg-0);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: background 120ms ease-out, border-color 120ms ease-out, transform 120ms ease-out;
+}
+.quick-action:hover {
+  background: var(--bg-1);
+  border-color: var(--accent-line);
+  transform: translateY(-1px);
+}
+.qa-icon { font-size: 0.95rem; line-height: 1; color: var(--accent); }
+.qa-label { white-space: nowrap; }
+
+/* --------------------------------------------------------------- activity */
+
+.bento-activity { flex: 1; min-height: 0; }
+.activity-list { list-style: none; display: flex; flex-direction: column; gap: 2px; margin: -2px -6px; padding: 2px 6px; max-height: 270px; overflow-y: auto; }
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 8px;
+  border-radius: 9px;
+  font-size: 0.8rem;
+  transition: background 0.12s;
+}
+.activity-item:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
+.activity-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); flex: none; }
+/* Colour by what happened, with a glow so the row reads at a glance:
+   green came up, red went down, blue changed shape. */
+.activity-dot[data-action='start'],
+.activity-dot[data-action='unpause'],
+.activity-dot[data-action='install'] { background: hsl(142, 71%, 55%); box-shadow: 0 0 6px rgba(34, 197, 94, 0.6); }
+.activity-dot[data-action='stop'],
+.activity-dot[data-action='die'],
+.activity-dot[data-action='oom'],
+.activity-dot[data-action='pause'] { background: hsl(0, 84%, 62%); box-shadow: 0 0 6px rgba(239, 68, 68, 0.6); }
+.activity-dot[data-action='restart'],
+.activity-dot[data-action='create'],
+.activity-dot[data-action='update'] { background: hsl(202, 100%, 65%); box-shadow: 0 0 6px rgba(59, 130, 246, 0.6); }
+.activity-dot[data-action='destroy'],
+.activity-dot[data-action='kill'],
+.activity-dot[data-action='remove'] { background: hsl(0, 84%, 62%); }
+.activity-item[data-level='error'] .activity-dot { background: var(--bad); }
+.activity-name {
+  flex: 1;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.activity-what { color: var(--text-muted); font-size: 0.72rem; text-transform: lowercase; flex: none; }
+.activity-when { color: var(--text-muted); font-size: 0.68rem; font-family: var(--mono); flex: none; }
+.activity-empty { color: var(--text-muted); font-size: 0.82rem; padding: 0.5rem 0; }
+
+/* ---------------------------------------------------------- module strip */
+
+.module-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 0.6rem;
+}
+
+.module-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-2);
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: border-color 0.15s, transform 0.15s;
+  width: 100%;
+}
+.module-chip:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+.module-emoji { font-size: 1.1rem; flex: none; }
+.module-chip-body { min-width: 0; flex: 1; }
+.module-chip-title { display: block; font-size: 0.82rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.module-chip-sub { display: block; font-size: 0.7rem; color: var(--text-muted); }
+
+.pill {
+  font-size: 0.64rem;
+  font-family: var(--mono);
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.pill[data-status='running'] { color: var(--good); border-color: var(--good-line); background: var(--good-soft); }
+.pill[data-status='partial'] { color: var(--warn); border-color: var(--warn-line); background: var(--warn-soft); }
+.pill[data-status='unhealthy'] { color: var(--bad); border-color: var(--bad-line); background: var(--bad-soft); }
+.pill[data-status='available'] { opacity: 0.75; }
+.pill[data-status='stopped'] { color: var(--text-muted); }
+
+/* ------------------------------------------------------------ apps / grid */
+
+.filter-row { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
+
+.search-bar { flex: 1; min-width: 220px; }
+.search-bar input,
+.select {
+  width: 100%;
+  padding: 0.5rem 0.8rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.86rem;
+}
+.select { width: auto; border-radius: var(--radius-sm); }
+.search-bar input::placeholder { color: var(--text-muted); }
+
+.chips { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.chip {
+  padding: 0.4rem 0.95rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.chip:hover { background: var(--bg-3); border-color: var(--border-strong); color: var(--text); }
+.chip.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+.btn {
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-1);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--border-strong); background: var(--bg-2); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); font-weight: 600; }
+.btn-primary:hover { filter: brightness(1.08); background: var(--accent); }
+
+/* Destructive actions read as destructive: outlined for "removes containers",
+   filled for "removes data and cannot be undone". */
+.btn-danger { color: var(--bad); border-color: var(--bad-line); background: var(--bad-soft); }
+.btn-danger:hover { border-color: var(--bad); background: var(--bad-soft); color: var(--bad); }
+.btn-danger-solid { background: var(--bad); border-color: var(--bad); color: #fff; font-weight: 600; }
+.btn-danger-solid:hover { filter: brightness(1.08); background: var(--bad); color: #fff; }
+
+/* ============================================================== APP STORE */
+
+.store-stats { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
+
+/* What the installed set is estimated to cost, against what the box has.
+   Estimates, clearly labelled as such — a real figure per app would need a
+   running container, and the point of this bar is to warn you BEFORE you
+   install the thing. */
+.ram-usage-bar {
+  margin-bottom: 1.25rem;
+  padding: 0.85rem 1rem;
+  background: var(--bg-1);
+  border-radius: var(--radius);
+  box-shadow: var(--elev-1);
+}
+.ram-bar-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 0.4rem;
+}
+.ram-bar-track { height: 8px; background: var(--bg-input); border-radius: 4px; overflow: hidden; }
+.ram-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+  transition: width 0.4s ease, background 0.3s ease;
+}
+.ram-bar-fill[data-level='warn'] { background: var(--warn); }
+.ram-bar-fill[data-level='bad'] { background: var(--bad); }
+
+.store-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+/* The search takes a full row of its own; filters and sort share the next. */
+.store-search { position: relative; flex: 1 1 100%; display: flex; align-items: center; }
+.store-search-input {
+  flex: 1;
+  padding: 0.7rem 2.5rem 0.7rem 2.4rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.store-search-input:focus { border-color: var(--accent-line); }
+.store-search-input::placeholder { color: var(--text-muted); }
+.store-search-icon { position: absolute; left: 14px; color: var(--text-muted); pointer-events: none; }
+.store-search-clear {
+  position: absolute;
+  right: 10px;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+}
+.store-search-clear:hover { color: var(--text); }
+.store-search-clear.hidden { display: none; }
+
+.store-filter-bar { display: flex; gap: 0.4rem; flex-wrap: wrap; flex: 1 1 auto; }
+.store-sort { display: flex; align-items: center; gap: 0.45rem; flex: none; }
+.store-sort-label { font-size: 0.8rem; color: var(--text-muted); }
+.store-sort-select {
+  background: var(--bg-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.4rem 0.75rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.apps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.app-card {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: var(--elev-1);
+  display: flex;
+  flex-direction: column;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+/* An installed app is ringed in the accent — the one place on this page the
+   accent means "yours" rather than "do this". */
+.app-card.is-installed {
+  border-color: var(--accent);
+  box-shadow: var(--elev-1), 0 0 0 1px var(--accent-soft);
+}
+
+.app-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.app-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  font-size: 1.6rem;
+  background: var(--bg-2);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+:root[data-theme='light'] .app-icon { border-color: rgba(15, 17, 23, 0.06); }
+.app-icon img { width: 28px; height: 28px; object-fit: contain; }
+
+.app-name { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 0.3rem; }
+/* The tagline is the accent, not muted grey (source style.css:1755) -- it is
+   the one purple line on the card and it is what makes the block read as a
+   note about the app rather than more description. */
+.app-tagline { display: block; font-size: 0.82rem; color: var(--accent); font-weight: 500; margin-bottom: 0.4rem; }
+.app-desc { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.45; margin: 0 0 1rem; }
+
+.app-meta { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-top: auto; }
+.app-tag {
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.app-tag.required { background: var(--good-soft); color: var(--good); }
+.app-tag.optional { background: var(--accent-soft); color: var(--accent); }
+.app-tag.ram { background: var(--bg-input); color: var(--text-secondary); }
+.app-tag.state { background: var(--bg-2); color: var(--text-muted); }
+.app-tag.state[data-status='running'] { background: var(--good-soft); color: var(--good); }
+.app-tag.state[data-status='unhealthy'] { background: var(--bad-soft); color: var(--bad); }
+.app-tag.state[data-status='partial'] { background: var(--warn-soft); color: var(--warn); }
+
+.app-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  /* 44px: this is the most-tapped control in the app, and a 32px target on a
+     phone is a miss as often as a hit. */
+  min-height: 44px;
+  padding: 0.6rem 1rem;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.app-action-btn:hover { filter: brightness(1.08); }
+.app-action-btn:disabled { opacity: 0.6; cursor: default; filter: none; }
+
+/* Installed reads as neutral, and turns into a red "Remove" the moment you
+   reach for it — so uninstalling is always one click from the card, without
+   a destructive button sitting there inviting a mis-tap. */
+.app-action-btn.is-installed {
+  background: var(--bg-2);
+  color: var(--text-secondary);
+  border-color: var(--border);
+}
+.app-action-btn.is-installed:hover,
+.app-action-btn.is-installed:focus-visible {
+  background: var(--bad-soft);
+  color: var(--bad);
+  border-color: var(--bad);
+  filter: none;
+  font-size: 0;
+}
+.app-action-btn.is-installed:hover::before,
+.app-action-btn.is-installed:focus-visible::before {
+  content: 'Remove';
+  font-size: 0.82rem;
+}
+/* Busy state. app.js renders these while a compose run is in flight; both
+   were lost in an earlier rewrite of this section, which left an install
+   showing no feedback at all. */
+.btn-busy { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--text-muted); cursor: default; }
+.spinner {
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2s; } }
+
+.app-action-btn.locked {
+  background: var(--bg-2);
+  color: var(--text-muted);
+  border-color: var(--border);
+  cursor: default;
+}
+
+.unclaimed-block { margin-top: 2rem; }
+.unclaimed-list { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.unclaimed-item {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-pill);
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+/* ----------------------------------------------------------------- tables */
+
+.table-wrap { background: var(--bg-1); border-radius: var(--radius); box-shadow: var(--elev-1); overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: 0.84rem; min-width: 720px; }
+.table th {
+  text-align: left;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 650;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.table td { padding: 0.6rem 1rem; border-bottom: 1px solid var(--border-hair); vertical-align: middle; }
+.table tr:last-child td { border-bottom: 0; }
+.table tbody tr:hover { background: var(--bg-2); }
+.cell-name { font-weight: 600; }
+.cell-dim { color: var(--text-muted); font-family: var(--mono); font-size: 0.76rem; }
+
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-family: var(--mono);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.state[data-state='healthy'], .state[data-state='running'] { color: var(--good); border-color: var(--good-line); background: var(--good-soft); }
+.state[data-state='unhealthy'] { color: var(--bad); border-color: var(--bad-line); background: var(--bad-soft); }
+.state[data-state='starting'] { color: var(--warn); border-color: var(--warn-line); background: var(--warn-soft); }
+
+.link-btn {
+  background: none;
+  border: 0;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 0;
+}
+.link-btn:hover { text-decoration: underline; }
+
+/* ------------------------------------------------------------------- logs */
+
+.logs-controls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
+
+.pill-select {
+  padding: 0.6rem 1.1rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--bg-1);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  min-width: 240px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.pill-select:focus { border-color: var(--accent-line); }
+.pill-select-sm { min-width: 0; }
+
+.setting-input {
+  flex: 1;
+  max-width: 240px;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.88rem;
+  outline: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.setting-input:focus { border-color: var(--accent-line); }
+
+.logs-follow {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.btn-soft {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.1rem;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.btn-soft:hover { border-color: var(--accent-line); }
+
+.log-window {
+  background: #0b0d12;
+  border-radius: var(--radius);
+  min-height: 400px;
+  max-height: calc(100vh - 300px);
+  overflow: auto;
+  box-shadow: var(--elev-2);
+}
+.log-output {
+  margin: 0;
+  padding: 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.65;
+  color: #a1a1aa;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+/* A line the filter matched, so the eye lands on it in a wall of text. */
+.log-output mark { background: var(--accent-soft); color: var(--text); border-radius: 3px; }
+
+/* --------------------------------------------------------------- settings */
+
+/* Full-width stacked sections, as the source does — not a multi-column grid.
+   A 320px column squeezes the swatch grid into three-per-row and turns the
+   Appearance section into a tall ladder instead of a wide sheet. */
+/* ------------------------------------------------------------- settings */
+
+/* A segmented bar, not page tabs: one row of equal-width buttons in a
+   recessed track, with the active one lifted onto the card colour. */
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 1.5rem;
+  padding: 4px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.settings-tabs::-webkit-scrollbar { display: none; }
+.settings-tab {
+  flex: 1;
+  padding: 0.55rem 0.75rem;
+  border: none;
+  background: none;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.settings-tab:hover { color: var(--text-secondary); }
+.settings-tab.active { color: var(--text); background: var(--card-bg); box-shadow: var(--elev-1); }
+
+.settings-panel { display: none; animation: fadeIn 0.15s ease; }
+.settings-panel.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.settings-grid { display: flex; flex-direction: column; gap: 1rem; }
+
+.settings-group-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 0.75rem;
+}
+
+/* A command someone is meant to copy and run. */
+.cmd {
+  display: block;
+  margin: 0.5rem 0 0;
+  padding: 0.7rem 0.85rem;
+  background: #0b0d12;
+  border-radius: var(--radius-sm);
+  color: #d7dce5;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre;
+}
+:root[data-theme^='light'] .cmd { background: #131722; }
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--border-hair);
+}
+.setting-row:last-child { border-bottom: 0; }
+/* A stacked setting: label, one line of why, then the control below it.
+   The old two-column .setting-row has nowhere to put a grid of swatches. */
+.setting-block { padding: 0.9rem 0; border-bottom: 1px solid var(--module-hairline); }
+.setting-block:last-child { border-bottom: 0; padding-bottom: 0; }
+
+.setting-title { font-weight: 600; font-size: 0.86rem; }
+.setting-sub { font-size: 0.76rem; color: var(--text-muted); }
+
+.segmented { display: inline-flex; background: var(--bg-2); border-radius: var(--radius-pill); padding: 2px; }
+.segmented button {
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 0.28rem 0.8rem;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+.segmented button.active { background: var(--bg-1); color: var(--text); box-shadow: var(--elev-1); }
+
+.kv { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 0.4rem 1rem; font-size: 0.82rem; }
+.kv dt { color: var(--text-muted); }
+.kv dd { margin: 0; font-family: var(--mono); font-size: 0.78rem; overflow-wrap: anywhere; }
+
+.issue-list { margin: 0; padding-left: 1.1rem; font-size: 0.82rem; color: var(--bad); }
+
+/* ----------------------------------------------------------------- drawer */
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 50;
+}
+
+.drawer {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: min(460px, 92vw);
+  z-index: 51;
+  background: var(--bg-1);
+  border-left: 1px solid var(--border);
+  box-shadow: -24px 0 64px -16px rgba(0, 0, 0, 0.6);
+  padding: 1.5rem 1.5rem 3rem;
+  overflow-y: auto;
+  animation: slide-in 0.24s ease both;
+}
+@keyframes slide-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.drawer-close {
+  position: absolute;
+  top: 0.9rem; right: 1rem;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text-secondary);
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.drawer-close:hover { background: var(--bg-3); color: var(--text); }
+
+.drawer h2 { margin: 0 0 0.2rem; font-size: 1.25rem; letter-spacing: -0.02em; }
+.drawer .drawer-tagline { color: var(--text-muted); margin: 0 0 1rem; }
+.drawer h3 {
+  margin: 1.5rem 0 0.5rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.drawer p { color: var(--text-secondary); }
+
+.svc-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--border-hair);
+}
+.svc-row:last-child { border-bottom: 0; }
+.svc-icon { width: 26px; height: 26px; object-fit: contain; flex: none; }
+.svc-mono { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; font-size: 0.72rem; font-weight: 700; flex: none; }
+.svc-body { flex: 1; min-width: 0; }
+.svc-name { display: block; font-size: 0.85rem; font-weight: 600; }
+.svc-desc { display: block; font-size: 0.74rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.tip-list { margin: 0; padding-left: 1.1rem; font-size: 0.82rem; color: var(--text-secondary); }
+.tip-list li { margin-bottom: 0.4rem; }
+
+@media (max-width: 900px) { .brand span:not(.brand-version) { display: none; } }
+@media (max-width: 1360px) { .topbar-stats { display: none; } }
+
+@media (max-width: 720px) {
+  .shell { padding-inline: 0.9rem; }
+  .hero-brand { display: none; }
+}
+
+
+/* ================================================================= BANDS
+   Full-width labelled dividers that group the home cards into sections, the
+   way the original splits "Your Server" from "Network & Maintenance". They
+   are what stops a long bento grid reading as one undifferentiated wall.
+   ================================================================= */
+
+.band-head { display: flex; align-items: center; gap: 14px; margin: 34px 0 16px; }
+.band-head:first-of-type { margin-top: 0; }
+.band-titles { min-width: 0; }
+.band-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.18rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.band-ico {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  color: var(--accent-hover);
+  background: var(--accent-soft);
+}
+.band-sub { font-size: 0.84rem; color: var(--text-muted); margin-top: 3px; }
+/* The rule fades out rather than running edge to edge, so the title keeps
+   the eye instead of the line. */
+.band-rule {
+  flex: 1;
+  height: 1px;
+  align-self: center;
+  background: linear-gradient(90deg, var(--border-strong), transparent);
+}
+
+/* ======================================================= RUNNING SERVICES */
+
+.running-list { display: flex; flex-direction: column; gap: 7px; }
+.running-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  background: var(--tile-bg);
+  box-shadow: 0 0 0 1px var(--tile-ring);
+}
+.running-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  /* Tinted inline with the brand colour of whatever app it is. No keycap
+     shadow: in the Running list the icon is a flat swatch, not a key. */
+}
+.running-icon img { width: 22px; height: 22px; object-fit: contain; }
+.running-icon span { font-weight: 800; font-size: 0.82rem; }
+.running-info { flex: 1; min-width: 0; }
+.running-name { font-weight: 700; font-size: 0.88rem; }
+.running-detail {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* These are the source's in-card overrides (`.bento-card .running-stats`),
+   not its looser base rule — the Running list only ever appears inside a
+   bento card, so the tighter values are the ones that actually apply. */
+.running-stats { display: flex; gap: 1rem; flex: none; }
+.mini-stat { text-align: right; }
+/* Block, not inline: the label belongs UNDER its number. As spans they flow
+   onto the same line and the column reads as "0% CPU" instead of a stat. */
+.mini-stat-val {
+  display: block;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.mini-stat-label {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+@media (max-width: 600px) { .running-stats .mini-stat:nth-child(1) { display: none; } }
+
+/* ================================================================ NETWORK */
+
+.network-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.network-item {
+  padding: 12px 14px;
+  border-radius: 11px;
+  background: var(--tile-bg);
+  box-shadow: 0 0 0 1px var(--tile-ring);
+}
+.network-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+}
+.network-value { font-size: 0.86rem; font-weight: 600; color: var(--text); word-break: break-all; }
+
+/* ================================================================ BACKUPS */
+
+.backup-body { display: flex; flex-direction: column; gap: 1px; }
+.backup-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--module-hairline);
+}
+.backup-row:last-child { border-bottom: none; }
+.backup-label { font-size: 0.8rem; color: var(--text-muted); }
+.backup-value { font-size: 0.82rem; font-weight: 700; color: var(--text); font-family: var(--mono); text-align: right; }
+.backup-value[data-level='good'] { color: var(--good); }
+.backup-value[data-level='warn'] { color: var(--warn); }
+.backup-note { font-size: 0.75rem; color: var(--text-muted); margin: 10px 0 0; line-height: 1.5; }
+
+
+/* ====================================================== RUNNING ACTIONS */
+
+.running-actions { display: flex; gap: 0.5rem; flex: none; }
+
+/* Pill buttons, sized to a comfortable tap target — these sit in a dense
+   row and are the ones people hit on a phone. */
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 34px;
+  padding: 0.55rem 1.1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-1);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.14s, color 0.14s, border-color 0.14s;
+}
+.btn-pill:hover { background: var(--bg-3); color: var(--text); border-color: var(--border-strong); }
+.btn-pill:disabled { opacity: 0.5; cursor: default; }
+.btn-pill.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+.btn-pill.primary:hover { filter: brightness(1.08); background: var(--accent); color: var(--accent-contrast); }
+
+.health-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-pill);
+  margin-left: 6px;
+}
+.health-badge.unhealthy { background: var(--bad-soft); color: var(--bad); }
+.health-badge.starting { background: var(--warn-soft); color: var(--warn); }
+.critical-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent);
+  margin-left: 6px;
+}
+
+/* A running app breathes. The same 2s ring expansion runs on the Running
+   list's dot and on the launcher tile's pip, so "it is alive" reads the same
+   in both places without anyone having to interpret a colour. */
+@keyframes statusPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(48, 209, 88, 0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(48, 209, 88, 0); }
+}
+
+.status-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--text-muted); }
+.status-dot.on { background: var(--live); animation: statusPulse 2s ease infinite; }
+/* Red, not grey: a container in the Running list that is not running is a
+   thing to notice, not a neutral state. */
+.status-dot.off { background: var(--bad); }
+
+@media (prefers-reduced-motion: reduce) {
+  .status-dot.on, .keycap-status { animation: none !important; }
+}
+
+@media (max-width: 900px) {
+  .running-row { flex-wrap: wrap; }
+  .running-actions { width: 100%; justify-content: flex-end; }
+}
+
+
+/* ====================================================== APPEARANCE PICKER */
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.swatch {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 7px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.14s, transform 0.1s;
+}
+.swatch:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+.swatch.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+/* The preview is the point: every option shows the actual colours or the
+   actual photo, so nobody has to guess what "Nebula" means. */
+.swatch-preview {
+  height: 46px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px var(--card-line);
+}
+.swatch-name {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-align: center;
+}
+.swatch.selected .swatch-name { color: var(--text); }
+
+/* Theme previews: page colour, card colour, accent, in the real palette. */
+.sw-default .swatch-preview { background: linear-gradient(135deg, #0f1117 40%, #1a1d26 40% 70%, #8b5cf6 70%); }
+.sw-midnight-purple .swatch-preview { background: linear-gradient(135deg, #0a0c12 40%, #1c2029 40% 70%, #8b5cf6 70%); }
+.sw-forest .swatch-preview { background: linear-gradient(135deg, #0a110d 40%, #18221c 40% 70%, #10b981 70%); }
+.sw-sunset .swatch-preview { background: linear-gradient(135deg, #120b0e 40%, #221a1d 40% 70%, #f97316 70%); }
+.sw-arctic .swatch-preview { background: linear-gradient(135deg, #0a1017 40%, #181f2b 40% 70%, #0ea5e9 70%); }
+.sw-rose .swatch-preview { background: linear-gradient(135deg, #110a10 40%, #201820 40% 70%, #ec4899 70%); }
+.sw-light .swatch-preview { background: linear-gradient(135deg, #f6f6f8 40%, #ffffff 40% 70%, #7c3aed 70%); }
+.sw-light-forest .swatch-preview { background: linear-gradient(135deg, #f4f8f5 40%, #ffffff 40% 70%, #059669 70%); }
+.sw-light-sunset .swatch-preview { background: linear-gradient(135deg, #faf7f4 40%, #ffffff 40% 70%, #d97706 70%); }
+.sw-light-arctic .swatch-preview { background: linear-gradient(135deg, #f4f7fa 40%, #ffffff 40% 70%, #0891b2 70%); }
+.sw-light-rose .swatch-preview { background: linear-gradient(135deg, #fbf5f8 40%, #ffffff 40% 70%, #db2777 70%); }
+
+/* Background previews. */
+.sw-aurora .swatch-preview {
+  background:
+    radial-gradient(60% 60% at 12% 8%, rgba(139, 92, 246, 0.85), transparent 70%),
+    radial-gradient(60% 60% at 90% 4%, rgba(56, 189, 248, 0.6), transparent 72%),
+    #12131a;
+}
+.sw-nebula .swatch-preview {
+  background:
+    radial-gradient(60% 60% at 12% 8%, rgba(139, 92, 246, 1), transparent 68%),
+    radial-gradient(60% 60% at 90% 4%, rgba(56, 189, 248, 0.9), transparent 70%),
+    #101018;
+  filter: saturate(150%);
+}
+.sw-deep .swatch-preview {
+  background: radial-gradient(60% 60% at 20% 10%, rgba(139, 92, 246, 0.35), transparent 70%), #07080c;
+}
+.sw-slate .swatch-preview {
+  background: radial-gradient(120% 80% at 50% -12%, rgba(255, 255, 255, 0.10), transparent 58%), #0f1117;
+}
+.sw-void .swatch-preview { background: #07090e; }
+.sw-solid .swatch-preview { background: var(--bg-0); }
+.sw-wp-purple .swatch-preview { background: url("../img/backgrounds/aurora-purple.jpg") center/cover; }
+.sw-wp-blue .swatch-preview { background: url("../img/backgrounds/deep-blue.jpg") center/cover; }
+
+
+/* ================================================= BACKUP CENTER */
+
+.backup-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin: 1rem 0; }
+
+.backup-banner {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--bad);
+  border-radius: var(--radius-sm);
+  background: var(--bad-soft);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+.backup-banner .hint { margin: 0.35rem 0 0; }
+
+.backup-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.archive-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius);
+  background: var(--tile-bg);
+  box-shadow: 0 0 0 1px var(--tile-ring);
+}
+.archive-row-info { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.archive-row-name { font-weight: 600; font-size: 0.88rem; font-family: var(--mono); overflow-wrap: anywhere; }
+.archive-row-meta { font-size: 0.78rem; color: var(--text-muted); }
+.archive-row-actions { display: flex; gap: 0.4rem; flex: none; }
+
+/* Encrypted is the normal state here, so the badge reassures rather than
+   warns — it is the absence of one that would be the problem. */
+.badge-encrypted {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  vertical-align: middle;
+  color: var(--live);
+  background: color-mix(in srgb, var(--live) 12%, transparent);
+}
+
+.schedule-config { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; margin-top: 1rem; }
+.schedule-row { display: flex; flex-direction: column; gap: 0.3rem; }
+.schedule-status { margin-top: 0.5rem; font-size: 0.82rem; color: var(--text-muted); }
+
+
+/* ============================================= ADVANCED RAW CONFIGURATION */
+
+.advanced-config {
+  margin-top: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--card-bg);
+}
+.advanced-config-summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 0.85rem 1.1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+  user-select: none;
+}
+.advanced-config-summary::-webkit-details-marker { display: none; }
+.advanced-config-summary::before {
+  content: '\25B8';
+  color: var(--text-muted);
+  transition: transform 0.15s ease;
+}
+.advanced-config[open] .advanced-config-summary::before { transform: rotate(90deg); }
+.advanced-config-title { font-weight: 600; }
+.advanced-config-note { color: var(--text-muted); font-size: 0.85rem; }
+.advanced-config-body { padding: 0.25rem 1.1rem 1.1rem; }
+
+.settings-group {
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-sm);
+  background: var(--tile-bg);
+  box-shadow: 0 0 0 1px var(--tile-ring);
+}
+/* A group holding a security key is ringed and labelled, so nobody edits one
+   by accident while looking for a path. */
+.settings-group.dangerous-group { box-shadow: 0 0 0 1px var(--warn-line); }
+.group-warning {
+  margin-left: 0.6rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+.settings-group-desc { font-size: 0.8rem; color: var(--text-muted); margin: 0 0 0.9rem; line-height: 1.5; }
+
+.config-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(220px, 2fr);
+  gap: 0.5rem 1rem;
+  align-items: center;
+  padding: 0.45rem 0;
+}
+.config-label { font-size: 0.84rem; font-weight: 600; }
+.config-key { display: block; font-size: 0.7rem; font-family: var(--mono); color: var(--text-muted); font-weight: 400; }
+.config-hint { grid-column: 1 / -1; font-size: 0.76rem; color: var(--text-muted); margin: 0; }
+.config-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-family: var(--mono);
+  outline: none;
+}
+.config-input:focus { border-color: var(--accent-line); }
+.config-input:disabled { opacity: 0.55; cursor: not-allowed; }
+.config-input.changed { border-color: var(--accent); }
+
+.config-secret { display: flex; gap: 0.4rem; align-items: center; }
+.config-secret .config-input { flex: 1; }
+
+.settings-actions { display: flex; align-items: center; gap: 0.75rem; margin-top: 1rem; }
+
+@media (max-width: 700px) {
+  .config-row { grid-template-columns: 1fr; }
+}
+
+
+/* ================================================================= TOASTS */
+/* Geometry, timing and the slide-in are the source's (style.css:2112). Only
+   the colour tokens are HomeBox's own names — it has --good/--bad where the
+   source has --green/--red, and --elev-3 where it has --shadow-lg. */
+
+.toast-wrap {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+  max-width: min(420px, calc(100vw - 2.5rem));
+}
+
+.toast {
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius);
+  font-size: 0.88rem;
+  font-weight: 500;
+  line-height: 1.45;
+  box-shadow: var(--elev-3);
+  animation: slideIn 0.35s ease;
+  pointer-events: auto;
+  transition: opacity 0.3s ease;
+}
+
+.toast.success { background: var(--good); color: #10231a; }
+.toast.error { background: var(--bad); color: #2a0d11; }
+.toast.info { background: var(--accent, #8b5cf6); color: #fff; }
+/* Amber "it worked, but…" — the save landed while something still needs a
+   hand. Without this rule the toast renders with no background at all. */
+.toast.warning { background: var(--warn, #e8c069); color: #1a1a1a; }
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+}
+
+/* ================================================== CONFIRM DIALOG */
+/* The source builds this with inline styles; here it is a stylesheet so the
+   theme tokens apply and light mode is not a second hand-written palette. */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.65);
+  animation: fadeIn 0.15s ease;
+}
+.modal-card {
+  width: 100%;
+  max-width: 480px;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  background: var(--card-bg);
+  border: 1px solid var(--card-line);
+  box-shadow: var(--elev-3);
+  color: var(--text);
+}
+.modal-title { margin: 0 0 0.85rem; font-size: 1.15rem; font-weight: 700; }
+.modal-body {
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  white-space: pre-line;   /* the body lists fields on their own lines */
+}
+.modal-actions { display: flex; gap: 0.6rem; justify-content: flex-end; margin-top: 1.25rem; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .modal-overlay { animation: none; } }
+
+
+/* ================================================ APP CARD: SERVICES + TIPS */
+/* Values from the source (style.css:1761-1855, :3163). A module is not one
+   container -- installing Media starts six things on six ports -- and without
+   this block the card had no way to say so, which is also why the cards sat
+   short and wide instead of tall. */
+
+.app-card-status {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: var(--text-muted);
+}
+.app-card-status .status-dot { width: 7px; height: 7px; }
+.app-card-status[data-status='running'] { color: var(--good); }
+.app-card-status[data-status='partial'] { color: var(--warn); }
+.app-card-status[data-status='unhealthy'] { color: var(--bad); }
+
+.app-services {
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+  background: var(--bg-input);
+  border-radius: 8px;
+}
+.app-services-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
+.app-service-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+  font-size: 0.82rem;
+}
+.app-service-name { color: var(--text); font-weight: 500; }
+.app-service-right { display: flex; align-items: center; gap: 0.35rem; flex: none; }
+.app-service-port {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+/* A running service with a reachable port is a real link: a bare ":8989"
+   invites a click that goes nowhere. */
+.app-service-open {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+.app-service-open:hover { background: var(--bg-2); border-color: var(--border-strong); }
+
+.app-tips { margin-bottom: 0.75rem; }
+.app-tip {
+  font-size: 0.78rem;
+  color: var(--teal);
+  padding: 0.3rem 0 0.3rem 1rem;
+  position: relative;
+  line-height: 1.4;
+}
+.app-tip::before {
+  content: '\2728';
+  position: absolute;
+  left: 0;
+  font-size: 0.7rem;
+}
+
+
+/* =================================== LAUNCHER / APP STORE CONTENT EDITORS */
+
+.editor-list { display: flex; flex-direction: column; gap: 0.5rem; margin: 1rem 0; }
+
+.editor-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--tile-bg);
+  box-shadow: 0 0 0 1px var(--tile-ring);
+}
+/* A hidden item stays listed and legible — it is one click from coming back,
+   so it must not read as broken. */
+.editor-row.is-off { opacity: 0.55; }
+.editor-row-info { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.editor-row-name { font-weight: 600; font-size: 0.88rem; display: flex; align-items: center; gap: 0.4rem; }
+.editor-row-meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.editor-row-actions { display: flex; gap: 0.4rem; flex: none; }
+
+.editor-badge {
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.editor-badge.is-edited { color: var(--warn); background: var(--warn-soft); }
+
+.editor-form {
+  margin-top: 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  box-shadow: 0 0 0 1px var(--tile-ring);
+}
+.editor-form-title { margin: 0 0 0.85rem; font-size: 0.95rem; font-weight: 700; }
+.editor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 1rem; }
+.editor-grid label { display: flex; flex-direction: column; gap: 0.3rem; }
+.editor-grid label > span { font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); }
+.editor-grid .is-wide { grid-column: 1 / -1; }
+.editor-grid .editor-new-only { grid-column: 1 / -1; }
+.editor-grid textarea.config-input { resize: vertical; line-height: 1.45; }
+.editor-actions { display: flex; align-items: center; gap: 0.6rem; margin-top: 1rem; }
+
+@media (max-width: 700px) {
+  .editor-grid { grid-template-columns: 1fr; }
+  .editor-row { flex-direction: column; align-items: flex-start; }
+}
+
+/* An icon that is text rather than an image: an emoji. Sized per context,
+   because the same value is drawn in a 44px keycap and a 22px list square. */
+.icon-emoji { display: grid; place-items: center; width: 100%; height: 100%; line-height: 1; font-size: 1.25rem; }
+.keycap-emoji { font-size: 1.5rem; }
+.app-emoji { font-size: 1.6rem; }
+.run-emoji { font-size: 1rem; }
+.svc-emoji { font-size: 1.1rem; }
+
+
+/* =============================================== STAGED INSTALLS (APPLY BAR) */
+/* Geometry from the source (style.css:506, :1293, :2365). Installing pulls
+   images, creates containers and opens LAN ports — too much to happen on a
+   first click with no way back, so a click queues and the bar commits. */
+
+.apps-apply-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.75rem 1rem 0.75rem 1.25rem;
+  background: var(--bg-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  box-shadow: 0 18px 48px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  min-width: 340px;
+  max-width: calc(100vw - 32px);
+  animation: apply-bar-in 0.2s ease;
+}
+@keyframes apply-bar-in {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+.apps-apply-bar-summary { color: var(--text-secondary); font-size: 0.875rem; font-weight: 500; }
+.apps-apply-bar-summary strong { color: var(--text); font-weight: 700; }
+.apps-apply-bar-actions { display: flex; gap: 0.5rem; margin-left: auto; }
+
+/* A queued card is unmistakable: nothing has happened yet, and it must not
+   read the same as one that is already installed. */
+.app-card.pending-install,
+.app-card.pending-remove {
+  position: relative;
+  background: var(--bg-2);
+}
+.app-card.pending-install { border-color: var(--accent); box-shadow: var(--elev-2), 0 0 0 2px var(--accent); }
+.app-card.pending-remove { border-color: var(--bad); box-shadow: var(--elev-2), 0 0 0 2px var(--bad); }
+.app-card.pending-install::before,
+.app-card.pending-remove::before {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  padding: 4px 10px;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  border-radius: 0 12px 0 8px;
+}
+.app-card.pending-install::before { content: 'QUEUED · INSTALL'; background: var(--accent); }
+.app-card.pending-remove::before { content: 'QUEUED · REMOVE'; background: var(--bad); }
+
+.app-action-btn.queued-install {
+  background: var(--bg-2);
+  color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.app-action-btn.queued-remove {
+  background: var(--bg-2);
+  color: var(--bad);
+  border-color: var(--bad);
+  box-shadow: 0 0 0 1px var(--bad) inset;
+}
+
+/* --- the disclosure dialog --- */
+.modal-card-wide { max-width: 560px; max-height: 82vh; display: flex; flex-direction: column; }
+.modal-card-wide .modal-body { display: flex; flex-direction: column; min-height: 0; }
+
+.install-disclosure-intro { margin: 0 0 1rem; color: var(--text-secondary); font-size: 0.92rem; }
+.install-disclosure-list { overflow-y: auto; margin: 0 -0.5rem 1rem; padding: 0 0.5rem; flex: 1 1 auto; }
+.install-disclosure-section { margin-bottom: 1.25rem; }
+.install-disclosure-section:last-child { margin-bottom: 0; }
+.install-disclosure-section-title {
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+.install-disclosure-item {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  padding: 0.75rem 0.9rem;
+  margin-bottom: 0.5rem;
+}
+.install-disclosure-item-disable { border-left-color: var(--bad); }
+.install-disclosure-item-name { font-weight: 600; font-size: 0.95rem; color: var(--text); margin-bottom: 0.35rem; }
+.install-disclosure-item-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.install-disclosure-chip {
+  background: var(--bg-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 0.1rem 0.55rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+.install-disclosure-item-services { font-size: 0.8rem; color: var(--text-secondary); font-style: italic; }
+.install-disclosure-item code {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  background: var(--bg-0);
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+}
+.install-disclosure-footer { padding: 0.75rem 0 0; border-top: 1px solid var(--border); }
+.install-disclosure-meta { font-size: 0.78rem; color: var(--text-muted); text-align: center; margin-bottom: 0.7rem; }
+/* Loud on purpose: this is the line that stops someone concluding a slow
+   first pull is a broken install. */
+.install-disclosure-notice {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  padding: 0.75rem 0.9rem;
+  border-radius: 10px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  box-shadow: 0 0 16px rgba(34, 197, 94, 0.18), inset 0 0 0 1px rgba(34, 197, 94, 0.15);
+}
+.install-disclosure-notice-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+  color: hsl(142, 71%, 60%);
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.install-disclosure-notice-text { font-size: 0.85rem; line-height: 1.45; color: hsl(142, 65%, 82%); }
+.install-disclosure-notice-text strong { color: hsl(142, 85%, 70%); font-weight: 700; }
+
+@media (prefers-reduced-motion: reduce) { .apps-apply-bar { animation: none; } }
+
+
+/* ============================================ LIVE INSTALL PROGRESS DIALOG */
+/* From the source (style.css:3228, :5663). The log is deliberately raw
+   compose output on a near-black panel: an install that only reports at the
+   end is a minute of silence, which is when people reload mid-pull. */
+
+.progress-card { max-width: 720px; }
+
+.progress-steps { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+.progress-step {
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--bg-input);
+  color: var(--text-muted);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+.progress-step.active { background: var(--accent-soft); color: var(--accent); }
+.progress-step.done { background: var(--good-soft); color: var(--good); }
+
+.progress-log {
+  /* The same near-black the Live Logs window uses, so terminal output looks
+     the same everywhere in HomeBox. */
+  background: #0b0d12;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: #cbd0dc;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-y: auto;
+  max-height: 420px;
+  min-height: 220px;
+}
+.progress-log.has-stderr { border-color: var(--bad-line); }
+
+/* A reload mid-pull leaves containers half-created and the log gone. Say so
+   before it happens rather than explaining it afterwards. */
+.progress-do-not-close {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid hsl(38, 75%, 50%);
+  border-left-width: 4px;
+  border-radius: 6px;
+  background: hsla(38, 95%, 60%, 0.08);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.progress-do-not-close strong { display: block; color: hsl(38, 95%, 70%); margin-bottom: 0.25rem; }

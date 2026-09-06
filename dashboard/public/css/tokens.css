@@ -1,0 +1,116 @@
+/* ==========================================================================
+   HomeBox — design tokens
+   Dark is the default and the one that is tuned; light is a real second
+   theme, not an inversion. Every colour below is defined once on :root so a
+   component never hardcodes a hex and quietly breaks in the other theme.
+   ========================================================================== */
+
+:root {
+  /* Surfaces — warm near-black rather than a cold blue-black, so the dark
+     theme reads as a comfortable room instead of a void. */
+  --bg-0: #0f1117;   /* page */
+  --bg-1: #1a1d26;   /* card */
+  --bg-2: #262b37;   /* hover, inner panels */
+  --bg-3: #323847;   /* drawers, popovers */
+  --bg-input: #1e2230;
+
+  --border: #2a2e3a;
+  --border-strong: #3e4352;
+  --border-hair: rgba(255, 255, 255, 0.08);
+  /* An inner tile (a gauge, a network fact, a running row) is RECESSED into
+     its card, not raised off it: darker than the card behind it, with only a
+     faint ring and no drop shadow. Making these lighter is what turns a
+     well into a floating chip and flattens the whole card. */
+  --tile-bg: rgba(13, 16, 25, 0.94);
+  --tile-ring: rgba(255, 255, 255, 0.06);
+  /* The faintest rule in the system: card headers and category separators,
+     where a visible line would cut the card in half. */
+  --module-hairline: rgba(255, 255, 255, 0.04);
+  --border-soft: rgba(255, 255, 255, 0.04);
+
+  /* A card is not flat --bg-1: in dark mode it is lifted, bordered and
+     shadowed. Kept as tokens so the recessed tiles above stay darker than
+     whatever the card is. */
+  --card-bg: rgba(24, 28, 40, 0.98);
+  --card-line: rgba(255, 255, 255, 0.13);
+  --card-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 10px 30px -8px rgba(0, 0, 0, 0.82);
+  --card-fill: color-mix(in srgb, var(--bg-1) 94%, transparent);
+  --grid-gap: 28px;
+
+  /* "Live" green is its own colour, not the semantic --good: it is used for
+     pulse dots and glows where saturation matters more than contrast. */
+  /* The atmosphere layer reads these three pools plus an overall strength.
+     A theme that leaves --mesh-* undefined gets a transparent backdrop,
+     which is exactly what the light themes want. */
+  --atmo: 0.95;
+  --mesh-1: rgba(139, 92, 246, 0.42);
+  --mesh-2: rgba(56, 189, 248, 0.30);
+  --mesh-3: rgba(244, 114, 182, 0.22);
+  --warm-glow: rgba(215, 201, 175, 0.05);
+
+  --live: #30d158;
+  --live-glow: rgba(48, 209, 88, 0.25);
+
+  /* Page titles are filled with a top-down gradient rather than a flat
+     colour — the detail that keeps a big heading from looking like plain
+     bold text. */
+  --title-gradient: linear-gradient(180deg, #ffffff 0%, #cfcfd6 100%);
+
+  /* Cards lean on ambient shadow for depth, with a hairline ring so they
+     still have an edge on a screen with the brightness turned down. */
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 0 1px var(--border);
+  --elev-2: 0 8px 24px -8px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--border);
+  --elev-3: 0 24px 64px -16px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--border-strong);
+
+
+  /* The launcher keycap. style.css in the original overrides the per-app
+     tint with this gradient and keeps the brand icon at full saturation, so
+     a row of apps reads as a keyboard rather than a row of colour swatches. */
+  --keycap-bg: linear-gradient(180deg, #242834, #1d2029);
+  --shadow-keycap:
+    0 2px 4px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  --text: #f8f9fb;
+  --text-secondary: #c7ccd6;
+  --text-muted: #9196a5;
+
+  /* Semantic colours. Green is softened off pure terminal green; red leans
+     coral so an error state is legible without shouting. */
+  --good: #4cd991;
+  --good-soft: rgba(76, 217, 145, 0.12);
+  --good-line: rgba(76, 217, 145, 0.32);
+  --warn: #e8c069;
+  --warn-soft: rgba(232, 192, 105, 0.12);
+  --warn-line: rgba(232, 192, 105, 0.32);
+  --bad: #ef707d;
+  --bad-soft: rgba(239, 112, 125, 0.12);
+  --bad-line: rgba(239, 112, 125, 0.32);
+  --info: #56cde6;
+  --info-soft: rgba(86, 205, 230, 0.12);
+
+  /* Accent is user-tunable (Settings → Accent) and only ever drives active
+     states, focus rings and gauge arcs — never a semantic health colour. */
+  --accent: #8b5cf6;
+  /* Setup tips are their own colour in the source (style.css:110) -- not
+     the semantic --good/--warn family, because a tip is neither. */
+  --teal: #5ac8fa;
+  --accent-soft: rgba(139, 92, 246, 0.14);
+  --accent-line: rgba(139, 92, 246, 0.36);
+  --accent-contrast: #ffffff;
+  /* A touch brighter than --accent, for text and icons ON an accent tint. */
+  --accent-hover: #a78bfa;
+  /* Used for the glow under a gauge arc, not for any surface. */
+  --accent-glow: rgba(139, 92, 246, 0.45);
+
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-pill: 999px;
+
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+
+  --shell-max: 1320px;
+  --topbar-h: 60px;
+}

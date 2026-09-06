@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# ==========================================================================
+# HomeBox bootstrap — the one-liner.
+#
+#   curl -fsSL https://raw.githubusercontent.com/abeksis/HomeBox/main/scripts/bootstrap.sh | sudo bash
+#
+# This is the piece install.sh cannot be: install.sh configures a tree that is
+# already on disk, and something has to put it there first. This downloads the
+# repository, unpacks it to /opt/homebox, and hands over.
+#
+# GitHub is the single source. An earlier version had every running HomeBox
+# serve its own copy over the LAN, which was removed on purpose: a box that had
+# drifted would hand out a tree nobody could reproduce, and it meant an
+# unauthenticated endpoint on every machine giving away the whole install.
+#
+# You are piping a script from the internet into a root shell. That is a real
+# thing to be careful about, and the answer is not to trust the wording here:
+#
+#   curl -fsSL https://raw.githubusercontent.com/abeksis/HomeBox/main/scripts/bootstrap.sh -o hb.sh
+#   less hb.sh && sudo bash hb.sh
+# ==========================================================================
+set -euo pipefail
+
+# Override any of these to install from a fork, a branch, a tag, or — on a
+# network with no route to GitHub — a tarball you host yourself:
+#   HB_TARBALL=http://192.0.2.20/homebox.tar.gz sudo -E bash hb.sh
+HB_REPO="${HB_REPO:-abeksis/HomeBox}"
+HB_REF="${HB_REF:-main}"
+HB_TARBALL="${HB_TARBALL:-https://codeload.github.com/${HB_REPO}/tar.gz/refs/heads/${HB_REF}}"
+HB_ROOT="${HB_ROOT:-/opt/homebox}"
+HB_USER="${HB_USER:-${SUDO_USER:-$(id -un)}}"
+
+if [ -t 1 ]; then
+  BOLD=$'\033[1m'; DIM=$'\033[2m'; RED=$'\033[31m'; GREEN=$'\033[32m'
+  YELLOW=$'\033[33m'; RESET=$'\033[0m'
+else
+  BOLD=''; DIM=''; RED=''; GREEN=''; YELLOW=''; RESET=''
+fi
+step() { printf '\n%s==>%s %s%s%s\n' "$GREEN" "$RESET" "$BOLD" "$*" "$RESET"; }
+warn() { printf '%s!! %s%s\n' "$YELLOW" "$*" "$RESET"; }
+die()  { printf '%sxx %s%s\n' "$RED" "$*" "$RESET" >&2; exit 1; }
+
+printf '%s\n' "${BOLD}HomeBox${RESET} ${DIM}bootstrap — ${HB_REPO}@${HB_REF}${RESET}"
+
+# --------------------------------------------------------------- 1. checks
+
+[ "$(id -u)" -eq 0 ] || die "run this with sudo — it writes to $HB_ROOT and installs packages"
+
+. /etc/os-release 2>/dev/null || die "cannot read /etc/os-release — this expects Debian or Ubuntu"
+case "${ID:-}${ID_LIKE:-}" in
+  *debian*|*ubuntu*) ;;
+  *) warn "${PRETTY_NAME:-this OS} is not Debian or Ubuntu — continuing, but the package steps may not fit" ;;
+esac
+
+case "$(uname -m)" in
+  x86_64|aarch64|arm64) ;;
+  *) die "unsupported architecture: $(uname -m)" ;;
+esac
+
+export DEBIAN_FRONTEND=noninteractive
+for tool in curl tar; do
+  command -v "$tool" >/dev/null 2>&1 || { apt-get update -qq; apt-get install -y -qq "$tool"; }
+done
+
+# --------------------------------------------------- 2. refuse to clobber
+
+# An existing install has .env in it — every generated password on that box.
+# Unpacking over it would not delete the file, but this is not an upgrade path
+# and pretending it is would be how someone loses a working box.
+if [ -e "$HB_ROOT/.env" ]; then
+  die "$HB_ROOT is already a HomeBox install.
+To update it in place:      cd $HB_ROOT && git pull && sudo bash install.sh
+To start over, move it out of the way first:
+  sudo mv $HB_ROOT ${HB_ROOT}.old"
+fi
+
+# ------------------------------------------------------------ 3. download
+
+step "Downloading HomeBox"
+printf '  %s\n' "$HB_TARBALL"
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+
+if ! curl -fsSL --connect-timeout 15 --max-time 300 "$HB_TARBALL" -o "$TMP/homebox.tar.gz"; then
+  die "could not download $HB_TARBALL
+Check the repository and branch exist and are reachable:
+  curl -I $HB_TARBALL"
+fi
+
+# A wrong URL usually returns an HTML error page, and `tar` then fails with
+# something unhelpful. Say what actually happened instead.
+if ! tar -tzf "$TMP/homebox.tar.gz" >/dev/null 2>&1; then
+  die "what came back is not a tarball — check $HB_REPO and the branch name"
+fi
+printf '  %s downloaded\n' "$(du -h "$TMP/homebox.tar.gz" | cut -f1)"
+
+step "Unpacking to $HB_ROOT"
+mkdir -p "$HB_ROOT"
+# GitHub wraps an archive in a <repo>-<ref>/ directory; strip it so the tree
+# lands at $HB_ROOT rather than $HB_ROOT/homebox-main.
+tar -xzf "$TMP/homebox.tar.gz" -C "$HB_ROOT" --strip-components=1
+[ -f "$HB_ROOT/install.sh" ] || die "the archive did not contain install.sh — nothing was installed"
+chmod +x "$HB_ROOT/homebox" "$HB_ROOT/install.sh" "$HB_ROOT"/scripts/*.sh 2>/dev/null || true
+chown -R "$HB_USER:$HB_USER" "$HB_ROOT"
+printf '  %s v%s\n' "$HB_ROOT" "$(cat "$HB_ROOT/VERSION" 2>/dev/null || echo '?')"
+
+# ------------------------------------------------------------- 4. install
+
+# Stop here with HB_FETCH_ONLY=1 — for reading the tree before anything is
+# installed, and for testing this script where installing Docker is not the
+# part under test.
+if [ -n "${HB_FETCH_ONLY:-}" ]; then
+  step "Fetched only, as asked"
+  printf '  %s is ready. Run the installer when you want it:\n    sudo bash %s/install.sh\n' "$HB_ROOT" "$HB_ROOT"
+  exit 0
+fi
+
+step "Handing over to the installer"
+HB_ROOT="$HB_ROOT" HB_USER="$HB_USER" bash "$HB_ROOT/install.sh"

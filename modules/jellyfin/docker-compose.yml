@@ -1,0 +1,71 @@
+# ==========================================
+# HOMEBOX - Jellyfin Module
+# The media server that plays what the media module collected.
+# ==========================================
+
+x-homebox:
+  id: jellyfin
+  added_at: "2026-09-05"
+  title: "Jellyfin"
+  tagline: "Your own streaming service"
+  description: "Plays your films, shows and music on a TV, phone or browser, with apps for Android TV, Fire TV, Roku and iOS. No subscription, no account, nothing leaves the box."
+  icon: "jellyfin.svg"
+  category: "media"
+  required: false
+  default: false
+  ram: "~500MB"
+  theme:
+    emoji: "🍿"
+    color: "#aa5cc3"
+    bg: "rgba(170,92,195,0.12)"
+  tips:
+    - "Point libraries at /data/<Movies> and /data/<TV series> — the same folder names the media module writes to, under the same single /data mount"
+    - "Without a GPU every transcode is CPU work. Direct-play formats your TV understands and this box stays quiet"
+    - "If this box has an Intel iGPU, uncomment the /dev/dri device below and enable VAAPI in Playback settings"
+  services:
+    jellyfin:
+      friendly_name: "Jellyfin"
+      color: "#aa5cc3"
+      description: "Media server"
+      icon: "jellyfin.svg"
+      port_map: 8096
+      url_scheme: "http"
+      first_login: "The first visit runs a setup wizard where you create the admin account and add libraries."
+
+services:
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    ports:
+      - "8096:8096"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/jellyfin/config/jellyfin:/config
+      # The same single pool mount the media module uses, so Jellyfin reads
+      # exactly the files Sonarr and Radarr wrote, at the same paths.
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/data:ro
+    # Hardware transcoding: uncomment on a box with an Intel/AMD GPU. Left
+    # commented because a hardcoded device makes Docker refuse to start the
+    # container on a VM that has no /dev/dri at all.
+    # devices:
+    #   - /dev/dri:/dev/dri
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '3.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

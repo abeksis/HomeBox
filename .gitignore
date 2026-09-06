@@ -1,0 +1,23 @@
+# Generated at install time — every password on the box lives here.
+.env
+.env.bak-*
+
+# Per-install state, not part of HomeBox: the enabled list, the activity log,
+# UI preferences, App Store text edits and downloaded icons.
+state/*
+!state/.gitignore
+
+# App data and config live inside their module — never in git.
+modules/*/config/
+
+# The shared pool: media, photos, books, downloads.
+data/
+
+# Encrypted archives of all of the above.
+backups/
+
+# Site notes. HOST-CHANGES.md records what was done to ONE box — its NAS
+# address, its mount points, its media layout. That is exactly the kind of
+# thing that must not ride along into someone else's install, and this repo is
+# public. Keep it on the box; it is in the backups.
+docs/HOST-CHANGES.md

@@ -1,0 +1,82 @@
+# ==========================================
+# HOMEBOX - Pi-hole
+#
+# Added from Settings > App Store contents, then completed by hand: the
+# generated template gives every app one TCP port and one /config volume,
+# which is right for most images and wrong for this one. Pi-hole serves its
+# UI on 80, answers DNS on 53 over BOTH tcp and udp, and keeps its data in
+# two directories that are not /config.
+#
+# That is the point of generating a real module rather than a second kind of
+# app: the file is here, and it can be edited.
+# ==========================================
+
+x-homebox:
+  id: pi-hole
+  added_at: "2026-09-06"
+  title: "Pi-hole"
+  tagline: "Block ads + trackers across your whole network"
+  description: "Blocks ads and trackers for every device on your network with no browser add-ons or per-device setup. It works as a DNS server: the address book every device uses to find websites. Pi-hole drops the ad addresses so they never load."
+  category: "network"
+  required: false
+  ram: "~90MB"
+  user_created: true
+  theme:
+    emoji: "🕳️"
+    color: "#f60d1a"
+    bg: "rgba(246,13,26,0.12)"
+  tips:
+    - "Point your router's DNS at this box and every device is covered — that is the whole setup"
+    - "Port 53 has to be free. systemd-resolved holds it on Debian: set DNSStubListener=no in /etc/systemd/resolved.conf and restart it"
+    - "Only one DNS blocker can own port 53, so Pi-hole and the AdGuard Home module cannot both run"
+  env_vars:
+    PIHOLE_PASSWORD:
+      label: "Pi-hole admin password"
+      type: "secret"
+      config_editable: false
+  services:
+    pihole:
+      friendly_name: "Pi-hole"
+      color: "#f60d1a"
+      description: "Network-wide ad blocking over DNS"
+      port_map: 8053
+      container_port: 80
+      url_scheme: "http"
+      first_login: "Log in at /admin with the password from `homebox secrets pi-hole`."
+
+services:
+  pihole:
+    image: pihole/pihole:2026.07.2
+    container_name: pihole
+    ports:
+      # Bound to the LAN address rather than 0.0.0.0 on purpose: systemd-resolved
+      # already holds 127.0.0.53:53, and a wildcard bind collides with it.
+      - "${HB_HOST_ADDRESS:-0.0.0.0}:53:53/tcp"
+      - "${HB_HOST_ADDRESS:-0.0.0.0}:53:53/udp"
+      - "8053:80/tcp"
+    environment:
+      - TZ=${TZ:-UTC}
+      - FTLCONF_webserver_api_password=${PIHOLE_PASSWORD:-}
+      # Answer queries from anywhere on the LAN. The default only replies to
+      # the container's own subnet, which makes it look broken from a phone.
+      - FTLCONF_dns_listeningMode=all
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/pi-hole/config/pihole:/etc/pihole
+      - ${HB_ROOT:-/opt/homebox}/modules/pi-hole/config/dnsmasq.d:/etc/dnsmasq.d
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.50'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

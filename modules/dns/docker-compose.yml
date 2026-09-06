@@ -1,0 +1,67 @@
+# ==========================================
+# HOMEBOX - DNS Module
+# AdGuard Home: network-wide ad blocking, and the DNS that makes the
+# *.home addresses in this install resolve.
+# ==========================================
+
+x-homebox:
+  id: dns
+  added_at: "2026-09-05"
+  title: "AdGuard Home"
+  tagline: "Block ads for every device at once"
+  description: "A DNS server for the whole house. It filters ads and trackers before they are ever requested, on phones and TVs that cannot run an ad blocker, and it is where you point the *.home names HomeBox hands out."
+  icon: "adguard-home.png"
+  category: "network"
+  required: false
+  default: true
+  ram: "~120MB"
+  theme:
+    emoji: "🛡️"
+    color: "#67b279"
+    bg: "rgba(103,178,121,0.12)"
+  tips:
+    - "Port 53 must be free first. On Debian check `ss -lntup | grep :53` — if systemd-resolved holds it, set DNSStubListener=no in /etc/systemd/resolved.conf and restart it"
+    - "Setup wizard runs on 3054 the first time, then the UI lives on 3053"
+    - "Add a DNS rewrite for *.home pointing at this box and every HomeBox address resolves house-wide"
+  services:
+    adguard:
+      friendly_name: "AdGuard Home"
+      color: "#67b279"
+      description: "DNS filtering and ad blocking"
+      icon: "adguard-home.png"
+      port_map: 3053
+      container_port: 80
+      url_scheme: "http"
+      first_login: "The first visit runs a setup wizard on port 3054 where you create the admin account."
+
+services:
+  adguard:
+    image: adguard/adguardhome:v0.107.79
+    container_name: adguard
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "3054:3000/tcp"
+      - "3053:80/tcp"
+    environment:
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/dns/config/adguard/work:/opt/adguardhome/work
+      - ${HB_ROOT:-/opt/homebox}/modules/dns/config/adguard/conf:/opt/adguardhome/conf
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.50'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

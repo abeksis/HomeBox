@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="en" data-theme="dark" data-accent="purple">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>HomeBox</title>
+  <meta name="color-scheme" content="dark light">
+  <link rel="icon" href="icons/homebox.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/tokens.css?v=__V__">
+  <link rel="stylesheet" href="css/themes.css?v=__V__">
+  <link rel="stylesheet" href="css/app.css?v=__V__">
+</head>
+<body>
+
+<!-- Backdrop: colour pools, grain and vignette. Purely decorative. -->
+<div class="atmo" aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="topbar-left">
+      <a class="brand" href="#home" data-page="home">
+        <img class="brand-mark" src="icons/homebox.svg" alt="">
+        <span>HomeBox</span>
+        <span class="brand-version mono" id="brand-version">—</span>
+      </a>
+    </div>
+
+    <nav class="topbar-nav" role="navigation" aria-label="Main navigation">
+      <a href="#home" data-page="home" class="tab active" aria-current="page">Home</a>
+      <a href="#apps" data-page="apps" class="tab">Apps</a>
+      <a href="#containers" data-page="containers" class="tab">Containers</a>
+      <a href="#logs" data-page="logs" class="tab">Logs</a>
+      <a href="#settings" data-page="settings" class="tab">Settings</a>
+    </nav>
+
+    <div class="topbar-right">
+      <span class="topbar-stats" id="topbar-stats">
+        <span class="topbar-stat" id="topbar-cpu" title="How hard the processor is working right now">CPU --</span>
+        <span class="topbar-stat" id="topbar-ram" title="How much memory is in use right now">RAM --</span>
+        <span class="topbar-stat" id="topbar-disk" title="How full the system disk is">Disk --</span>
+      </span>
+      <span class="live-dot" id="live-dot" title="Live connection to the server">
+        <span class="live-pip"></span><span class="live-label">live</span>
+      </span>
+    </div>
+  </div>
+</header>
+
+<main class="shell">
+
+  <!-- ==================== HOME ==================== -->
+  <section id="page-home" class="page active">
+    <div class="home-hero">
+      <div class="hero-greeting">
+        <h1 id="greeting">Hey there 👋</h1>
+        <p id="hero-sub">Checking your server…</p>
+      </div>
+      <div class="hero-brand" aria-hidden="true">
+        <img src="icons/homebox.svg" alt="" class="hero-brand-logo">
+        <span class="hero-brand-text">Welcome back to <strong>HomeBox</strong></span>
+      </div>
+    </div>
+
+    <!-- The one-line answer to "is my server OK?", above everything else. -->
+    <div class="status-hero" id="status-hero" data-level="unknown">
+      <div class="sh-health">
+        <span class="sh-icon" id="sh-icon" aria-hidden="true">•</span>
+        <div class="sh-text">
+          <div class="sh-title" id="sh-title">Checking your server…</div>
+          <div class="sh-sub" id="sh-sub">One moment.</div>
+        </div>
+      </div>
+      <div class="sh-cta" id="sh-cta"></div>
+    </div>
+
+    <!-- Band 1: the box itself -->
+    <div class="band-head">
+      <div class="band-titles">
+        <div class="band-title"><span class="band-ico" aria-hidden="true">🖥</span> Your Server</div>
+        <div class="band-sub">Apps and system health</div>
+      </div>
+      <div class="band-rule"></div>
+    </div>
+
+    <div class="bento-grid">
+      <!-- LAUNCHER — every app worth opening, one click away -->
+      <div class="bento-card bento-8" style="--bento-delay:0ms">
+        <div class="card-header">
+          <span class="card-label">Launcher</span>
+          <span class="card-meta mono" id="launcher-meta"></span>
+        </div>
+        <div class="launcher" id="launcher"></div>
+      </div>
+
+      <div class="bento-col-right bento-4">
+        <!-- SYSTEM — the four numbers that matter, as rings -->
+        <div class="bento-card" style="--bento-delay:60ms">
+          <div class="card-header">
+            <span class="card-label">System</span>
+            <span class="card-meta mono" id="system-meta">live</span>
+          </div>
+          <div class="gauges" id="gauges">
+            <div class="gauge">
+              <div class="ring" id="ring-cpu">
+                <svg viewBox="0 0 36 36" aria-hidden="true">
+                  <path class="ring-bg" d="M18 2.0845a15.9155 15.9155 0 0 1 0 31.831a15.9155 15.9155 0 0 1 0-31.831"/>
+                  <path class="ring-fg" id="arc-cpu" stroke-dasharray="0,100" d="M18 2.0845a15.9155 15.9155 0 0 1 0 31.831a15.9155 15.9155 0 0 1 0-31.831"/>
+                </svg>
+                <span class="ring-value mono" id="val-cpu">--</span>
+              </div>
+              <div class="gauge-label">CPU</div>
+              <div class="gauge-detail mono" id="detail-cpu"></div>
+            </div>
+            <div class="gauge">
+              <div class="ring" id="ring-ram">
+                <svg viewBox="0 0 36 36" aria-hidden="true">
+                  <path class="ring-bg" d="M18 2.0845a15.9155 15.9155 0 0 1 0 31.831a15.9155 15.9155 0 0 1 0-31.831"/>
+                  <path class="ring-fg" id="arc-ram" stroke-dasharray="0,100" d="M18 2.0845a15.9155 15.9155 0 0 1 0 31.831a15.9155 15.9155 0 0 1 0-31.831"/>
+                </svg>
+                <span class="ring-value mono" id="val-ram">--</span>
+              </div>
+              <div class="gauge-label">RAM</div>
+              <div class="gauge-detail mono" id="detail-ram"></div>
+            </div>
+            <div class="gauge">
+              <div class="ring" id="ring-disk">
+                <svg viewBox="0 0 36 36" aria-hidden="true">
+                  <path class="ring-bg" d="M18 2.0845a15.9155 15.9155 0 0 1 0 31.831a15.9155 15.9155 0 0 1 0-31.831"/>
+                  <path class="ring-fg" id="arc-disk" stroke-dasharray="0,100" d="M18 2.0845a15.9155 15.9155 0 0 1 0 31.831a15.9155 15.9155 0 0 1 0-31.831"/>
+                </svg>
+                <span class="ring-value mono" id="val-disk">--</span>
+              </div>
+              <div class="gauge-label">Disk</div>
+              <div class="gauge-detail mono" id="detail-disk"></div>
+            </div>
+            <div class="gauge">
+              <div class="uptime mono" id="val-uptime">--</div>
+              <div class="gauge-label">Uptime</div>
+              <div class="gauge-detail mono" id="detail-load"></div>
+            </div>
+          </div>
+          <div class="quick-actions">
+            <button type="button" class="quick-action" id="action-restart-all" title="Restart every installed app">
+              <span class="qa-icon" aria-hidden="true">&#8634;</span><span class="qa-label">Restart</span>
+            </button>
+            <a class="quick-action" id="action-portainer" href="#apps" data-page="apps">
+              <span class="qa-icon" aria-hidden="true">&#128011;</span><span class="qa-label">Portainer</span>
+            </a>
+            <button type="button" class="quick-action" id="action-update-all" title="Pull newer images for every installed app">
+              <span class="qa-icon" aria-hidden="true">&#8682;</span><span class="qa-label">Updates</span>
+            </button>
+            <a class="quick-action" href="#logs" data-page="logs">
+              <span class="qa-icon" aria-hidden="true">&#9776;</span><span class="qa-label">Logs</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- ACTIVITY — what the box did while you were not looking -->
+        <div class="bento-card bento-activity" style="--bento-delay:100ms">
+          <div class="card-header">
+            <span class="card-label">Recent activity</span>
+            <span class="card-meta mono" id="activity-meta">live</span>
+          </div>
+          <ul class="activity-list" id="activity-list">
+            <li class="activity-empty">Nothing yet. Installs and container events show up here.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Band 2: everything around the apps -->
+    <div class="band-head">
+      <div class="band-titles">
+        <div class="band-title"><span class="band-ico" aria-hidden="true">🛡</span> Network &amp; Maintenance</div>
+        <div class="band-sub">Running services, connectivity &amp; backups</div>
+      </div>
+      <div class="band-rule"></div>
+    </div>
+
+    <div class="bento-grid">
+      <!-- RUNNING — every container HomeBox owns, with its ports -->
+      <div class="bento-card bento-12" style="--bento-delay:120ms">
+        <div class="card-header">
+          <span class="card-label">Running</span>
+          <span class="card-meta mono" id="running-meta"></span>
+        </div>
+        <div class="running-list" id="running-list"></div>
+      </div>
+
+      <!-- NETWORK — how to reach this box -->
+      <div class="bento-card bento-8" style="--bento-delay:180ms">
+        <div class="card-header">
+          <span class="card-label">Network</span>
+          <span class="card-meta mono" id="network-meta"></span>
+        </div>
+        <div class="network-grid" id="network-grid"></div>
+      </div>
+
+      <!-- BACKUPS — what would be lost, and whether anything is copying it -->
+      <div class="bento-card bento-4" style="--bento-delay:220ms">
+        <div class="card-header">
+          <span class="card-label">Backups</span>
+          <span class="card-meta mono" id="backup-meta"></span>
+        </div>
+        <div class="backup-body" id="backup-body"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== APPS ==================== -->
+  <section id="page-apps" class="page">
+    <div class="page-intro">
+      <h1>App Store</h1>
+      <p>Turn apps on and off like flipping a switch. Each module is a group of related services that work together, and installing one pulls its images and starts them here.</p>
+      <div class="store-stats" id="store-stats"></div>
+    </div>
+
+    <!-- What the installed set costs, against what this box actually has. -->
+    <div class="ram-usage-bar">
+      <div class="ram-bar-label">
+        <span>Estimated RAM</span>
+        <span id="ram-usage-text">-- / --</span>
+      </div>
+      <div class="ram-bar-track">
+        <div class="ram-bar-fill" id="ram-bar-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="store-toolbar">
+      <div class="store-search">
+        <svg class="store-search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
+        </svg>
+        <input type="text" id="app-search" class="store-search-input"
+               placeholder="Search apps… (Jellyfin, Immich, Vaultwarden, …)" autocomplete="off" aria-label="Search apps">
+        <button type="button" id="store-search-clear" class="store-search-clear hidden" aria-label="Clear search">×</button>
+      </div>
+      <div class="store-filter-bar chips" id="category-chips"></div>
+      <div class="store-sort">
+        <label for="store-sort-select" class="store-sort-label">Sort:</label>
+        <select id="store-sort-select" class="store-sort-select">
+          <option value="name">Name</option>
+          <option value="status">Installed first</option>
+          <option value="ram">RAM</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="apps-grid" id="apps-grid"></div>
+
+    <div class="unclaimed-block" id="unclaimed-block" hidden>
+      <div class="card-header">
+        <span class="card-label">Not in any module</span>
+        <span class="card-meta mono" id="unclaimed-meta"></span>
+      </div>
+      <p class="hint">These containers run on this box but were not created by HomeBox, so no module owns them.</p>
+      <div class="unclaimed-list" id="unclaimed-list"></div>
+    </div>
+  </section>
+
+  <!-- ==================== CONTAINERS ==================== -->
+  <section id="page-containers" class="page">
+    <div class="page-intro">
+      <h1>Containers</h1>
+      <p>Everything Docker is running on this box, with the module that owns it. Containers HomeBox did not create show no module.</p>
+    </div>
+    <div class="filter-row">
+      <div class="search-bar">
+        <input type="text" id="container-search" placeholder="Filter containers…" autocomplete="off" aria-label="Filter containers">
+      </div>
+      <div class="chips" id="container-chips"></div>
+    </div>
+    <div class="table-wrap">
+      <table class="table" id="containers-table">
+        <thead>
+          <tr><th>Status</th><th>Name</th><th>Image</th><th>Ports</th><th>Module</th><th></th></tr>
+        </thead>
+        <tbody id="containers-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==================== LOGS ==================== -->
+  <section id="page-logs" class="page">
+    <div class="page-intro">
+      <h1>Live Logs</h1>
+      <p>A real-time diary of what each service is doing. Mostly useful when something breaks — look for lines containing "error".</p>
+    </div>
+    <div class="logs-controls">
+      <select id="log-picker" class="pill-select" aria-label="Container">
+        <option value="">Pick a service…</option>
+      </select>
+      <input id="log-filter" class="setting-input" placeholder="Filter (e.g. error)" aria-label="Filter log output">
+      <select id="log-tail" class="pill-select pill-select-sm" aria-label="Number of lines">
+        <option value="100">100 lines</option>
+        <option value="200" selected>200 lines</option>
+        <option value="500">500 lines</option>
+        <option value="1000">1000 lines</option>
+      </select>
+      <label class="logs-follow">
+        <input type="checkbox" id="log-follow" checked aria-label="Scroll to the newest lines">
+        Auto-scroll
+      </label>
+      <button type="button" class="btn-soft" id="log-refresh">Refresh</button>
+    </div>
+    <div class="log-window">
+      <pre class="log-output mono" id="log-view">Pick a service above to see its logs here.</pre>
+    </div>
+  </section>
+
+  <!-- ==================== SETTINGS ==================== -->
+  <section id="page-settings" class="page">
+    <div class="page-intro">
+      <h1>Settings</h1>
+      <p>Everything about this install, grouped. Appearance is stored on the server in <code class="mono">state/prefs.json</code>, so it follows you to any browser.</p>
+    </div>
+
+    <div class="settings-tabs" id="settings-tabs">
+      <button type="button" class="settings-tab active" data-stab="general">General</button>
+      <button type="button" class="settings-tab" data-stab="launcher">Launcher</button>
+      <button type="button" class="settings-tab" data-stab="catalog">App Store</button>
+      <button type="button" class="settings-tab" data-stab="server">Server Config</button>
+      <button type="button" class="settings-tab" data-stab="network">Network</button>
+      <button type="button" class="settings-tab" data-stab="remote">Remote access</button>
+      <button type="button" class="settings-tab" data-stab="backup">Backup</button>
+      <button type="button" class="settings-tab" data-stab="passwords">Passwords</button>
+      <button type="button" class="settings-tab" data-stab="monitoring">Monitoring</button>
+      <button type="button" class="settings-tab" data-stab="tools">Tools</button>
+    </div>
+
+    <!-- GENERAL -->
+    <div class="settings-panel active" data-stab-panel="general">
+      <div class="settings-grid">
+        <div class="bento-card">
+          <div class="card-header"><span class="card-label">Appearance</span></div>
+          <div class="setting-block">
+            <div class="setting-title">Theme</div>
+            <div class="setting-sub">Colours for the whole page. Each theme brings its own accent.</div>
+            <div class="swatches" id="theme-swatches"></div>
+          </div>
+          <div class="setting-block">
+            <div class="setting-title">Background</div>
+            <div class="setting-sub">What sits behind the cards.</div>
+            <div class="swatches" id="atmo-swatches"></div>
+          </div>
+        </div>
+
+        <div class="bento-card">
+          <div class="card-header"><span class="card-label">This install</span></div>
+          <dl class="kv" id="install-info"></dl>
+        </div>
+
+        <div class="bento-card" id="module-errors-card" hidden>
+          <div class="card-header"><span class="card-label">Module problems</span></div>
+          <ul class="issue-list" id="module-errors"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SERVER CONFIG -->
+    <!-- LAUNCHER CONTENTS -->
+    <div class="settings-panel" data-stab-panel="launcher">
+      <div class="bento-card">
+        <div class="card-header">
+          <span class="card-label">Launcher contents</span>
+          <span class="card-meta mono" id="launcher-editor-summary"></span>
+        </div>
+        <p class="hint">Add personal links or remove detected applications from the Launcher.
+          Removing an item here does not uninstall its service.
+          <strong>Changes are stored only in this browser</strong> &mdash; they are a view preference,
+          not a change to the box, so another device keeps its own.</p>
+
+        <div class="editor-list" id="launcher-editor-list"></div>
+
+        <form class="editor-form" id="launcher-add-form">
+          <h3 class="editor-form-title" id="launcher-form-title">Add a custom item</h3>
+          <div class="editor-grid">
+            <label><span>Name</span>
+              <input class="config-input" id="launcher-name" name="name" maxlength="48" placeholder="Router" required></label>
+            <label><span>Address</span>
+              <input class="config-input" id="launcher-address" name="address" type="url" maxlength="300" placeholder="http://router.home/" required></label>
+            <label><span>Icon &mdash; emoji or image URL</span>
+              <input class="config-input" id="launcher-icon" name="icon" maxlength="500" placeholder="&#127760;"></label>
+          </div>
+          <div class="editor-actions">
+            <button type="button" class="btn-pill" id="launcher-cancel" hidden>Cancel</button>
+            <button type="submit" class="btn-pill primary" id="launcher-submit">Add to Launcher</button>
+            <span class="schedule-status" id="launcher-editor-status" role="status"></span>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- APP STORE CONTENTS -->
+    <div class="settings-panel" data-stab-panel="catalog">
+      <div class="bento-card">
+        <div class="card-header">
+          <span class="card-label">App Store contents</span>
+          <button type="button" class="btn-pill primary" id="catalog-add">+ Add app</button>
+        </div>
+        <p class="hint">Edit application text and installation notes, or add an installable Docker application.
+          <strong>Changes are stored on the server and appear on every device.</strong>
+          Edits to apps that ship with HomeBox are kept separately, so an upgrade cannot discard them
+          and Reset always brings the original text back.</p>
+
+        <div class="editor-list" id="catalog-editor-list"></div>
+
+        <form class="editor-form" id="catalog-form" hidden>
+          <h3 class="editor-form-title" id="catalog-form-title">Add an application</h3>
+          <input type="hidden" name="id">
+          <div class="editor-grid">
+            <label><span>Name</span><input class="config-input" name="name" maxlength="80" required></label>
+            <label><span>Icon &mdash; emoji or image URL</span><input class="config-input" name="icon" maxlength="500" placeholder="&#128230; or https://…/icon.png"></label>
+            <label><span>Category</span><select class="config-input" name="category" id="catalog-category" required></select></label>
+            <label><span>RAM estimate (MB)</span><input class="config-input" name="ramMb" type="number" min="16" max="65536" value="256" required></label>
+            <label class="is-wide"><span>Tagline</span><input class="config-input" name="tagline" maxlength="180"></label>
+            <label class="is-wide"><span>Description</span><textarea class="config-input" name="description" rows="3" maxlength="1200"></textarea></label>
+            <label class="is-wide"><span>Installation notes &mdash; one per line</span><textarea class="config-input" name="tips" rows="4"></textarea></label>
+            <div class="editor-new-only">
+              <div class="editor-grid">
+                <label class="is-wide"><span>Docker image</span>
+                  <input class="config-input" name="image" maxlength="300" placeholder="ghcr.io/vendor/app:latest"></label>
+                <label><span>Host port</span><input class="config-input" name="port" type="number" min="1" max="65535"></label>
+                <label><span>Container port</span><input class="config-input" name="containerPort" type="number" min="1" max="65535"></label>
+                <label><span>Service name</span><input class="config-input" name="serviceName" maxlength="80" placeholder="leave blank to use the name"></label>
+              </div>
+            </div>
+          </div>
+          <div class="editor-actions">
+            <button type="button" class="btn-pill" id="catalog-cancel">Cancel</button>
+            <button type="submit" class="btn-pill primary" id="catalog-save">Save changes</button>
+            <span class="schedule-status" id="catalog-status" role="status"></span>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="settings-panel" data-stab-panel="server">
+      <div class="settings-grid">
+        <div class="bento-card">
+          <div class="card-header"><span class="card-label">Paths and identity</span></div>
+          <dl class="kv" id="server-config"></dl>
+          <p class="hint">These come from <code class="mono">/opt/homebox/.env</code>, written once by <code class="mono">install.sh</code>. Edit that file and restart the affected module to change them.</p>
+        </div>
+        <div class="bento-card">
+          <div class="card-header"><span class="card-label">Module tree</span></div>
+          <p class="hint">Each app is a folder holding its own compose file, its metadata and its config. Copy the folder and you have copied the app.</p>
+          <code class="cmd" id="server-tree"></code>
+        </div>
+      </div>
+
+      <!-- The raw file is tucked behind a toggle, collapsed by default: it
+           holds security keys and nobody needs it for everyday use, but it
+           stays fully present for the few who do. -->
+      <details class="advanced-config" id="advanced-config">
+        <summary class="advanced-config-summary">
+          <span class="advanced-config-title">Advanced &mdash; show raw configuration</span>
+          <span class="advanced-config-note">Most people never need this.</span>
+        </summary>
+        <div class="advanced-config-body">
+          <p class="hint" id="config-file-note"></p>
+          <div id="config-groups"></div>
+          <div class="settings-actions">
+            <button type="button" class="btn-pill primary" id="btn-save-config">Save Changes</button>
+            <span class="schedule-status" id="config-save-status"></span>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <!-- NETWORK -->
+    <div class="settings-panel" data-stab-panel="network">
+      <div class="settings-grid">
+        <div class="bento-card">
+          <div class="card-header"><span class="card-label">Addresses</span></div>
+          <div class="network-grid" id="settings-network-grid"></div>
+        </div>
+        <div class="bento-card">
+          <div class="card-header"><span class="card-label">Published ports</span><span class="card-meta mono" id="ports-meta"></span></div>
+          <p class="hint">Every port this box answers on, and which app owns it. Anything listed here is reachable from your LAN.</p>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Port</th><th>App</th><th>Container</th></tr></thead>
+              <tbody id="ports-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REMOTE ACCESS -->
+    <div class="settings-panel" data-stab-panel="remote">
+      <div class="settings-grid">
+        <div class="bento-card">
+          <div class="card-header"><span class="card-label">Reaching this box from outside</span></div>
+          <p class="app-desc">HomeBox has <strong>no authentication</strong>. Anyone who can reach port 8443 can install, stop and remove apps and read every container log. That is fine on a trusted LAN and nowhere else.</p>
+          <p class="app-desc">The safe way in is a VPN: one door instead of one per app. Install the <strong>VPN</strong> module, forward UDP 51820 on your router to this box, and nothing else needs to be exposed.</p>
+          <div id="remote-vpn-state"></div>
+        </div>
+        <div class="bento-card">
+          <div class="card-header"><span class="card-label">Publishing an app properly</span></div>
+          <p class="hint">If an app really must be public, put it behind the proxy with a real hostname and a real certificate, and put auth in front of anything that manages the box.</p>
+          <dl class="kv" id="remote-proxy"></dl>
+        </div>
+      </div>
+    </div>
+
+    <!-- BACKUP -->
+    <div class="settings-panel" data-stab-panel="backup">
+      <div class="settings-grid">
+        <div class="bento-card">
+          <div class="card-header">
+            <span class="card-label">Backup Center</span>
+            <span class="card-meta mono" id="backup-summary"></span>
+          </div>
+
+          <div id="backup-no-key" class="backup-banner" hidden></div>
+          <p class="hint" id="backup-same-disk" hidden>These backups sit on the same disk they protect. That survives a mistake, not a dead drive — copy them somewhere else.</p>
+          <p class="hint" id="backup-latest"></p>
+
+          <div class="backup-actions">
+            <button type="button" class="btn-soft" id="btn-create-backup">Create Backup Now</button>
+            <select id="backup-kind" class="pill-select pill-select-sm" aria-label="What to include">
+              <option value="config">Config and secrets</option>
+              <option value="full">Everything, including the data pool</option>
+            </select>
+          </div>
+          <p class="hint" id="backup-kind-note"></p>
+
+          <div class="backup-list" id="backup-list"></div>
+        </div>
+
+        <div class="bento-card">
+          <div class="card-header"><span class="card-label">Backup Encryption Key</span></div>
+          <p class="hint">Every archive is AES-256-GCM encrypted with this key, because it contains <code class="mono">.env</code> — every generated password on this box. <strong>An archive without the key is unreadable.</strong> Keep a copy somewhere that is not this machine.</p>
+          <div class="backup-actions">
+            <button type="button" class="btn-soft" id="btn-reveal-key">Reveal Backup Key</button>
+            <button type="button" class="btn-pill" id="btn-copy-key" hidden>Copy</button>
+          </div>
+          <code class="cmd" id="backup-key-value" hidden></code>
+        </div>
+
+        <div class="bento-card">
+          <div class="card-header"><span class="card-label">Schedule</span></div>
+          <div class="setting-block">
+            <label class="logs-follow">
+              <input type="checkbox" id="backup-schedule-enabled">
+              Take a backup automatically
+            </label>
+            <div class="schedule-config" id="backup-schedule-config" hidden>
+              <div class="schedule-row">
+                <label class="setting-sub" for="backup-schedule-preset">How often</label>
+                <select id="backup-schedule-preset" class="pill-select"></select>
+              </div>
+              <div class="schedule-row">
+                <label class="setting-sub" for="backup-schedule-retention">Keep the newest</label>
+                <input type="number" id="backup-schedule-retention" class="pill-select pill-select-sm"
+                       value="7" min="1" max="100" style="width:8ch">
+              </div>
+              <button type="button" class="btn-pill primary" id="btn-save-schedule">Save Schedule</button>
+            </div>
+            <p class="schedule-status" id="backup-schedule-status"></p>
+          </div>
+          <p class="hint">The schedule always takes a <strong>config</strong> backup. A media pool is too large to copy on a timer, and a nightly job that never finishes is worse than none.</p>
+        </div>
+
+        <div class="bento-card">
+          <div class="card-header"><span class="card-label">Restoring</span></div>
+          <p class="hint">Restore is deliberately a shell operation, not a button: it overwrites live config while the apps using it are running, and it needs the key you kept elsewhere.</p>
+          <code class="cmd" id="backup-restore-cmd"></code>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- PASSWORDS -->
+    <div class="settings-panel" data-stab-panel="passwords">
+      <div class="settings-grid">
+        <div class="bento-card">
+          <div class="card-header"><span class="card-label">Generated secrets</span><span class="card-meta mono" id="secrets-meta"></span></div>
+          <p class="hint">Generated once by <code class="mono">install.sh</code> into <code class="mono">.env</code> (mode 600) and never regenerated: an encryption key that changes turns stored data into bytes nobody can read.</p>
+          <p class="hint"><strong>The values are deliberately not shown here.</strong> This page has no login, so printing them would put every password on any screen that can reach port 8443. Read one from a shell instead:</p>
+          <code class="cmd">homebox secrets &lt;module&gt;</code>
+          <div class="table-wrap" style="margin-top:1rem">
+            <table class="table">
+              <thead><tr><th>Module</th><th>Secret</th><th>Read it</th></tr></thead>
+              <tbody id="secrets-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MONITORING -->
+    <div class="settings-panel" data-stab-panel="monitoring">
+      <div class="settings-grid">
+        <div class="bento-card">
+          <div class="card-header"><span class="card-label">Host</span><span class="card-meta mono">live</span></div>
+          <dl class="kv" id="monitoring-host"></dl>
+        </div>
+        <div class="bento-card">
+          <div class="card-header"><span class="card-label">Container health</span><span class="card-meta mono" id="monitoring-meta"></span></div>
+          <div class="backup-body" id="monitoring-health"></div>
+        </div>
+        <div class="bento-card">
+          <div class="card-header"><span class="card-label">Alerting</span></div>
+          <div id="monitoring-module"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOOLS -->
+    <div class="settings-panel" data-stab-panel="tools">
+      <div class="settings-grid">
+        <div class="bento-card">
+          <div class="card-header"><span class="card-label">Command line</span></div>
+          <p class="hint">The CLI and this dashboard both shell out to <code class="mono">docker compose</code>, so they can never disagree about what is installed.</p>
+          <code class="cmd" id="tools-cli"></code>
+        </div>
+        <div class="bento-card">
+          <div class="card-header"><span class="card-label">When something looks wrong</span></div>
+          <p class="hint">Checks the environment, then parses every module and lets compose validate it.</p>
+          <code class="cmd">homebox doctor</code>
+          <p class="hint" style="margin-top:1rem">Rebuild the dashboard after editing its source:</p>
+          <code class="cmd" id="tools-rebuild"></code>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Module detail, opened from a module card -->
+<div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="Module details">
+  <button type="button" class="drawer-close" id="drawer-close" aria-label="Close">×</button>
+  <div id="drawer-body"></div>
+</aside>
+
+<!-- Toasts stack here. aria-live so a screen reader announces a save that
+     the sighted user sees slide in at the top right. -->
+<div class="toast-wrap" id="toast-wrap" role="status" aria-live="polite"></div>
+
+<script src="js/app.js?v=__V__"></script>
+</body>
+</html>

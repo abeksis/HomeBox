@@ -1,0 +1,86 @@
+# ==========================================
+# HOMEBOX - VPN Module
+# wg-easy: WireGuard with a web UI, so adding a phone is a QR code.
+# ==========================================
+
+x-homebox:
+  id: vpn
+  added_at: "2026-09-05"
+  title: "VPN"
+  tagline: "Reach home from anywhere, safely"
+  description: "WireGuard with a web UI. Add a device, scan the QR code with the WireGuard app, and your phone is on the home network from anywhere — with nothing else exposed to the internet."
+  icon: "wireguard.svg"
+  category: "network"
+  required: false
+  default: true
+  ram: "~60MB"
+  theme:
+    emoji: "🔒"
+    color: "#88171a"
+    bg: "rgba(136,23,26,0.12)"
+  tips:
+    - "WG_HOST must be the address clients reach from OUTSIDE — your public IP or dynamic-DNS name, not the LAN address of this box"
+    - "Forward UDP 51820 on your router to this box, and only that. The web UI on 51821 stays inside"
+    - "A VPN in is the safer alternative to publishing app after app: one door instead of ten"
+  env_vars:
+    WG_HOST:
+      label: "Public address clients connect to"
+      type: "text"
+      config_editable: true
+    WG_ADMIN_PASSWORD:
+      label: "Web UI password"
+      type: "secret"
+      config_editable: false
+  services:
+    wg-easy:
+      friendly_name: "WireGuard"
+      color: "#88171a"
+      description: "VPN server and device manager"
+      icon: "wireguard.svg"
+      port_map: 51821
+      url_scheme: "http"
+      first_login: "Signs in with the generated password — `homebox secrets vpn`."
+
+services:
+  wg-easy:
+    image: ghcr.io/wg-easy/wg-easy:14
+    container_name: wg-easy
+    environment:
+      - TZ=${TZ:-UTC}
+      # Blank here would hand clients a config pointing nowhere. Set it in
+      # .env once you know the address you actually reach this box at.
+      - WG_HOST=${WG_HOST:-}
+      - PASSWORD=${WG_ADMIN_PASSWORD:-}
+      - WG_PORT=51820
+      - WG_DEFAULT_ADDRESS=10.8.0.x
+      - WG_DEFAULT_DNS=1.1.1.1
+    ports:
+      - "51820:51820/udp"
+      - "51821:51821/tcp"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/vpn/config/wg-easy:/etc/wireguard
+    # WireGuard is a kernel network interface: it needs to create one and
+    # write routing rules, which no unprivileged container can do.
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.50'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

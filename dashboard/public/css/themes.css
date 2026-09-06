@@ -1,0 +1,170 @@
+/* ==========================================================================
+   HomeBox — theme variants
+
+   The default (`data-theme="dark"`) lives in tokens.css with hand-tuned
+   literals. Everything here is a named alternative: each one restates only
+   its palette, and the two shared blocks at the bottom derive the surface
+   tokens (card, tile, keycap) from that palette with color-mix — so adding a
+   theme means writing colours, not re-deriving a whole surface system.
+   ========================================================================== */
+
+/* ============================ DARK VARIANTS ============================= */
+
+:root[data-theme='midnight-purple'] {
+  --bg-0: #0a0c12; --bg-1: #1c2029; --bg-2: #2a3040; --bg-3: #353c4d; --bg-input: #262b37;
+  --border: #2a2e3a; --border-strong: #3e4352;
+  --text: #f8f9fb; --text-secondary: #c7ccd6; --text-muted: #9196a5;
+  --accent: #8b5cf6; --accent-hover: #a78bfa;
+  --accent-soft: rgba(139, 92, 246, 0.20); --accent-line: rgba(139, 92, 246, 0.45);
+  --live: #30d158; --live-glow: rgba(48, 209, 88, 0.25);
+  /* The atmosphere layer reads these three; they are what makes each theme
+     feel like a different room rather than a recoloured one. */
+  --mesh-1: rgba(139, 92, 246, 0.55); --mesh-2: rgba(56, 189, 248, 0.38); --mesh-3: rgba(244, 114, 182, 0.30);
+}
+
+:root[data-theme='forest'] {
+  --bg-0: #0a110d; --bg-1: #18221c; --bg-2: #243329; --bg-3: #2f4236; --bg-input: #243329;
+  --border: #2e3c33; --border-strong: #3f5044;
+  --text: #f1f5f2; --text-secondary: #b8c5bc; --text-muted: #8b9a90;
+  --accent: #10b981; --accent-hover: #34d399; --accent-contrast: #052e20;
+  --accent-soft: rgba(16, 185, 129, 0.16); --accent-line: rgba(16, 185, 129, 0.38);
+  --live: #84cc16; --live-glow: rgba(132, 204, 22, 0.28);
+  --mesh-1: rgba(5, 150, 105, 0.50); --mesh-2: rgba(132, 204, 22, 0.30); --mesh-3: rgba(20, 184, 166, 0.30);
+}
+
+:root[data-theme='sunset'] {
+  --bg-0: #120b0e; --bg-1: #221a1d; --bg-2: #30252a; --bg-3: #402f36; --bg-input: #30252a;
+  --border: #3c2e34; --border-strong: #503f46;
+  --text: #f5f1f2; --text-secondary: #c5bac0; --text-muted: #9a8e94;
+  --accent: #f97316; --accent-hover: #fb923c; --accent-contrast: #2a1405;
+  --accent-soft: rgba(249, 115, 22, 0.16); --accent-line: rgba(249, 115, 22, 0.40);
+  --live: #facc15; --live-glow: rgba(250, 204, 21, 0.28);
+  --mesh-1: rgba(234, 88, 12, 0.52); --mesh-2: rgba(244, 63, 94, 0.34); --mesh-3: rgba(250, 204, 21, 0.26);
+}
+
+:root[data-theme='arctic'] {
+  --bg-0: #0a1017; --bg-1: #181f2b; --bg-2: #242e3e; --bg-3: #303d52; --bg-input: #242e3e;
+  --border: #2e3848; --border-strong: #3f4c62;
+  --text: #f1f4f6; --text-secondary: #b8c3cd; --text-muted: #8b95a5;
+  --accent: #0ea5e9; --accent-hover: #38bdf8;
+  --accent-soft: rgba(14, 165, 233, 0.16); --accent-line: rgba(14, 165, 233, 0.38);
+  --live: #5eead4; --live-glow: rgba(94, 234, 212, 0.28);
+  --mesh-1: rgba(14, 116, 176, 0.50); --mesh-2: rgba(99, 102, 241, 0.32); --mesh-3: rgba(20, 184, 166, 0.30);
+}
+
+:root[data-theme='rose'] {
+  --bg-0: #110a10; --bg-1: #201820; --bg-2: #2c222c; --bg-3: #3a2d3a; --bg-input: #2c222c;
+  --border: #352a35; --border-strong: #483a48;
+  --text: #f4f1f3; --text-secondary: #c5b8c1; --text-muted: #9a8c95;
+  --accent: #ec4899; --accent-hover: #f472b6;
+  --accent-soft: rgba(236, 72, 153, 0.16); --accent-line: rgba(236, 72, 153, 0.38);
+  --live: #34d399; --live-glow: rgba(52, 211, 153, 0.25);
+  --mesh-1: rgba(190, 24, 93, 0.52); --mesh-2: rgba(168, 85, 247, 0.32); --mesh-3: rgba(251, 113, 133, 0.30);
+}
+
+/* =========================== LIGHT VARIANTS ============================= */
+/* --mesh-* stay UNDEFINED on purpose: the atmosphere layer falls back to
+   transparent, so no dark-mode glow bleeds across a white page. */
+
+:root[data-theme='light'] {
+  --bg-0: #f6f6f8; --bg-1: #ffffff; --bg-2: #f0f0f3; --bg-3: #e6e6ea; --bg-input: #ffffff;
+  --border: #e4e4e7; --border-strong: #cfcfd4;
+  --text: #18191c; --text-secondary: #48494e; --text-muted: #6a6b72;
+  --accent: #7c3aed; --accent-hover: #8b5cf6; --accent-contrast: #ffffff;
+  --accent-soft: rgba(124, 58, 237, 0.12); --accent-line: rgba(124, 58, 237, 0.30);
+  --live: #16a34a; --live-glow: rgba(22, 163, 74, 0.22);
+}
+
+:root[data-theme='light-forest'] {
+  --bg-0: #f4f8f5; --bg-1: #ffffff; --bg-2: #edf3ef; --bg-3: #e0ebe3; --bg-input: #ffffff;
+  --border: #d4e4d8; --border-strong: #b8d4bf;
+  --text: #18191c; --text-secondary: #3d4a40; --text-muted: #657a6a;
+  --accent: #059669; --accent-hover: #10b981; --accent-contrast: #ffffff;
+  --accent-soft: rgba(5, 150, 105, 0.12); --accent-line: rgba(5, 150, 105, 0.30);
+  --live: #16a34a; --live-glow: rgba(22, 163, 74, 0.22);
+}
+
+:root[data-theme='light-sunset'] {
+  --bg-0: #faf7f4; --bg-1: #ffffff; --bg-2: #f5f0ea; --bg-3: #ede4d9; --bg-input: #ffffff;
+  --border: #e8ddd0; --border-strong: #d9c9b5;
+  --text: #1c1916; --text-secondary: #4a4036; --text-muted: #7a6e60;
+  --accent: #d97706; --accent-hover: #f59e0b; --accent-contrast: #ffffff;
+  --accent-soft: rgba(217, 119, 6, 0.12); --accent-line: rgba(217, 119, 6, 0.30);
+  --live: #16a34a; --live-glow: rgba(22, 163, 74, 0.22);
+}
+
+:root[data-theme='light-arctic'] {
+  --bg-0: #f4f7fa; --bg-1: #ffffff; --bg-2: #edf2f7; --bg-3: #e0e8f0; --bg-input: #ffffff;
+  --border: #d4dfe8; --border-strong: #b8cad8;
+  --text: #18191c; --text-secondary: #3a4450; --text-muted: #607080;
+  --accent: #0891b2; --accent-hover: #06b6d4; --accent-contrast: #ffffff;
+  --accent-soft: rgba(8, 145, 178, 0.12); --accent-line: rgba(8, 145, 178, 0.30);
+  --live: #16a34a; --live-glow: rgba(22, 163, 74, 0.22);
+}
+
+:root[data-theme='light-rose'] {
+  --bg-0: #fbf5f8; --bg-1: #ffffff; --bg-2: #f7eef3; --bg-3: #f0e0e9; --bg-input: #ffffff;
+  --border: #ebd8e3; --border-strong: #dcc0d1;
+  --text: #1c161a; --text-secondary: #4a3a43; --text-muted: #7a6470;
+  --accent: #db2777; --accent-hover: #ec4899; --accent-contrast: #ffffff;
+  --accent-soft: rgba(219, 39, 119, 0.12); --accent-line: rgba(219, 39, 119, 0.30);
+  --live: #16a34a; --live-glow: rgba(22, 163, 74, 0.22);
+}
+
+/* ===================== DERIVED SURFACES PER THEME ======================= */
+/* The blocks above declare colour; these two derive everything built on top
+   of it, so a new theme never has to restate the surface system. The default
+   dark theme keeps its hand-tuned literals in tokens.css and is excluded. */
+
+:root[data-theme]:not([data-theme='dark']):not([data-theme^='light']) {
+  --border-soft: rgba(255, 255, 255, 0.04);
+  --border-hair: rgba(255, 255, 255, 0.08);
+  --module-hairline: rgba(255, 255, 255, 0.04);
+  --card-line: rgba(255, 255, 255, 0.13);
+
+  /* A card sits just off the page colour; a tile inside it goes darker still. */
+  --card-bg: color-mix(in srgb, var(--bg-1) 94%, var(--bg-0));
+  --card-fill: color-mix(in srgb, var(--bg-1) 94%, transparent);
+  --card-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 10px 30px -8px rgba(0, 0, 0, 0.82);
+  --tile-bg: color-mix(in srgb, var(--bg-0) 92%, #000);
+  --tile-ring: rgba(255, 255, 255, 0.06);
+
+  --keycap-bg: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+  --shadow-keycap:
+    0 2px 4px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  --title-gradient: linear-gradient(180deg, var(--text) 0%, var(--text-secondary) 100%);
+}
+
+:root[data-theme^='light'] {
+  --border-soft: rgba(15, 17, 23, 0.05);
+  --border-hair: rgba(15, 17, 23, 0.08);
+  --module-hairline: rgba(15, 17, 23, 0.05);
+  --card-line: var(--border);
+
+  --card-bg: #ffffff;
+  --card-fill: #ffffff;
+  --card-shadow: 0 1px 2px rgba(15, 17, 23, 0.06), 0 10px 30px -18px rgba(15, 17, 23, 0.18);
+  /* On white a "recessed" tile is a shade below the card, not above it. */
+  --tile-bg: color-mix(in srgb, var(--bg-2) 92%, #000);
+  --tile-ring: rgba(15, 17, 23, 0.07);
+
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.05), 0 0 0 1px var(--border);
+  --elev-2: 0 4px 12px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--border);
+  --elev-3: 0 16px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--border-strong);
+
+  --keycap-bg: linear-gradient(180deg, #ffffff, var(--bg-2));
+  --shadow-keycap:
+    0 2px 4px rgba(15, 17, 23, 0.08),
+    0 0 0 1px rgba(15, 17, 23, 0.06),
+    inset 0 1px 0 #fff;
+
+  --good: #17915d; --good-soft: rgba(23, 145, 93, 0.10); --good-line: rgba(23, 145, 93, 0.28);
+  --warn: #a2740b; --warn-soft: rgba(162, 116, 11, 0.10); --warn-line: rgba(162, 116, 11, 0.28);
+  --bad: #cc2f42;  --bad-soft: rgba(204, 47, 66, 0.10);   --bad-line: rgba(204, 47, 66, 0.28);
+  --info: #1a7f99; --info-soft: rgba(26, 127, 153, 0.10);
+
+  --title-gradient: linear-gradient(180deg, var(--text) 0%, var(--text-secondary) 100%);
+}

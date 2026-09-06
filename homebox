@@ -1,0 +1,546 @@
+#!/usr/bin/env bash
+# ==========================================================================
+# homebox — install and run the apps defined in /opt/homebox/modules
+#
+# One compose project per module (homebox-<id>), so a broken module can be
+# rebuilt without touching anything else, and Docker's own project label is
+# what maps a running container back to the module that owns it. There is no
+# separate registry to drift out of sync.
+# ==========================================================================
+set -euo pipefail
+
+HB_ROOT="${HB_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+MODULES_DIR="$HB_ROOT/modules"
+STATE_DIR="$HB_ROOT/state"
+ENV_FILE="$HB_ROOT/.env"
+ENABLED_FILE="$STATE_DIR/modules.conf"
+VERSION="$(cat "$HB_ROOT/VERSION" 2>/dev/null || echo 0.0.0)"
+
+if [ -t 1 ]; then
+  BOLD=$'\033[1m'; DIM=$'\033[2m'; RED=$'\033[31m'; GREEN=$'\033[32m'
+  YELLOW=$'\033[33m'; RESET=$'\033[0m'
+else
+  BOLD=''; DIM=''; RED=''; GREEN=''; YELLOW=''; RESET=''
+fi
+
+die() { printf '%s%s%s\n' "$RED" "$*" "$RESET" >&2; exit 1; }
+info() { printf '%s\n' "$*"; }
+step() { printf '%s==>%s %s\n' "$GREEN" "$RESET" "$*"; }
+
+# Decide once whether docker needs sudo. Probing per call is slower and, for
+# commands that print to stdout, a failed probe leaks a stray blank line into
+# the captured output.
+DOCKER=()
+if docker version >/dev/null 2>&1; then
+  DOCKER=(docker)
+elif sudo -n docker version >/dev/null 2>&1; then
+  DOCKER=(sudo -n docker)
+fi
+have_docker() { [ "${#DOCKER[@]}" -gt 0 ]; }
+dk() { have_docker || die "docker is not reachable from this account"; "${DOCKER[@]}" "$@"; }
+
+module_ids() {
+  find "$MODULES_DIR" -mindepth 1 -maxdepth 1 -type d ! -name '_*' -printf '%f\n' 2>/dev/null | sort
+}
+module_file() { echo "$MODULES_DIR/$1/docker-compose.yml"; }
+project_of() { echo "homebox-$1"; }
+
+require_module() {
+  [ -n "${1:-}" ] || die "which module? try: homebox list"
+  [ -f "$(module_file "$1")" ] || die "no such module: $1"
+}
+
+# Metadata is read with the dashboard's own parser, so the CLI and the UI can
+# never disagree about what a module declares.
+meta() {
+  local id="$1" expr="$2"
+  node -e '
+    const yaml = require(process.argv[1] + "/dashboard/lib/yaml.js");
+    const fs = require("fs");
+    const meta = yaml.extractTopLevel(fs.readFileSync(process.argv[2], "utf8"), "x-homebox") || {};
+    // Text edited in Settings > App Store contents is kept in state/catalog.json
+    // rather than written back into the compose file, so an upgrade cannot
+    // discard it. The CLI has to read the same layer or `homebox list` prints a
+    // different name than the page shows for the same module.
+    try {
+      const over = JSON.parse(fs.readFileSync(process.argv[1] + "/state/catalog.json", "utf8")).overrides[process.argv[4]];
+      if (over && typeof over === "object") Object.assign(meta, over);
+    } catch (e) { /* no overrides yet, or unreadable — the shipped text stands */ }
+    const out = (function (m) { return eval(process.argv[3]); })(meta);
+    if (out == null) process.exit(0);
+    process.stdout.write(Array.isArray(out) ? out.join("\n") : String(out));
+  ' "$HB_ROOT" "$(module_file "$id")" "$expr" "$id" 2>/dev/null || true
+}
+
+compose() {
+  local id="$1"; shift
+  dk compose -p "$(project_of "$id")" -f "$(module_file "$id")" --env-file "$ENV_FILE" "$@"
+}
+
+# --------------------------------------------------------------------------
+# A Docker bind mount is resolved when the container is CREATED, and Docker
+# CREATES a missing source directory rather than refusing. Start a module a few
+# seconds before its NAS automount is up and every app binds a brand-new empty
+# folder on the root disk — which then hides underneath the share once it
+# arrives, and which an *arr app reads as "the library was deleted". Nothing
+# errors, nothing logs, which is exactly what makes it dangerous.
+#
+# So before anything is created, walk every host path this module binds and
+# make sure the mount covering it is really up. Merely looking at the path is
+# enough to fire an automount; a mount unit that is down and will not start is
+# a hard stop, because a module that failed to start is much cheaper than a
+# library an *arr app has decided to "fix".
+# --------------------------------------------------------------------------
+mount_unit_up() {
+  local unit="$1" dir="$2"
+  step "$dir is not mounted — starting $unit before any container is created"
+  local sc=(systemctl)
+  [ "$(id -u)" -eq 0 ] || sc=(sudo -n systemctl)
+  if "${sc[@]}" start "$unit" >/dev/null 2>&1; then return 0; fi
+  die "$dir is covered by $unit, which is not mounted. Creating containers now
+would bind an empty directory and the apps would see an empty library.
+Start it, then run this again:
+
+  sudo systemctl start $unit"
+}
+
+prime_binds() {
+  command -v systemctl >/dev/null 2>&1 || return 0
+  command -v systemd-escape >/dev/null 2>&1 || return 0
+  local src dir unit
+  while IFS= read -r src; do
+    ls -d "$src" >/dev/null 2>&1 || true   # fires the automount, if there is one
+    dir="$src"
+    while [ -n "$dir" ] && [ "$dir" != / ]; do
+      unit="$(systemd-escape -p --suffix=mount "$dir" 2>/dev/null)" || break
+      if systemctl cat "$unit" >/dev/null 2>&1; then
+        systemctl is-active --quiet "$unit" || mount_unit_up "$unit" "$dir"
+        break
+      fi
+      dir="$(dirname "$dir")"
+    done
+  done < <(compose "$1" config 2>/dev/null | awk '$1 == "source:" && $2 ~ /^\// { print $2 }' | sort -u)
+}
+
+# Containers of a module, by compose's own project label — no hand-maintained
+# list of names to fall out of date.
+module_containers() {
+  have_docker || return 0
+  "${DOCKER[@]}" ps -a \
+    --filter "label=com.docker.compose.project=$(project_of "$1")" \
+    --format '{{.Names}}	{{.State}}	{{.Status}}' 2>/dev/null || true
+}
+
+module_running_count() {
+  module_containers "$1" | awk -F'\t' '$2=="running"' | wc -l | tr -d ' '
+}
+module_total_count() {
+  module_containers "$1" | grep -c . | tr -d ' ' || true
+}
+
+is_enabled() { [ -f "$ENABLED_FILE" ] && grep -qxF "$1" "$ENABLED_FILE"; }
+
+mark_enabled() {
+  mkdir -p "$STATE_DIR"; touch "$ENABLED_FILE"
+  is_enabled "$1" || echo "$1" >> "$ENABLED_FILE"
+}
+mark_disabled() {
+  [ -f "$ENABLED_FILE" ] || return 0
+  grep -vxF "$1" "$ENABLED_FILE" > "$ENABLED_FILE.tmp" && mv "$ENABLED_FILE.tmp" "$ENABLED_FILE"
+}
+
+# ------------------------------------------------------------------ commands
+
+cmd_list() {
+  printf '%s%-14s %-24s %-13s %-13s %s%s\n' "$BOLD" "MODULE" "TITLE" "CATEGORY" "STATE" "RAM" "$RESET"
+  for id in $(module_ids); do
+    local title category ram total up state colour
+    title="$(meta "$id" 'm.title')"
+    category="$(meta "$id" 'm.category')"
+    ram="$(meta "$id" 'm.ram || "-"')"
+    total="$(module_total_count "$id")"
+    up="$(module_running_count "$id")"
+    if [ "${total:-0}" -eq 0 ]; then
+      state="not installed"; colour="$DIM"
+    elif [ "$up" -eq "$total" ]; then
+      state="$up/$total up"; colour="$GREEN"
+    elif [ "$up" -eq 0 ]; then
+      state="stopped"; colour="$YELLOW"
+    else
+      state="$up/$total up"; colour="$YELLOW"
+    fi
+    printf '%-14s %-24s %-13s %b%-13s%b %s\n' \
+      "$id" "${title:0:24}" "$category" "$colour" "$state" "$RESET" "$ram"
+  done
+  printf '\n%s%s modules · HomeBox v%s%s\n' "$DIM" "$(module_ids | wc -l)" "$VERSION" "$RESET"
+}
+
+cmd_info() {
+  require_module "${1:-}"
+  local id="$1"
+  printf '%s%s%s %s\n' "$BOLD" "$(meta "$id" 'm.title')" "$RESET" "$(meta "$id" '(m.theme && m.theme.emoji) || ""')"
+  printf '%s%s%s\n\n' "$DIM" "$(meta "$id" 'm.tagline')" "$RESET"
+  printf '%s\n\n' "$(meta "$id" 'm.description')"
+  printf '%sid%s        %s\n' "$BOLD" "$RESET" "$id"
+  printf '%scategory%s  %s\n' "$BOLD" "$RESET" "$(meta "$id" 'm.category')"
+  printf '%sram%s       %s\n' "$BOLD" "$RESET" "$(meta "$id" 'm.ram || "-"')"
+  printf '%srequired%s  %s\n' "$BOLD" "$RESET" "$(meta "$id" 'm.required === true ? "yes" : "no"')"
+  printf '%sfile%s      %s\n' "$BOLD" "$RESET" "$(module_file "$id")"
+
+  local addr; addr="$(grep -E '^HB_HOST_ADDRESS=' "$ENV_FILE" 2>/dev/null | cut -d= -f2)"
+  printf '\n%sApps%s\n' "$BOLD" "$RESET"
+  node -e '
+    const yaml = require(process.argv[1] + "/dashboard/lib/yaml.js");
+    const fs = require("fs");
+    const m = yaml.extractTopLevel(fs.readFileSync(process.argv[2], "utf8"), "x-homebox") || {};
+    const host = process.argv[3] || "localhost";
+    for (const [name, s] of Object.entries(m.services || {})) {
+      const where = s.internal ? "(internal)" : s.port_map ? "http://" + host + ":" + s.port_map : "";
+      console.log("  " + (s.friendly_name || name).padEnd(20) + where);
+      if (s.first_login) console.log("      " + s.first_login);
+    }
+  ' "$HB_ROOT" "$(module_file "$id")" "$addr" 2>/dev/null || true
+
+  local containers; containers="$(module_containers "$id")"
+  printf '\n%sContainers%s\n' "$BOLD" "$RESET"
+  if [ -z "$containers" ]; then
+    printf '  %snot installed%s\n' "$DIM" "$RESET"
+  else
+    printf '%s\n' "$containers" | while IFS=$'\t' read -r name state status; do
+      printf '  %-24s %s\n' "$name" "$status"
+    done
+  fi
+
+  local tips; tips="$(meta "$id" 'm.tips')"
+  if [ -n "$tips" ]; then
+    printf '\n%sWorth knowing%s\n' "$BOLD" "$RESET"
+    while IFS= read -r tip; do [ -n "$tip" ] && printf '  * %s\n' "$tip"; done <<< "$tips"
+  fi
+}
+
+cmd_status() {
+  local total=0 up=0
+  for id in $(module_ids); do
+    local containers; containers="$(module_containers "$id")"
+    [ -n "$containers" ] || continue
+    printf '%s%s%s\n' "$BOLD" "$(meta "$id" 'm.title')" "$RESET"
+    while IFS=$'\t' read -r name state status; do
+      [ -n "$name" ] || continue
+      total=$((total + 1))
+      local mark colour
+      case "$status" in
+        *unhealthy*) mark='x'; colour="$RED" ;;
+        Up*)         mark='+'; colour="$GREEN"; up=$((up + 1)) ;;
+        *)           mark='-'; colour="$YELLOW" ;;
+      esac
+      printf '  %b%s%b %-26s %s%s%s\n' "$colour" "$mark" "$RESET" "$name" "$DIM" "$status" "$RESET"
+    done <<< "$containers"
+  done
+  [ "$total" -gt 0 ] || info "nothing installed yet - try: homebox install monitoring"
+  printf '\n%s/%s containers up\n' "$up" "$total"
+}
+
+# install = enable + seed + start. The one command someone actually wants.
+cmd_install() {
+  require_module "${1:-}"
+  local id="$1"
+  step "Installing $(meta "$id" 'm.title')"
+
+  local setup="$MODULES_DIR/$id/setup.sh"
+  if [ -f "$setup" ]; then
+    step "Running setup for $id"
+    HB_ROOT="$HB_ROOT" bash "$setup"
+  fi
+
+  step "Pulling images"
+  compose "$id" pull || true
+
+  step "Starting containers"
+  prime_binds "$id"
+  compose "$id" up -d --remove-orphans
+
+  mark_enabled "$id"
+
+  local addr; addr="$(grep -E '^HB_HOST_ADDRESS=' "$ENV_FILE" 2>/dev/null | cut -d= -f2)"
+  printf '\n%s%s is installed.%s\n' "$GREEN" "$(meta "$id" 'm.title')" "$RESET"
+  node -e '
+    const yaml = require(process.argv[1] + "/dashboard/lib/yaml.js");
+    const fs = require("fs");
+    const m = yaml.extractTopLevel(fs.readFileSync(process.argv[2], "utf8"), "x-homebox") || {};
+    const host = process.argv[3] || "localhost";
+    for (const [name, s] of Object.entries(m.services || {})) {
+      if (s.internal || !s.port_map) continue;
+      console.log("  " + (s.friendly_name || name) + ": http://" + host + ":" + s.port_map);
+      if (s.first_login) console.log("     " + s.first_login);
+    }
+  ' "$HB_ROOT" "$(module_file "$id")" "$addr" 2>/dev/null || true
+}
+
+cmd_remove() {
+  require_module "${1:-}"
+  local id="$1"; shift || true
+  [ "$(meta "$id" 'm.required === true ? "yes" : "no"')" = "yes" ] && die "$id is required and cannot be removed"
+
+  local purge=0 yes=0
+  for arg in "$@"; do
+    [ "$arg" = "--purge" ] && purge=1
+    [ "$arg" = "--yes" ] && yes=1
+  done
+
+  if [ "$yes" -ne 1 ]; then
+    printf '%sDry run.%s Would stop and delete the containers of %s.\n' "$YELLOW" "$RESET" "$id"
+    printf 'Config and data under modules/%s/config are KEPT unless you add --purge.\n' "$id"
+    printf 'Add --yes to do it.\n'
+    return
+  fi
+
+  step "Stopping $id"
+  compose "$id" down --remove-orphans
+  mark_disabled "$id"
+
+  if [ "$purge" -eq 1 ]; then
+    # Deleting an app's config directory is not recoverable, so it takes its
+    # own flag on top of --yes rather than riding along with the removal.
+    step "Deleting $MODULES_DIR/$id/config"
+    rm -rf "${MODULES_DIR:?}/$id/config"
+  fi
+  info "removed $id"
+}
+
+cmd_up() {
+  require_module "${1:-}"
+  local id="$1"; shift || true
+  for arg in "$@"; do
+    if [ "$arg" = "--yes" ]; then
+      prime_binds "$id"
+      compose "$id" up -d --remove-orphans
+      mark_enabled "$id"
+      return
+    fi
+  done
+  printf '%sDry run.%s Would run:\n\n  docker compose -p %s -f %s up -d\n\nAdd --yes, or use `homebox install %s` for the full flow.\n' \
+    "$YELLOW" "$RESET" "$(project_of "$id")" "$(module_file "$id")" "$id"
+}
+
+cmd_down() {
+  require_module "${1:-}"
+  local id="$1"; shift || true
+  for arg in "$@"; do
+    if [ "$arg" = "--yes" ]; then
+      compose "$id" stop
+      return
+    fi
+  done
+  printf '%sDry run.%s Would stop the containers of %s (they stay defined). Add --yes.\n' "$YELLOW" "$RESET" "$id"
+}
+
+cmd_restart() {
+  require_module "${1:-}"
+  compose "$1" restart
+}
+
+cmd_update() {
+  require_module "${1:-}"
+  local id="$1"
+  step "Pulling newer images for $id"
+  compose "$id" pull
+  step "Recreating"
+  prime_binds "$id"
+  compose "$id" up -d --remove-orphans
+  info "updated $id"
+}
+
+cmd_logs() {
+  [ -n "${1:-}" ] || die "which container or module? try: homebox status"
+  if [ -f "$(module_file "$1")" ]; then
+    compose "$1" logs --tail "${2:-100}"
+  else
+    dk logs --tail "${2:-100}" "$1"
+  fi
+}
+
+# Secrets live in .env (mode 600) and are printed only on request, never as
+# part of `list` or `info` output that someone might paste into a chat.
+cmd_secrets() {
+  require_module "${1:-}"
+  local names; names="$(meta "$1" 'Object.keys(m.env_vars || {})')"
+  [ -n "$names" ] || { info "$1 declares no secrets"; return; }
+  while IFS= read -r name; do
+    [ -n "$name" ] || continue
+    local value; value="$(grep -E "^${name}=" "$ENV_FILE" 2>/dev/null | cut -d= -f2-)"
+    printf '%-32s %s\n' "$name" "${value:-<unset>}"
+  done <<< "$names"
+}
+
+# Backups are encrypted with HB_BACKUP_KEY (AES-256-GCM, scrypt-derived).
+# The archive contains .env, so there is no unencrypted path.
+# App config is written by containers running as root, so a backup taken as
+# the login user cannot read Gitea SSH keys or a Postgres data directory and
+# tar bails. Escalate rather than quietly shipping a partial archive.
+node_root() {
+  if [ "$(id -u)" -eq 0 ]; then node "$@"; else sudo -n node "$@"; fi
+}
+
+cmd_backup() {
+  local kind="${1:-config}"
+  node_root -e '
+    const backup = require(process.argv[1] + "/dashboard/lib/backup.js");
+    backup.create({ kind: process.argv[2] })
+      .then((r) => console.log(`${r.name}  ${(r.size / 1048576).toFixed(1)}MB  in ${r.seconds}s`))
+      .catch((e) => { console.error(e.message); if (e.hint) console.error(e.hint); process.exit(1); });
+  ' "$HB_ROOT" "$kind"
+}
+
+cmd_backups() {
+  node -e '
+    const backup = require(process.argv[1] + "/dashboard/lib/backup.js");
+    backup.status().then((s) => {
+      if (!s.hasKey) console.log("NO ENCRYPTION KEY - set HB_BACKUP_KEY in .env");
+      if (!s.backups.length) return console.log("no backups yet");
+      for (const b of s.backups) {
+        console.log(`${b.name}  ${(b.size / 1048576).toFixed(1)}MB  ${new Date(b.created).toLocaleString()}`);
+      }
+      console.log(`
+${s.count} archives, ${(s.totalSize / 1048576).toFixed(1)}MB, in ${s.directory}`);
+      if (s.sameDisk) console.log("These sit on the same disk they protect - copy them elsewhere.");
+    });
+  ' "$HB_ROOT"
+}
+
+# Restore is deliberately manual: it overwrites live config underneath running
+# apps, so it decrypts and unpacks somewhere safe and lets you look first.
+cmd_restore() {
+  [ -n "${1:-}" ] || die "which archive? try: homebox backups"
+  local name="$1" dest="${2:-$HB_ROOT/restore-$(date +%Y%m%d-%H%M%S)}"
+
+  # The key is read here rather than inside the node snippet: keeping the
+  # inline JavaScript free of quotes and escapes is what stops this script
+  # breaking every time it is edited.
+  local key
+  key="$(grep -E "^HB_BACKUP_KEY=" "$ENV_FILE" 2>/dev/null | cut -d= -f2-)"
+  [ -n "$key" ] || die "HB_BACKUP_KEY is not in $ENV_FILE"
+
+  mkdir -p "$dest"
+  step "Decrypting $name"
+  node_root -e "
+    const backup = require(process.argv[1] + '/dashboard/lib/backup.js');
+    const path = require('path');
+    const out = path.join(process.argv[3], 'archive.tar.gz');
+    backup.decryptFile(backup.resolveName(process.argv[2]), out, process.argv[4])
+      .then(() => console.log(out))
+      .catch((e) => { console.error(e.message); process.exit(1); });
+  " "$HB_ROOT" "$name" "$dest" "$key" || die "decryption failed - wrong key, or a damaged archive"
+
+  step "Unpacking"
+  tar -xzf "$dest/archive.tar.gz" -C "$dest" && rm -f "$dest/archive.tar.gz"
+  info ""
+  info "Unpacked to $dest"
+  info "Nothing live was touched. Compare, then copy back what you want:"
+  info "  homebox down <module> --yes"
+  info "  cp -a $dest/modules/<id>/config $HB_ROOT/modules/<id>/"
+  info "  homebox up <module> --yes"
+}
+
+cmd_validate() {
+  local failed=0
+  for id in $(module_ids); do
+    local file; file="$(module_file "$id")"
+    [ -f "$file" ] || { printf '%sx %-14s no docker-compose.yml%s\n' "$RED" "$id" "$RESET"; failed=1; continue; }
+    local err
+    err="$(node -e '
+      const yaml = require(process.argv[1] + "/dashboard/lib/yaml.js");
+      const fs = require("fs");
+      const meta = yaml.extractTopLevel(fs.readFileSync(process.argv[2], "utf8"), "x-homebox");
+      if (!meta) { console.error("no x-homebox block"); process.exit(1); }
+      for (const key of ["id", "title", "tagline", "category"]) {
+        if (!meta[key]) { console.error("missing " + key); process.exit(1); }
+      }
+      if (meta.id !== process.argv[3]) { console.error("id does not match directory"); process.exit(1); }
+      if (!meta.services || !Object.keys(meta.services).length) { console.error("declares no services"); process.exit(1); }
+    ' "$HB_ROOT" "$file" "$id" 2>&1 >/dev/null)" || {
+      printf '%sx %-14s %s%s\n' "$RED" "$id" "$err" "$RESET"; failed=1; continue
+    }
+    # Compose has to agree it is a valid file, not just our metadata reader.
+    if have_docker && ! compose "$id" config -q >/dev/null 2>&1; then
+      printf '%sx %-14s compose rejects this file%s\n' "$RED" "$id" "$RESET"; failed=1; continue
+    fi
+    printf '%s+%s %-14s %s\n' "$GREEN" "$RESET" "$id" "$(meta "$id" 'm.title')"
+  done
+  [ "$failed" -eq 0 ] || die "validation failed"
+  printf '\n%sall modules parse and compose accepts them%s\n' "$GREEN" "$RESET"
+}
+
+cmd_doctor() {
+  printf '%sHomeBox v%s%s\n' "$BOLD" "$VERSION" "$RESET"
+  printf 'root        %s\n' "$HB_ROOT"
+  printf 'modules     %s found\n' "$(module_ids | wc -l)"
+  printf 'node        %s\n' "$(node --version 2>/dev/null || echo 'MISSING - the CLI needs node')"
+  if have_docker; then
+    printf 'docker      %s\n' "$("${DOCKER[@]}" version -f '{{.Server.Version}}' 2>/dev/null)"
+    [ "${DOCKER[0]}" = "sudo" ] && printf '            %svia sudo - this account is not in the docker group yet%s\n' "$YELLOW" "$RESET"
+    printf 'compose     %s\n' "$("${DOCKER[@]}" compose version --short 2>/dev/null || echo MISSING)"
+    for net in homebox_proxy homebox_internal; do
+      printf 'network     %-18s %s\n' "$net" "$("${DOCKER[@]}" network inspect "$net" >/dev/null 2>&1 && echo ok || echo MISSING)"
+    done
+  else
+    printf '%sdocker      unreachable%s\n' "$RED" "$RESET"
+  fi
+  printf 'env file    %s\n' "$([ -f "$ENV_FILE" ] && echo "$ENV_FILE (mode $(stat -c '%a' "$ENV_FILE" 2>/dev/null))" || echo 'MISSING - run install.sh')"
+  printf 'data pool   %s\n' "$(grep -E '^HB_DATA_DIR=' "$ENV_FILE" 2>/dev/null | cut -d= -f2)"
+  printf '\n'
+  cmd_validate
+}
+
+usage() {
+  cat <<EOF
+${BOLD}homebox${RESET} v$VERSION - apps live in $MODULES_DIR
+
+  ${BOLD}list${RESET}                    every module and whether it is running
+  ${BOLD}info${RESET} <module>           what it is, where its apps are, first-login notes
+  ${BOLD}status${RESET}                  every container HomeBox runs
+  ${BOLD}secrets${RESET} <module>        print the generated passwords for one module
+
+  ${BOLD}install${RESET} <module>        seed, pull, start, mark enabled - the whole thing
+  ${BOLD}remove${RESET} <module> --yes   stop and delete containers (--purge drops config too)
+  ${BOLD}update${RESET} <module>         pull newer images and recreate
+
+  ${BOLD}up${RESET} <module> --yes       start without the install steps
+  ${BOLD}down${RESET} <module> --yes     stop, keep everything defined
+  ${BOLD}restart${RESET} <module>
+  ${BOLD}logs${RESET} <module|container> [lines]
+
+  ${BOLD}backup${RESET} [config|full]     encrypted archive of config, state and .env
+  ${BOLD}backups${RESET}                 list what has been taken
+  ${BOLD}restore${RESET} <archive> [dir]  decrypt and unpack, without touching anything live
+
+  ${BOLD}validate${RESET}                parse every module and let compose check it
+  ${BOLD}doctor${RESET}                  environment check, then validate
+
+Every module is a folder: modules/<id>/docker-compose.yml holds both the
+services and, in its x-homebox block, everything the UI knows about them.
+EOF
+}
+
+cmd="${1:-list}"
+shift || true
+case "$cmd" in
+  list|ls) cmd_list "$@" ;;
+  info|show) cmd_info "$@" ;;
+  status|ps) cmd_status "$@" ;;
+  secrets) cmd_secrets "$@" ;;
+  install|add) cmd_install "$@" ;;
+  remove|rm|uninstall) cmd_remove "$@" ;;
+  update|upgrade) cmd_update "$@" ;;
+  up|start) cmd_up "$@" ;;
+  down|stop) cmd_down "$@" ;;
+  restart) cmd_restart "$@" ;;
+  logs) cmd_logs "$@" ;;
+  backup) cmd_backup "$@" ;;
+  backups) cmd_backups "$@" ;;
+  restore) cmd_restore "$@" ;;
+  validate|check) cmd_validate "$@" ;;
+  doctor) cmd_doctor "$@" ;;
+  help|-h|--help) usage ;;
+  version|--version) echo "$VERSION" ;;
+  *) usage; exit 1 ;;
+esac

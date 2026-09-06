@@ -1,0 +1,134 @@
+# ==========================================
+# HOMEBOX - Cloud Module
+# Nextcloud + MariaDB + Redis: files, calendar and contacts that sync.
+# ==========================================
+
+x-homebox:
+  id: cloud
+  added_at: "2026-09-05"
+  title: "Nextcloud"
+  tagline: "Your own Dropbox, calendar and contacts"
+  description: "File sync across every device, plus calendar, contacts and notes that talk to the apps already on your phone. The full replacement for the parts of Google and Dropbox that hold your own documents."
+  icon: "nextcloud.svg"
+  category: "files"
+  required: false
+  default: true
+  ram: "~800MB"
+  theme:
+    emoji: "☁️"
+    color: "#0082c9"
+    bg: "rgba(0,130,201,0.12)"
+  tips:
+    - "It serves HTTPS on 8445 with a self-signed certificate — the browser warning on first visit is expected on a LAN address"
+    - "Calendar and contacts are CalDAV/CardDAV: iOS and Android sync them natively once you add the account, no Nextcloud app needed"
+    - "Redis is not optional here. Without it file locking falls back to the database and large syncs start timing out"
+  env_vars:
+    NEXTCLOUD_DB_PASSWORD:
+      label: "Database password"
+      type: "secret"
+      config_editable: false
+      dangerous: true
+  services:
+    nextcloud:
+      friendly_name: "Nextcloud"
+      color: "#0082c9"
+      description: "Files, calendar and contacts"
+      icon: "nextcloud.svg"
+      port_map: 8445
+      container_port: 443
+      url_scheme: "https"
+      first_login: "The first visit runs a setup wizard where you create the admin account."
+    nextcloud-db:
+      friendly_name: "Nextcloud Database"
+      description: "MariaDB"
+      internal: true
+    nextcloud-redis:
+      friendly_name: "Nextcloud Cache"
+      description: "Redis, for file locking"
+      internal: true
+
+services:
+  nextcloud:
+    image: lscr.io/linuxserver/nextcloud:30.0.4
+    container_name: nextcloud
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    ports:
+      - "8445:443"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/cloud/config/nextcloud:/config
+      - ${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}/nextcloud:/data
+    depends_on:
+      - nextcloud-db
+      - nextcloud-redis
+    networks:
+      - homebox_proxy
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  nextcloud-db:
+    image: mariadb:11.6
+    container_name: nextcloud-db
+    command: --transaction-isolation=READ-COMMITTED --log-bin=binlog --binlog-format=ROW
+    environment:
+      - TZ=${TZ:-UTC}
+      - MARIADB_ROOT_PASSWORD=${NEXTCLOUD_DB_PASSWORD:-}
+      - MARIADB_DATABASE=nextcloud
+      - MARIADB_USER=nextcloud
+      - MARIADB_PASSWORD=${NEXTCLOUD_DB_PASSWORD:-}
+      - MARIADB_AUTO_UPGRADE=1
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/cloud/config/mariadb:/var/lib/mysql
+    networks:
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  nextcloud-redis:
+    image: redis:7-alpine
+    container_name: nextcloud-redis
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/cloud/config/redis:/data
+    networks:
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+          cpus: '0.50'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true
+  homebox_internal:
+    external: true
