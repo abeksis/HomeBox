@@ -279,9 +279,15 @@ cmd_install() {
   # --quiet-pull and a filtered build log: compose's own output is a 40-line
   # BuildKit table of layer hashes that buries the four lines this script
   # prints. What is kept is what changed — the images and the containers.
+  # Keep only the lines that say what changed. Everything filtered here is
+  # BuildKit's progress: `=> step` with a TTY, `#13 exporting layers` without
+  # one, plus compose's own `[+] Building 20.5s` counters. What survives is
+  # "Image ... Built" and the container lines, which is what an install is.
+  # `docker compose build` on its own still shows the full log when a build
+  # actually fails, because the failure text is not in these shapes.
   compose "$id" up -d --build --quiet-pull --remove-orphans 2>&1 \
-    | grep -vE '^\s*=>|^\s*$|^\[\+\]|^time=|transferring|DONE|CACHED|resolve docker|load (metadata|build definition|local bake)' \
-    | sed 's/^ *//' \
+    | grep -vE '^\s*(=>|#[0-9]+)|^\s*$|^\[\+\]|^time=' \
+    | sed 's/^ */  /' \
     || true
 
   mark_enabled "$id"
