@@ -65,7 +65,11 @@ IMAGES=""
 if [ "${#DOCKER[@]}" -gt 0 ] && docker info >/dev/null 2>&1; then
   # By compose project label, not by name: the label is what actually ties a
   # container to a HomeBox module, and names have no prefix by design.
-  CONTAINERS="$(docker ps -aq --filter 'label=com.docker.compose.project' \
+  # No -q: docker refuses to honour --format when --quiet is also set
+  # ("Ignoring custom format, because both --format and --quiet are set"), so
+  # this listed bare IDs and the filter below matched nothing — the inventory
+  # said "containers 0" on a box with three running.
+  CONTAINERS="$(docker ps -a --filter 'label=com.docker.compose.project' \
     --format '{{.Label "com.docker.compose.project"}} {{.Names}}' 2>/dev/null \
     | awk '$1 ~ /^homebox-/ {print $2}' || true)"
   NETWORKS="$(docker network ls --format '{{.Name}}' 2>/dev/null | grep -E '^homebox_' || true)"
