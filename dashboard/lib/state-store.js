@@ -36,11 +36,26 @@ async function readJson(name, fallback) {
  * then leaves the previous good file rather than a truncated one — the same
  * reason the rest of this box uses atomic writes for config.
  */
+/**
+ * State files that must not be world-readable.
+ *
+ * auth.json holds the password hash and every live session id — and a session
+ * id IS the credential, so anyone able to read this file can paste one into a
+ * cookie and be signed in. The rest of state/ (prefs, the activity log, the
+ * catalog, bookmarks) is uninteresting and stays readable.
+ */
+const SECRET_FILES = new Set(['auth.json']);
+
 async function writeJson(name, value) {
   ensureDir();
   const target = path.join(STATE_DIR, name);
   const tmp = `${target}.tmp-${process.pid}`;
-  await fsp.writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+  const mode = SECRET_FILES.has(name) ? 0o600 : 0o644;
+  // The mode is set at creation and again explicitly, because `mode` in
+  // writeFile is masked by the process umask. A file that is world-readable
+  // for even a moment was world-readable.
+  await fsp.writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`, { encoding: 'utf8', mode });
+  await fsp.chmod(tmp, mode);
   await fsp.rename(tmp, target);
   await matchDirOwner(target);
 }
