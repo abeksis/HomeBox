@@ -244,10 +244,13 @@ async function changePassword(req, { current, next }) {
   }
   data.password = hash(next);
   // Everything signed in with the old password is signed out. That is the
-  // point of changing it.
+  // point of changing it. Counted before they go, so the page can say how
+  // many devices this just kicked off rather than leaving it to be guessed.
+  const mine = cookieFrom(req);
+  const others = Object.keys(pruneSessions(data.sessions)).filter((k) => k !== mine).length;
   data.sessions = {};
   const id = await createSession(data);
-  return { cookie: sessionCookie(id, req) };
+  return { cookie: sessionCookie(id, req), otherSessionsSignedOut: others };
 }
 
 /**

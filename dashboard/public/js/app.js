@@ -1269,6 +1269,56 @@ window.fetch = async (input, opts) => {
   return res;
 };
 
+/**
+ * Change the dashboard password. Validated here as well as on the server so a
+ * typo in the confirmation costs nothing, but the server is the one that
+ * decides: it re-checks the current password and the minimum length, because
+ * this form is not the only thing that can POST here.
+ */
+async function submitPasswordChange(event) {
+  event.preventDefault();
+  const current = $('#pw-current').value;
+  const next = $('#pw-new').value;
+  const status = $('#pw-status');
+  const button = $('#btn-change-password');
+
+  if (next !== $('#pw-confirm').value) {
+    status.textContent = 'The new passwords do not match.';
+    toast('The new passwords do not match.', 'error');
+    return;
+  }
+  button.disabled = true;
+  button.classList.add('btn-busy');
+  status.textContent = 'Changing…';
+  try {
+    const res = await fetch('api/auth/password', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ current, next }),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      status.textContent = data.error;
+      toast(data.error, 'error', 8000);
+      return;
+    }
+    const others = Number(data.otherSessionsSignedOut) || 0;
+    toast(others
+      ? `Password changed. ${others} other device${others === 1 ? '' : 's'} signed out.`
+      : 'Password changed.', 'success', 7000);
+    status.textContent = '';
+    $('#pw-current').value = '';
+    $('#pw-new').value = '';
+    $('#pw-confirm').value = '';
+  } catch (err) {
+    status.textContent = err.message;
+    toast(err.message, 'error', 8000);
+  } finally {
+    button.disabled = false;
+    button.classList.remove('btn-busy');
+  }
+}
+
 /* --------------------------------------------------- quick access (server) */
 
 /**
@@ -2764,6 +2814,7 @@ document.addEventListener('input', (event) => {
 $('#launcher-add-form').addEventListener('submit', submitLauncherForm);
 $('#catalog-form').addEventListener('submit', submitCatalogForm);
 $('#quick-form').addEventListener('submit', submitQuickForm);
+$('#password-form').addEventListener('submit', submitPasswordChange);
 state.launcherPrefs = readLauncherPrefs();
 
 $('#log-refresh').addEventListener('click', () => loadLogs());

@@ -581,9 +581,9 @@ const server = http.createServer(async (req, res) => {
         // Changing a password is not a way IN, so it needs a session.
         if (route === '/api/auth/password') {
           if (!(await auth.isAuthenticated(req))) return sendJson(res, 401, { error: 'not signed in' });
-          const { cookie } = await auth.changePassword(req, await readBody(req));
-          res.setHeader('set-cookie', cookie);
-          return sendJson(res, 200, { ok: true });
+          const result = await auth.changePassword(req, await readBody(req));
+          res.setHeader('set-cookie', result.cookie);
+          return sendJson(res, 200, { ok: true, otherSessionsSignedOut: result.otherSessionsSignedOut });
         }
         return sendJson(res, 404, { error: 'no such endpoint' });
       } catch (err) {

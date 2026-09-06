@@ -659,9 +659,32 @@
     <div class="settings-panel" data-stab-panel="passwords">
       <div class="settings-grid">
         <div class="bento-card">
+          <div class="card-header"><span class="card-label">Your dashboard password</span></div>
+          <p class="hint">The password you sign in with. Changing it signs out every other
+            device that is currently signed in &mdash; that is the point of changing it.</p>
+          <form class="editor-form" id="password-form">
+            <div class="editor-grid">
+              <label class="is-wide"><span>Current password</span>
+                <input class="config-input" id="pw-current" type="password" autocomplete="current-password" required></label>
+              <label><span>New password</span>
+                <input class="config-input" id="pw-new" type="password" autocomplete="new-password" required></label>
+              <label><span>Confirm new password</span>
+                <input class="config-input" id="pw-confirm" type="password" autocomplete="new-password" required></label>
+            </div>
+            <div class="editor-actions">
+              <button type="submit" class="btn-pill primary" id="btn-change-password">Change password</button>
+              <span class="schedule-status" id="pw-status" role="status"></span>
+            </div>
+          </form>
+          <p class="hint">Forgotten it? There is no reset by email, because there is no email.
+            On the server: <code class="mono">sudo rm /opt/homebox/state/auth.json</code> then
+            <code class="mono">homebox bootstrap-token</code> to claim the box again.</p>
+        </div>
+
+        <div class="bento-card">
           <div class="card-header"><span class="card-label">Generated secrets</span><span class="card-meta mono" id="secrets-meta"></span></div>
           <p class="hint">Generated once by <code class="mono">install.sh</code> into <code class="mono">.env</code> (mode 600) and never regenerated: an encryption key that changes turns stored data into bytes nobody can read.</p>
-          <p class="hint"><strong>The values are deliberately not shown here.</strong> This page has no login, so printing them would put every password on any screen that can reach port 8443. Read one from a shell instead:</p>
+          <p class="hint"><strong>The values are deliberately not shown here.</strong> The dashboard has a login now, so this is no longer about who can reach the page &mdash; it is that a screen showing thirty passwords is one screenshot, one shoulder, or one shared tab away from leaking all of them at once. Read the one you need from a shell:</p>
           <code class="cmd">homebox secrets &lt;module&gt;</code>
           <div class="table-wrap" style="margin-top:1rem">
             <table class="table">
