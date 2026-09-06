@@ -417,7 +417,7 @@ function runningRow({ container, svc, mod }) {
       : '';
   const core = mod.required ? '<span class="critical-badge">Core</span>' : '';
 
-  return `<div class="running-row">
+  return `<div class="running-row" data-down="${on ? '0' : '1'}">
     <span class="running-icon" style="background:${tint(color)}">${art}</span>
     <span class="running-info">
       <span class="running-name">${escapeHtml(name)}${core}${badge}</span>

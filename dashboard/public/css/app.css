@@ -474,9 +474,12 @@ code.mono {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  /* The ring is the card colour: it punches the dot out of the keycap so it
-     reads at any icon colour. */
-  border: 2px solid var(--bg-1);
+  /* The ring is the PAGE colour, not the card's (source style.css:3024 uses
+     var(--bg), which resolves to --bg-0). It is the difference between a dot
+     that looks punched through the surface and one that sits on top of it as
+     a raised badge — which is why this read as too prominent next to the
+     original. */
+  border: 2px solid var(--bg-0);
 }
 .keycap-status[data-state='healthy'],
 .keycap-status[data-state='running'] { background: var(--live); animation: statusPulse 2s ease infinite; }
@@ -1346,7 +1349,34 @@ code.mono {
 .running-icon img { width: 22px; height: 22px; object-fit: contain; }
 .running-icon span { font-weight: 800; font-size: 0.82rem; }
 .running-info { flex: 1; min-width: 0; }
-.running-name { font-weight: 700; font-size: 0.88rem; }
+/* TWO indicators per running row, as the source has (style.css:7904): a live
+   pulsing dot prefixing the NAME, and a separate .status-dot beside the status
+   text below it. They are not redundant — the first says "this is alive right
+   now", the second qualifies it ("Up 2 hours", "unhealthy"). Only one of them
+   was here, so a row read as half the signal the original gives. */
+.running-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.running-row .running-name::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--live);
+  box-shadow: 0 0 6px var(--live-glow);
+  animation: statusPulse 2s ease infinite;
+}
+/* A stopped row must not advertise a heartbeat it does not have. */
+.running-row[data-down='1'] .running-name::before {
+  background: var(--text-muted);
+  box-shadow: none;
+  animation: none;
+}
 .running-detail {
   font-size: 0.74rem;
   color: var(--text-muted);
