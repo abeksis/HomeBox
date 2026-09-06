@@ -380,7 +380,10 @@ BOOTSTRAP="$(HOMEBOX_ROOT="$HB_ROOT" node -e '
 # This runs as root and AFTER the chown -R above, so the file it just created
 # belongs to root and `homebox bootstrap-token` as the login user could not
 # read it back.
-[ -f "$HB_ROOT/state/auth.json" ] && $SUDO chown "$HB_USER:$HB_USER" "$HB_ROOT/state/auth.json" || true
+if [ -f "$HB_ROOT/state/auth.json" ]; then
+  $SUDO chown "$HB_USER:$HB_USER" "$HB_ROOT/state/auth.json"
+  $SUDO chmod 600 "$HB_ROOT/state/auth.json"
+fi
 
 ADDRESS="$(hostname -I 2>/dev/null | awk '{print $1}')"
 cat <<EOF
