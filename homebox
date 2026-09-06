@@ -257,7 +257,10 @@ cmd_install() {
 
   step "Starting containers"
   prime_binds "$id"
-  compose "$id" up -d --remove-orphans
+  # --build, because `up` builds only when the image is MISSING: once a
+  # stale tag exists it is reused and the install silently runs old code.
+  # The dashboard is the module this bites. Harmless for image-only ones.
+  compose "$id" up -d --build --remove-orphans
 
   mark_enabled "$id"
 
@@ -346,7 +349,10 @@ cmd_update() {
   compose "$id" pull
   step "Recreating"
   prime_binds "$id"
-  compose "$id" up -d --remove-orphans
+  # --build, because `up` builds only when the image is MISSING: once a
+  # stale tag exists it is reused and the install silently runs old code.
+  # The dashboard is the module this bites. Harmless for image-only ones.
+  compose "$id" up -d --build --remove-orphans
   info "updated $id"
 }
 
