@@ -132,8 +132,14 @@ async function install(id, { onLine = null } = {}) {
     if (onLine) onLine('==> Pull failed — trying with the images already on this box', true);
   }
 
-  if (onLine) onLine(`==> Starting ${id}`, false);
-  const up = await compose(id, ['up', '-d', '--remove-orphans'], { timeout: 600000, onLine });
+  // --build matters for any module with a `build:` section — the dashboard is
+  // one. `up` alone builds only when the image is MISSING, so once a stale
+  // `homebox-dashboard:local` exists it is reused forever and an install
+  // silently runs old code. Compose says so in a warning nobody reads:
+  // "Some service image(s) must be built from source". Harmless for the
+  // image-only modules, which have nothing to build.
+  if (onLine) onLine(`==> Building and starting ${id}`, false);
+  const up = await compose(id, ['up', '-d', '--build', '--remove-orphans'], { timeout: 900000, onLine });
   log.push(`# up\n${up.stdout}${up.stderr}`);
   return log.join('\n');
 }
@@ -166,8 +172,10 @@ const pull = (id, { onLine = null } = {}) => compose(id, ['pull'], { timeout: 90
 async function update(id, { onLine = null } = {}) {
   if (onLine) onLine(`==> Pulling newer images for ${id}`, false);
   await pull(id, { onLine });
-  if (onLine) onLine(`==> Recreating ${id}`, false);
-  return compose(id, ['up', '-d', '--remove-orphans'], { onLine });
+  if (onLine) onLine(`==> Rebuilding and recreating ${id}`, false);
+  // Same reason as install(): without --build, updating a module that builds
+  // from source pulls new base layers and then runs the old image anyway.
+  return compose(id, ['up', '-d', '--build', '--remove-orphans'], { timeout: 900000, onLine });
 }
 
 /**
