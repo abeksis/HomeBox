@@ -70,6 +70,20 @@ QBIT_USER="${HB_QBIT_USER:-admin}"
 seed_qbittorrent_login() {
   [ -n "${HB_QBIT_PASS:-}" ] || { echo "media: no HB_QBIT_PASS in .env — leaving qBittorrent on its temporary password"; return 0; }
 
+  # qBittorrent rewrites this file from memory when it SHUTS DOWN, so anything
+  # written here while it is running is erased the moment the container stops
+  # — and the erase happens three seconds before the next start, which is why
+  # it looks like the seeding never ran at all. Measured on this box.
+  #
+  # On a fresh install that is not a problem: setup.sh runs before `compose
+  # up`. Re-running it against a live stack is the case that needs saying out
+  # loud, because a silent no-op here reads as "HomeBox cannot do this".
+  if command -v docker >/dev/null 2>&1 && [ -n "$(docker ps -q --filter name='^qbittorrent$' 2>/dev/null)" ]; then
+    echo "media: qBittorrent is running — it would overwrite this file on shutdown, so the login was NOT seeded."
+    echo "media: stop it first if you want the account written:  docker stop qbittorrent && bash $HB_ROOT/modules/media/setup.sh && docker start qbittorrent"
+    return 0
+  fi
+
   if [ -f "$QBT_CONF" ] && grep -q '^WebUI\\Password_PBKDF2=' "$QBT_CONF"; then
     echo "media: qBittorrent already has a saved web UI password — leaving it alone"
     return 0
