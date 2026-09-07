@@ -2184,6 +2184,10 @@ function renderModuleErrors(errors) {
 
 function applySummary(summary) {
   state.summary = summary;
+  // Set before anything renders: the launcher builds its dismissal keys from
+  // it, and a tile drawn under the fallback key would be dismissible into a
+  // slot nothing ever reads again.
+  state.installId = summary.installId || null;
   // The server is the authority on what is mid-install: a page opened after
   // an install started should still show it as busy.
   state.busy = new Set(summary.busy || []);
@@ -2353,7 +2357,21 @@ async function savePrefs(patch) {
  * Dismissal is per-browser (localStorage) and per-service, because it is a
  * statement about what THIS person has already seen, not about the box.
  */
-const seenKey = (service) => `hb-first-login-seen-${service}`;
+/**
+ * The dismissal key, scoped to THIS install of the box.
+ *
+ * localStorage belongs to the browser, so wiping the server cannot clear it.
+ * Keyed on the service alone, "don't show this again" outlived a full
+ * uninstall and reinstall: the box came back with a brand new generated
+ * password and the dialog that exists to show it stayed silent, which reads
+ * exactly like the uninstall left something behind.
+ *
+ * The install id changes whenever state/ is recreated, so a reinstalled box
+ * is a different box as far as this is concerned. Falls back to the bare name
+ * only before the first summary lands, which at worst shows the dialog once
+ * more than needed — the right direction to fail in.
+ */
+const seenKey = (service) => `hb-first-login-seen-${state.installId || 'pending'}-${service}`;
 
 /** Every setting a module declares, with its current value. */
 async function moduleEnv(moduleId) {

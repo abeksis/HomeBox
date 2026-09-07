@@ -338,6 +338,27 @@ async function backupInfo(modules, metrics) {
   };
 }
 
+/**
+ * A random id for this install, made once and kept in state/.
+ *
+ * It is not a secret and it identifies nothing about the machine — it exists
+ * so a browser can tell "the box I saw before" from "the box that has since
+ * been wiped and reinstalled". Because uninstall.sh removes state/ with the
+ * rest of $HB_ROOT, a reinstall necessarily produces a new one.
+ */
+let cachedInstallId = null;
+async function installId() {
+  if (cachedInstallId) return cachedInstallId;
+  const saved = await state.readJson('install.json', null);
+  if (saved && typeof saved.id === 'string') {
+    cachedInstallId = saved.id;
+    return cachedInstallId;
+  }
+  cachedInstallId = require('crypto').randomBytes(8).toString('hex');
+  await state.writeJson('install.json', { id: cachedInstallId, created: new Date().toISOString() });
+  return cachedInstallId;
+}
+
 async function apiSummary() {
   const [{ modules, errors }, containers, metrics, dockerVersion, networks] = await Promise.all([
     modulesLib.loadAll(),
@@ -360,6 +381,12 @@ async function apiSummary() {
     network: networkInfo(withState, networks),
     backups: await backupInfo(withState, metrics),
     version: VERSION,
+    // Identifies THIS install, so anything a browser remembers about the box
+    // can be tied to it. Uninstall takes state/ with it, so a reinstall is a
+    // new id and every "don't show me again" a browser is holding lapses —
+    // which is the point: a wiped box that still suppresses its own
+    // first-login dialogs looks like the wipe did not work.
+    installId: await installId(),
     host: { address: HOST_ADDRESS, name: metrics.hostname },
     docker: dockerVersion,
     metrics,

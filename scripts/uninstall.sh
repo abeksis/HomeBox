@@ -62,6 +62,8 @@ step "What will be removed"
 CONTAINERS=""
 NETWORKS=""
 IMAGES=""
+VOLUMES=""
+DECLARED=""
 if [ "${#DOCKER[@]}" -gt 0 ] && docker info >/dev/null 2>&1; then
   # By compose project label, not by name: the label is what actually ties a
   # container to a HomeBox module, and names have no prefix by design.
@@ -73,13 +75,48 @@ if [ "${#DOCKER[@]}" -gt 0 ] && docker info >/dev/null 2>&1; then
     --format '{{.Label "com.docker.compose.project"}} {{.Names}}' 2>/dev/null \
     | awk '$1 ~ /^homebox-/ {print $2}' || true)"
   NETWORKS="$(docker network ls --format '{{.Name}}' 2>/dev/null | grep -E '^homebox_' || true)"
+
+  # Anonymous volumes, collected BEFORE the containers go.
+  #
+  # An image that declares VOLUME without a compose mapping gets an unnamed
+  # volume with a 64-hex name, and `docker rm` leaves it behind — it needs
+  # -v. Six of them survived a full uninstall on the test box, which is
+  # exactly the kind of thing "it left residue" means. Read from the
+  # containers themselves so only HomeBox's own are ever touched: a bare
+  # `volume prune` would take somebody else's stopped container's data.
+  for c in $CONTAINERS; do
+    VOLUMES="$VOLUMES$(docker inspect "$c" \
+      --format '{{range .Mounts}}{{if eq .Type "volume"}}{{.Name}}{{"\n"}}{{end}}{{end}}' 2>/dev/null || true)"
+  done
+  VOLUMES="$(printf '%s' "$VOLUMES" | grep -E '^[a-f0-9]{64}$' | sort -u || true)"
+
+  # Images: what the modules actually declare, not just the ones built here.
+  #
+  # `homebox-*` only ever matched the dashboard's own build. Everything
+  # pulled — Radarr, Sonarr, the proxy, FlareSolverr — stayed, which on the
+  # test box was 5GB of "removed" HomeBox. The list comes from the module
+  # files so it can never include an image HomeBox did not ask for.
+  if [ -d "$HB_ROOT/modules" ]; then
+    # A tag built from ${HB_VERSION:-local} leaves "homebox-dashboard:" once
+    # the variable is stripped, so anything without a real tag is dropped —
+    # the homebox-* match above already covers the images built here.
+    DECLARED="$(grep -rhoE '^\s*image:\s*\S+' "$HB_ROOT"/modules/*/docker-compose.yml 2>/dev/null \
+      | sed -E 's/^\s*image:\s*//; s/\$\{[^}]*\}//g' \
+      | grep -E ':[A-Za-z0-9._-]+$' | sort -u || true)"
+  fi
   IMAGES="$(docker image ls --format '{{.Repository}}:{{.Tag}}' 2>/dev/null | grep -E '^homebox-' || true)"
+  for want in $DECLARED; do
+    docker image inspect "$want" >/dev/null 2>&1 && IMAGES="$IMAGES
+$want"
+  done
+  IMAGES="$(printf '%s' "$IMAGES" | grep -vE '^\s*$' | sort -u || true)"
 fi
 
 count() { [ -z "$1" ] && echo 0 || printf '%s\n' "$1" | grep -c .; }
 printf '  containers   %s%s\n' "$(count "$CONTAINERS")" \
   "$([ -n "$CONTAINERS" ] && printf ' %s(%s)%s' "$DIM" "$(printf '%s' "$CONTAINERS" | tr '\n' ' ')" "$RESET")"
 printf '  networks     %s\n' "$(count "$NETWORKS")"
+printf '  volumes      %s %s(anonymous, created by these containers)%s\n' "$(count "$VOLUMES")" "$DIM" "$RESET"
 printf '  images       %s%s\n' "$(count "$IMAGES")" \
   "$([ "$KEEP_IMAGES" -eq 1 ] && echo "  ${DIM}kept (--keep-images)${RESET}")"
 
@@ -124,9 +161,25 @@ fi
 
 if [ -n "$CONTAINERS" ]; then
   step "Removing containers"
+  # -v so an anonymous volume goes with the container that made it. Named
+  # volumes a compose file declares are not touched by this flag.
   # shellcheck disable=SC2086
-  docker rm -f $(printf '%s ' $CONTAINERS) >/dev/null 2>&1 || true
+  docker rm -f -v $(printf '%s ' $CONTAINERS) >/dev/null 2>&1 || true
   printf '  %s removed\n' "$(count "$CONTAINERS")"
+fi
+
+# Anything -v could not take, usually because it was still referenced when
+# the container went. Only the ones this script inventoried from HomeBox's
+# own containers, never a blanket prune.
+if [ -n "$VOLUMES" ] && [ "$KEEP_DATA" -ne 1 ]; then
+  step "Removing anonymous volumes"
+  left=0
+  for vol in $VOLUMES; do
+    if docker volume inspect "$vol" >/dev/null 2>&1; then
+      docker volume rm "$vol" >/dev/null 2>&1 && printf '  %s\n' "${vol:0:12}" || { warn "${vol:0:12} is still in use — left alone"; left=1; }
+    fi
+  done
+  [ "$left" -eq 0 ] && printf '  %s accounted for\n' "$(count "$VOLUMES")"
 fi
 
 if [ -n "$NETWORKS" ]; then
@@ -137,9 +190,12 @@ if [ -n "$NETWORKS" ]; then
 fi
 
 if [ -n "$IMAGES" ] && [ "$KEEP_IMAGES" -ne 1 ]; then
-  step "Removing images built here"
+  step "Removing images"
   for img in $IMAGES; do
-    docker image rm "$img" >/dev/null 2>&1 && printf '  %s\n' "$img" || true
+    # `docker image rm` refuses while any container still uses it, which is
+    # the safety we want: an image another stack on this box shares stays.
+    docker image rm "$img" >/dev/null 2>&1 && printf '  %s\n' "$img" \
+      || warn "$img is used by something else — left alone"
   done
 fi
 
