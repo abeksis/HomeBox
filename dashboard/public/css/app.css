@@ -2333,3 +2333,158 @@ code.mono {
 .editor-icon img { width: 20px; height: 20px; object-fit: contain; }
 .editor-icon-mono { font-size: 0.68rem; font-weight: 800; color: var(--accent); }
 .editor-emoji { font-size: 1.05rem; }
+
+/* ============================== UPDATES ==============================
+   The Updates page. Deliberately calm: what it lists are optional rebuilds
+   of versions you already run, so nothing here is painted like an alarm.
+   Red is reserved for an update that actually failed. */
+
+/* A dot on the nav tab, never a count — see updateBadge() for why. */
+.tab-badge {
+  width: 7px;
+  height: 7px;
+  margin-left: 0.4rem;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.updates-intro-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.updates-status {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.updates-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--grid-gap, 0.8rem);
+  margin-bottom: 1rem;
+}
+.updates-summary article {
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--tile-bg);
+  box-shadow: 0 0 0 1px var(--tile-ring);
+}
+.updates-summary span {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+.updates-summary strong {
+  display: block;
+  margin: 0.25rem 0 0.15rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.updates-summary small { color: var(--text-muted); font-size: 0.78rem; }
+
+/* Same surface as a settings group — this page has no bento grid to sit in,
+   so each section carries its own panel. */
+.updates-card {
+  padding: 1rem 1.1rem;
+  margin-bottom: 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--tile-bg);
+  box-shadow: 0 0 0 1px var(--tile-ring);
+}
+.updates-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+.updates-card-head h2 { margin: 0; font-size: 0.98rem; font-weight: 700; }
+.updates-card-head small { color: var(--text-muted); font-size: 0.8rem; }
+
+.empty-state {
+  margin: 0.4rem 0;
+  color: var(--text-muted);
+  font-size: 0.87rem;
+  line-height: 1.55;
+}
+
+/* One row per container. `flex: 1` on the middle column, not
+   space-between: with three children the middle one would otherwise be
+   parked in the centre of the card, away from its own icon and button. */
+.update-row {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.7rem 0;
+  border-top: 1px solid var(--border-hair);
+}
+.update-row:first-of-type { border-top: 0; }
+.update-row-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+.update-row-name { font-weight: 650; display: flex; align-items: center; gap: 0.45rem; }
+.update-row-image,
+.update-row-digest {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+.update-tag {
+  padding: 0.05rem 0.4rem;
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: help;
+}
+
+.updates-skipped {
+  margin-top: 0.9rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius-sm);
+  background: var(--warn-soft);
+  box-shadow: 0 0 0 1px var(--warn-line);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+.updates-skipped strong { display: block; margin-bottom: 0.25rem; }
+
+.update-history-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--border-hair);
+  font-size: 0.82rem;
+}
+.update-history-row:first-of-type { border-top: 0; }
+.update-history-tag {
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.update-history-tag.ok { background: var(--good-soft); color: var(--good); }
+.update-history-tag.rolled-back { background: var(--warn-soft); color: var(--warn); }
+.update-history-tag.failed { background: var(--bad-soft); color: var(--bad); }
+.update-history-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.update-history-time { color: var(--text-muted); }
+.update-history-reason { flex-basis: 100%; color: var(--text-muted); font-size: 0.78rem; }
+
+.updates-footnote {
+  margin: 0;
+  padding: 0 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.65;
+}

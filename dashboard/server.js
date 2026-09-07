@@ -32,6 +32,7 @@ const catalog = require('./lib/catalog');
 const icons = require('./lib/icons');
 const bookmarks = require('./lib/bookmarks');
 const auth = require('./lib/auth');
+const updates = require('./lib/updates');
 const stats = require('./lib/stats');
 const state = require('./lib/state-store');
 
@@ -648,6 +649,56 @@ const server = http.createServer(async (req, res) => {
       if (req.method !== 'POST') return sendJson(res, 405, { error: 'method not allowed' });
       const result = await runAction(decodeURIComponent(action[1]), action[2]);
       return sendJson(res, result.status, result.body);
+    }
+
+    // --- Updates ---
+    //
+    // GET  /api/updates          the cached answer + history (never checks)
+    // POST /api/updates/check    ask the registries now
+    // POST /api/updates/apply    {container: "<name>" | "all"} — streams NDJSON
+    //
+    // The check is a POST even though it reads nothing on this box: it makes
+    // a dozen outbound registry requests, and a GET is something a browser
+    // prefetch or a refresh can fire on its own.
+    if (route.startsWith('/api/updates')) {
+      const tail = route.slice('/api/updates'.length).replace(/^\//, '');
+      try {
+        if (!tail && req.method === 'GET') return sendJson(res, 200, await updates.status());
+
+        if (tail === 'check' && req.method === 'POST') {
+          return sendJson(res, 200, { ok: true, ...(await updates.check()) });
+        }
+
+        if (tail === 'apply' && req.method === 'POST') {
+          const body = await readBody(req);
+          const which = String(body.container || '').trim();
+          if (!which) return sendJson(res, 400, { error: 'which container?' });
+
+          // Same shape as the module action stream: an update pulls an image
+          // and waits on a healthcheck, which is minutes of silence unless
+          // the page can watch the work happen.
+          res.writeHead(200, {
+            'content-type': 'application/x-ndjson; charset=utf-8',
+            'cache-control': 'no-store',
+            'x-accel-buffering': 'no',
+          });
+          const send = (obj) => { if (!res.writableEnded) res.write(`${JSON.stringify(obj)}\n`); };
+          try {
+            const result = await updates.apply(which, {
+              onLine: (line, isErr) => send({ line, err: isErr }),
+            });
+            send({ done: true, ...result });
+          } catch (err) {
+            send({ line: err.message, err: true });
+            send({ done: true, ok: false, error: err.message });
+          }
+          return res.end();
+        }
+
+        return sendJson(res, 404, { error: 'no such endpoint' });
+      } catch (err) {
+        return sendJson(res, err.status || 500, { error: err.message });
+      }
     }
 
     // --- Backup Center ---

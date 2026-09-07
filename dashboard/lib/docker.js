@@ -83,6 +83,11 @@ async function listContainers() {
     id: c.Id.slice(0, 12),
     name: cleanName(c.Names),
     image: c.Image,
+    // The content id of the image actually running, which is not the same
+    // thing as the name above: after a `pull` the name points somewhere new
+    // while this container keeps running the old bytes. The update check is
+    // exactly that comparison, so it needs both.
+    imageId: c.ImageID || null,
     state: normalizeState(c),
     rawState: c.State,
     status: c.Status,
@@ -93,6 +98,22 @@ async function listContainers() {
     project: (c.Labels || {})['com.docker.compose.project'] || null,
     service: (c.Labels || {})['com.docker.compose.service'] || null,
   }));
+}
+
+/**
+ * The registry digests a local image is known by.
+ *
+ * An image pulled from a registry carries the digest it came from in
+ * RepoDigests; one built here has none, which is how the update check tells
+ * "nothing to compare" apart from "up to date".
+ */
+async function imageDigests(idOrName) {
+  try {
+    const info = await request(`/v1.43/images/${encodeURIComponent(idOrName)}/json`);
+    return Array.isArray(info.RepoDigests) ? info.RepoDigests : [];
+  } catch {
+    return [];
+  }
 }
 
 async function logs(name, tail = 200) {
@@ -170,4 +191,6 @@ async function reachable() {
   }
 }
 
-module.exports = { listContainers, listNetworks, logs, version, reachable, normalizeState };
+module.exports = {
+  listContainers, listNetworks, logs, version, reachable, normalizeState, imageDigests,
+};

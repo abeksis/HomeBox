@@ -186,6 +186,55 @@ async function update(id, { onLine = null } = {}) {
   return compose(id, ['up', '-d', '--build', '--remove-orphans'], { timeout: 900000, onLine });
 }
 
+// A compose service name, for the same reason module ids are validated: it
+// reaches an argv slot, and nothing that is not a service name belongs there.
+const SERVICE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/;
+
+function checkService(name) {
+  if (!SERVICE_PATTERN.test(name)) throw new ComposeError(`invalid service name: ${name}`);
+  return name;
+}
+
+/**
+ * Pull one service's image, without touching the rest of the module.
+ *
+ * The Updates page works service by service on purpose: a module like `media`
+ * runs six containers, and a rebuild of Bazarr is no reason to recreate
+ * Sonarr mid-download.
+ */
+const pullService = (id, service, { onLine = null } = {}) =>
+  compose(id, ['pull', checkService(service)], { timeout: 900000, onLine });
+
+/**
+ * Recreate one service against whatever image its tag now points at.
+ *
+ * `--no-deps` is the important flag: without it compose brings the service's
+ * dependencies up too, which on a module with a database means restarting the
+ * database to update the web front end.
+ */
+const upService = (id, service, { onLine = null } = {}) =>
+  compose(id, ['up', '-d', '--no-deps', checkService(service)], { timeout: 900000, onLine });
+
+/**
+ * Point a tag back at an image that is still on disk.
+ *
+ * This is the rollback. A pull does not delete what it replaced — it only
+ * moves the tag — so the previous image is still here by id, and re-tagging
+ * it and recreating the service puts the box back exactly where it was. That
+ * is why the update flow records the old image id BEFORE pulling; without it
+ * a failed update leaves you on a broken new version with no way back that
+ * does not involve the registry.
+ */
+function retag(imageId, ref) {
+  if (!/^sha256:[a-f0-9]{64}$/.test(String(imageId || ''))) {
+    throw new ComposeError(`invalid image id: ${imageId}`);
+  }
+  if (!/^[A-Za-z0-9][A-Za-z0-9_.\-/:]{0,255}$/.test(String(ref || ''))) {
+    throw new ComposeError(`invalid image reference: ${ref}`);
+  }
+  return run('docker', ['tag', imageId, ref], { timeout: 60000 });
+}
+
 /**
  * Per-container lifecycle, for the Running list's Logs / Restart / Pause
  * buttons. It goes through the docker CLI rather than the Engine API so that
@@ -218,5 +267,6 @@ async function available() {
 
 module.exports = {
   install, start, stop, restart, down, purge, update, pull, available, runSetup,
+  pullService, upService, retag,
   containerAction, CONTAINER_ACTIONS, ComposeError, ID_PATTERN,
 };

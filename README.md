@@ -41,6 +41,34 @@ cd /opt/homebox && git pull && sudo bash install.sh
 `install.sh` is idempotent: it repairs what is missing and never regenerates a
 secret that already exists.
 
+That command updates HomeBox itself — the dashboard, the CLI, and the pinned
+image versions in the compose files.
+
+#### App image updates (the Updates tab)
+
+Separately, the dashboard's **Updates** tab handles a case a pinned version
+does not protect you from. Every module here pins an exact tag on purpose
+(`pihole/pihole:2026.07.2`, `jc21/nginx-proxy-manager:2.15.1`, …) so that
+nothing jumps a major version unattended — but a pinned tag is not frozen
+bytes. Publishers re-push the same tag when a base layer gets a CVE fix, so
+the tag you pinned points at a new digest, and `docker compose pull` will
+report "up to date" while your copy is months of security patches behind,
+because compose only compares tags.
+
+The Updates tab compares the **digest** of every running image against what
+its registry serves for that same tag, and lists the differences. Nothing is
+applied until you press the button. When you do, one service at a time:
+
+1. archive that module's `config/` directory,
+2. record the image id currently running — this is the rollback,
+3. `pull`, then `up -d --no-deps` for that one service,
+4. wait for it to report healthy; if it does not, re-tag the recorded image,
+   recreate, and record the failure in the page's history.
+
+Moving an app to a genuinely newer *version* is not something this button
+does. That is a change to a compose file in this repo, and it arrives with a
+HomeBox release, via the `git pull` above.
+
 ### Uninstalling
 
 ```bash

@@ -66,6 +66,7 @@
       <a href="#apps" data-page="apps" class="tab">Apps</a>
       <a href="#containers" data-page="containers" class="tab">Containers</a>
       <a href="#logs" data-page="logs" class="tab">Logs</a>
+      <a href="#updates" data-page="updates" class="tab">Updates<span class="tab-badge hidden" id="updates-badge" aria-hidden="true"></span></a>
       <a href="#settings" data-page="settings" class="tab">Settings</a>
     </nav>
 
@@ -354,6 +355,65 @@
     <div class="log-window">
       <pre class="log-output mono" id="log-view">Pick a service above to see its logs here.</pre>
     </div>
+  </section>
+
+  <!-- ==================== UPDATES ==================== -->
+  <section id="page-updates" class="page">
+    <div class="page-intro updates-intro-row">
+      <div>
+        <h1>Updates</h1>
+        <p>Docker images on this box whose publisher has pushed a newer build. Nothing is updated until you confirm it.</p>
+        <span class="updates-status" id="updates-status">Loading…</span>
+      </div>
+      <button type="button" class="btn-soft" id="updates-check">Check now</button>
+    </div>
+
+    <div class="updates-summary">
+      <article>
+        <span>AVAILABLE</span>
+        <strong id="updates-count">0</strong>
+        <small>containers with a newer image</small>
+      </article>
+      <article>
+        <span>UPDATE METHOD</span>
+        <strong>One at a time</strong>
+        <small>backup, pull, recreate and health check</small>
+      </article>
+      <article>
+        <span>SERVER</span>
+        <strong id="updates-server">this box</strong>
+        <small id="updates-server-note">HomeBox containers only</small>
+      </article>
+    </div>
+
+    <section class="updates-card" aria-label="Available updates">
+      <div class="updates-card-head">
+        <div>
+          <h2>Available updates</h2>
+          <small>Nothing is updated until you confirm it.</small>
+        </div>
+        <button type="button" class="btn-pill primary hidden" id="updates-all">Update all</button>
+      </div>
+      <div id="updates-list"></div>
+    </section>
+
+    <section class="updates-card" aria-label="Update history">
+      <div class="updates-card-head">
+        <div>
+          <h2>History</h2>
+          <small>The last 20 updates applied from this page, and how each one ended.</small>
+        </div>
+      </div>
+      <div id="updates-history"></div>
+    </section>
+
+    <p class="updates-footnote">
+      Every module here pins an exact image version on purpose, so this page never jumps an app to a
+      new release behind your back. What it does catch is the case a pinned version does not protect
+      you from: the publisher rebuilding that same version with patched base layers, which is where
+      security fixes arrive. Moving to a genuinely newer version comes with a HomeBox release —
+      <code>git pull &amp;&amp; sudo homebox update &lt;module&gt;</code>.
+    </p>
   </section>
 
   <!-- ==================== SETTINGS ==================== -->

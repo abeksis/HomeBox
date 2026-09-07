@@ -213,7 +213,7 @@ const STATUS_LABEL = {
 
 /* --------------------------------------------------------------- routing */
 
-const PAGES = ['home', 'apps', 'containers', 'logs', 'settings'];
+const PAGES = ['home', 'apps', 'containers', 'logs', 'updates', 'settings'];
 
 function show(page) {
   const target = PAGES.includes(page) ? page : 'home';
@@ -225,6 +225,7 @@ function show(page) {
     else el.removeAttribute('aria-current');
   });
   if (target !== 'home') loadModules();
+  if (target === 'updates') loadUpdates();
   if (target === 'settings') { loadBackups(); loadConfig(); loadCatalog(); }
   if (target === 'settings' || target === 'home') loadBookmarks();
   window.scrollTo({ top: 0, behavior: 'instant' });
@@ -2256,6 +2257,198 @@ async function savePrefs(patch) {
   }
 }
 
+/* ----------------------------------------------------------- updates */
+
+/**
+ * The Updates page.
+ *
+ * What it lists is narrower than the word suggests, and the page says so:
+ * every module pins an exact image version, so this never offers to move an
+ * app to a new release. It offers the thing a pinned version does NOT protect
+ * you from — the publisher re-pushing that same version with patched base
+ * layers, which only the image digest reveals.
+ *
+ * The server keeps the last answer, so opening this tab shows something
+ * immediately and only goes to the registries when what it has is stale.
+ */
+let updatesState = { available: [], lastCheck: null, applying: false };
+
+function updateBadge(count) {
+  const badge = $('#updates-badge');
+  if (!badge) return;
+  // A dot, not a number. These are optional rebuilds, and a red "12" reads
+  // like twelve things are broken — the source made the same call.
+  badge.classList.toggle('hidden', !count);
+  badge.title = count
+    ? `${count} container${count === 1 ? ' has' : 's have'} a newer image available`
+    : '';
+}
+
+async function loadUpdates({ force = false } = {}) {
+  const list = $('#updates-list');
+  if (!list) return;
+  try {
+    const data = await (await fetch('api/updates')).json();
+    renderUpdates(data);
+    // Nothing cached, or cached long enough ago that showing it without
+    // saying "this is old" would be misleading. Re-check in the background.
+    if ((force || data.stale) && !data.checking && !data.applying) runUpdateCheck({ quiet: true });
+  } catch (err) {
+    list.innerHTML = `<p class="empty-state">Could not read the update state: ${escapeHtml(err.message)}</p>`;
+  }
+}
+
+function renderUpdates(data) {
+  updatesState = data;
+  const list = $('#updates-list');
+  const count = (data.available || []).length;
+
+  $('#updates-count').textContent = String(count);
+  $('#updates-server').textContent = location.hostname || 'this box';
+  updateBadge(count);
+
+  // Never say "up to date" without a check behind it — that is a claim, and
+  // an install that has never checked has no basis for making it.
+  if (!data.lastCheck) {
+    $('#updates-status').textContent = 'No check has run on this box yet.';
+  } else {
+    const skipped = (data.skipped || []).length;
+    $('#updates-status').textContent =
+      `Last checked ${new Date(data.lastCheck).toLocaleString()} · `
+      + `${data.checked} of ${data.containers} containers compared`
+      + (skipped ? ` · ${skipped} could not be reached` : '');
+  }
+
+  $('#updates-all').classList.toggle('hidden', count < 2);
+
+  if (!data.lastCheck) {
+    list.innerHTML = '<p class="empty-state">Press <strong>Check now</strong> to compare every running image against its registry.</p>';
+  } else if (!count) {
+    list.innerHTML = '<p class="empty-state"><strong>Everything is current.</strong> Every image running on this box matches the newest build the registry has for its pinned version.</p>';
+  } else {
+    list.innerHTML = data.available.map((u) => `
+      <div class="update-row" data-container="${escapeHtml(u.container)}">
+        <div class="update-row-info">
+          <div class="update-row-name">
+            ${escapeHtml(u.container)}
+            <span class="update-tag" title="The publisher rebuilt this same version tag with new layers. Same version number, usually security patches underneath.">rebuild</span>
+          </div>
+          <div class="update-row-image mono">${escapeHtml(u.image)}</div>
+          <div class="update-row-digest mono">${escapeHtml(String(u.currentDigest).slice(7, 19))} → ${escapeHtml(String(u.latestDigest).slice(7, 19))}</div>
+        </div>
+        <button type="button" class="btn-soft" data-update="${escapeHtml(u.container)}">Update</button>
+      </div>`).join('');
+  }
+
+  // Whatever could not be checked is shown, not swallowed. A box where the
+  // registry was unreachable for half its images must not look like a box
+  // that is fully up to date.
+  if ((data.skipped || []).length) {
+    list.insertAdjacentHTML('beforeend', `
+      <div class="updates-skipped">
+        <strong>Not checked</strong>
+        ${data.skipped.map((s) => `<div><span class="mono">${escapeHtml(s.container)}</span> — ${escapeHtml(s.reason)}</div>`).join('')}
+      </div>`);
+  }
+
+  renderUpdateHistory(data.history || []);
+}
+
+function renderUpdateHistory(history) {
+  const el = $('#updates-history');
+  if (!el) return;
+  if (!history.length) {
+    el.innerHTML = '<p class="empty-state">No updates have been applied from this page yet.</p>';
+    return;
+  }
+  el.innerHTML = history.map((h) => {
+    const kind = h.success ? 'ok' : (h.rolledBack ? 'rolled-back' : 'failed');
+    const label = h.success ? 'Updated' : (h.rolledBack ? 'Rolled back' : 'Failed');
+    return `
+      <div class="update-history-row">
+        <span class="update-history-tag ${kind}">${label}</span>
+        <span class="update-history-name mono">${escapeHtml(h.container || h.module || '')}</span>
+        <span class="update-history-time">${escapeHtml(new Date(h.timestamp).toLocaleString())}</span>
+        ${h.reason ? `<span class="update-history-reason">${escapeHtml(h.reason)}</span>` : ''}
+      </div>`;
+  }).join('');
+}
+
+async function runUpdateCheck({ quiet = false } = {}) {
+  const btn = $('#updates-check');
+  if (btn) { btn.disabled = true; btn.textContent = 'Checking…'; }
+  if (!quiet) $('#updates-status').textContent = 'Asking each registry for the newest build…';
+  try {
+    const res = await fetch('api/updates/check', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'the check did not complete');
+    renderUpdates({ ...data, history: updatesState.history || [] });
+    if (!quiet) {
+      const n = (data.available || []).length;
+      toast(n
+        ? `${n} container${n === 1 ? '' : 's'} can be updated.`
+        : 'Everything on this box is running the newest build of its version.', 'success');
+    }
+  } catch (err) {
+    if (!quiet) toast(err.message, 'error');
+    $('#updates-status').textContent = `The last check did not finish: ${err.message}`;
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Check now'; }
+  }
+}
+
+/**
+ * Apply one update, or all of them, with the server's progress in the same
+ * dialog an install uses. Confirmed first, always: this recreates a running
+ * container, which means a short outage for that app.
+ */
+async function applyUpdate(which) {
+  const many = which === 'all';
+  const target = many
+    ? `all ${updatesState.available.length} containers`
+    : which;
+  const ok = await confirmDialog({
+    title: many ? 'Update everything?' : `Update ${which}?`,
+    body: `HomeBox will back up the module's config, pull the new image and recreate ${target} `
+      + 'one at a time, waiting for each to come back healthy. Anything that does not come back '
+      + 'is put straight back on the image it was running. Expect a brief outage per app.',
+    confirmLabel: many ? 'Update all' : 'Update',
+  });
+  if (!ok) return;
+
+  openProgress(many ? 'Updating all containers' : `Updating ${which}`);
+  let success = false;
+  try {
+    const res = await fetch('api/updates/apply', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ container: which }),
+    });
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const raw of lines) {
+        if (!raw.trim()) continue;
+        let msg;
+        try { msg = JSON.parse(raw); } catch { continue; }
+        if (msg.done) success = msg.ok === true;
+        else if (typeof msg.line === 'string') progressLine(msg.line);
+      }
+    }
+  } catch (err) {
+    progressLine(`ERROR: ${err.message}`);
+  }
+  closeProgress(success, success ? 'Update complete' : 'Update did not finish');
+  toast(success ? 'Update complete.' : 'The update did not finish — read the log above.', success ? 'success' : 'error');
+  loadUpdates();
+}
+
 /* ------------------------------------------------ live install progress */
 
 /**
@@ -2835,6 +3028,13 @@ $('#quick-form').addEventListener('submit', submitQuickForm);
 $('#password-form').addEventListener('submit', submitPasswordChange);
 state.launcherPrefs = readLauncherPrefs();
 
+$('#updates-check').addEventListener('click', () => runUpdateCheck());
+$('#updates-all').addEventListener('click', () => applyUpdate('all'));
+$('#updates-list').addEventListener('click', (event) => {
+  const btn = event.target.closest('[data-update]');
+  if (btn) applyUpdate(btn.dataset.update);
+});
+
 $('#log-refresh').addEventListener('click', () => loadLogs());
 $('#log-filter').addEventListener('input', () => renderLogs());
 $('#log-follow').addEventListener('change', () => renderLogs());
@@ -2868,6 +3068,10 @@ async function init() {
   show(currentPage());
   await loadModules(true);
   fetch('api/activity?limit=25').then((r) => r.json()).then((d) => renderActivity(d.entries)).catch(() => {});
+  // The nav dot, from the cached answer only. Boot must never wait on a
+  // dozen registry round-trips, and it must never set them off either.
+  fetch('api/updates').then((r) => r.json())
+    .then((d) => updateBadge((d.available || []).length)).catch(() => {});
   connect();
   setInterval(() => loadModules(true), 20000);
 }
