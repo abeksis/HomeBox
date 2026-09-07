@@ -434,9 +434,10 @@ async function applySaved(keys) {
   const restarting = [];
   const failed = [];
   const manual = [];
+  const selfRestart = [];
   for (const id of affected) {
     if (!installed.has(id)) continue;
-    if (id === 'dashboard') { manual.push(id); continue; }
+    if (id === 'dashboard') { selfRestart.push(id); continue; }
     try {
       // No activity entry is written here on purpose: recreating a container
       // emits real Docker create/start events, and the activity feed is fed by
@@ -449,6 +450,28 @@ async function applySaved(keys) {
       failed.push({ id, error: (err.stderr || err.message || '').trim().split('\n').pop() });
     }
   }
+  // The dashboard reads TZ and the paths too, so a setting it uses means it
+  // has to be recreated like everything else. It just cannot do that DURING
+  // the request — compose would stop this process before the answer is
+  // written, and the page would see a dead socket instead of "saved".
+  //
+  // So it is scheduled instead: answer first, then recreate. The browser gets
+  // its confirmation, the socket closes, and a moment later compose replaces
+  // the container. The page reconnects on its own — it already has to, since
+  // the same thing happens on every `homebox update dashboard`.
+  //
+  // Telling the user to go and run a CLI command was the alternative, and it
+  // is the same round trip through a terminal this whole settings page exists
+  // to remove.
+  if (selfRestart.length) {
+    restarting.push(...selfRestart);
+    setTimeout(() => {
+      composeLib.start('dashboard').catch((err) => {
+        console.error(`[homebox] self-restart after a settings change failed: ${err.message}`);
+      });
+    }, 1500).unref();
+  }
+
   return { restarting, failed, manual };
 }
 

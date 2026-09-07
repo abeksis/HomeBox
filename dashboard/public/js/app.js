@@ -398,10 +398,16 @@ function launchTile(tile) {
   // usually the generated password, which otherwise lives only in .env and a
   // CLI command. Marked here; the click is intercepted once, and the tick in
   // that dialog removes the marker for good.
+  //
+  // `data-fl-*` and NOT `data-module`: the document click handler opens the
+  // module drawer for anything matching `[data-module]`, so naming it that
+  // made every marked launcher tile slide the drawer open behind the dialog.
+  // A generic attribute name on a shared document listener is a collision
+  // waiting to happen.
   let first = '';
   try {
     if (tile.first_login && !localStorage.getItem(seenKey(tile.name))) {
-      first = ` data-first-login="1" data-service="${escapeHtml(tile.name)}" data-module="${escapeHtml(tile.module.id)}"`;
+      first = ` data-first-login="1" data-fl-service="${escapeHtml(tile.name)}" data-fl-module="${escapeHtml(tile.module.id)}"`;
     }
   } catch { /* localStorage blocked: show it, which is the safe direction */ }
 
@@ -1063,8 +1069,13 @@ async function saveConfig() {
     if (failed.length) {
       toast(`${saved} ${failed.map((f) => `${f.id}: ${f.error}`).join(' · ')}`, 'error', 14000);
     } else if (restarting.length) {
+      // The dashboard recreates itself a moment after answering, so the page
+      // is about to lose its connection. Saying so beats a live dot going red
+      // for no visible reason directly after a save.
+      const self = restarting.includes('dashboard');
       toast(`${saved} Recreated ${restarting.join(', ')} so the new values actually take effect.`
-        + (manual.length ? ` ${manual.join(', ')} needs a manual restart.` : ''), 'info', 9000);
+        + (self ? ' The dashboard restarts itself in a moment — this page will reconnect on its own.' : '')
+        + (manual.length ? ` ${manual.join(', ')} needs a manual restart.` : ''), 'info', self ? 12000 : 9000);
     } else if (manual.length) {
       toast(`${saved} ${manual.join(', ')} uses these values but was left alone — restart it yourself.`, 'warning', 10000);
     } else {
@@ -2458,8 +2469,8 @@ document.addEventListener('click', async (event) => {
   if (!link) return;
   event.preventDefault();
 
-  const service = link.dataset.service;
-  const mod = state.modules.find((m) => m.id === link.dataset.module);
+  const service = link.dataset.flService;
+  const mod = state.modules.find((m) => m.id === link.dataset.flModule);
   const svc = mod && mod.services.find((s) => s.name === service);
   if (!svc) { window.open(link.href, '_blank', 'noopener,noreferrer'); return; }
 
