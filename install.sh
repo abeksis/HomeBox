@@ -324,6 +324,38 @@ declared_secrets() {
   ' "$HB_ROOT" 2>/dev/null || true
 }
 
+# The non-secret settings a module declares a `default:` for, as KEY=VALUE.
+#
+# A secret gets generated; a default has to be WRITTEN, or the key is simply
+# absent from .env. That is not harmless: qBittorrent's username defaults to
+# `admin`, the seeder falls back to it correctly, and the dashboard then shows
+# the user a password with no username beside it because there is no value to
+# show. A declared default is part of the module's answer, not a suggestion.
+declared_defaults() {
+  [ -f "$HB_ROOT/dashboard/lib/yaml.js" ] || return 0
+  command -v node >/dev/null 2>&1 || return 0
+  node -e '
+    const fs = require("fs"), path = require("path");
+    const root = process.argv[1];
+    const yaml = require(path.join(root, "dashboard/lib/yaml.js"));
+    const dir = path.join(root, "modules");
+    for (const name of fs.readdirSync(dir)) {
+      const file = path.join(dir, name, "docker-compose.yml");
+      if (!fs.existsSync(file)) continue;
+      let meta;
+      try { meta = yaml.extractTopLevel(fs.readFileSync(file, "utf8"), "x-homebox"); } catch { continue; }
+      const vars = (meta && meta.env_vars) || {};
+      for (const [key, spec] of Object.entries(vars)) {
+        if (!spec || spec.type === "secret") continue;
+        if (spec.default === undefined || spec.default === null || spec.default === "") continue;
+        // A newline in a value would forge a second .env line.
+        const value = String(spec.default);
+        if (/^[A-Z][A-Z0-9_]*$/.test(key) && !/[\r\n]/.test(value)) console.log(`${key}=${value}`);
+      }
+    }
+  ' "$HB_ROOT" 2>/dev/null || true
+}
+
 added=0
 while IFS= read -r secret; do
   [ -n "$secret" ] || continue
@@ -340,6 +372,19 @@ EOF
 if [ "$added" -eq 0 ]; then
   printf '  %severy module secret already present%s\n' "$DIM" "$RESET"
 fi
+
+# set_env never overwrites, so a value the user has since changed stands.
+while IFS= read -r pair; do
+  [ -n "$pair" ] || continue
+  key="${pair%%=*}"
+  value="${pair#*=}"
+  if ! grep -q "^${key}=" "$ENV_FILE" 2>/dev/null; then
+    set_env "$key" "$value"
+    printf '  %s=%s %sdefault from the module that declares it%s\n' "$key" "$value" "$DIM" "$RESET"
+  fi
+done <<EOF
+$(declared_defaults | sort -u)
+EOF
 # Created after the chown -R above, so it needs its own: without this the
 # HomeBox user cannot read the secrets the installer just generated.
 $SUDO chown "$HB_USER:$HB_USER" "$ENV_FILE"
