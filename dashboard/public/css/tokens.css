@@ -58,7 +58,22 @@
 
   /* Cards lean on ambient shadow for depth, with a hairline ring so they
      still have an edge on a screen with the brightness turned down. */
-  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 0 1px var(--border);
+  /* The rim on a LIFTED surface, and it is light, not dark. A raised card
+     catches the light along its edge; the dark --border hairline is for
+     things drawn flat on a surface. The source keeps them as separate
+     tokens for exactly that reason. */
+  --card-border: rgba(255, 255, 255, 0.20);
+
+  /* design.css:29, which is the value that actually applies in the source —
+     style.css defines a flatter --elev-1 earlier and design.css overrides
+     it. Reading only the first file is how this ended up with the stale one
+     while --elev-2 and --elev-3 below were already taken from the second.
+     The difference is the whole effect: a 34px drop and a light rim make a
+     lifted tile; `0 1px 2px` with a dark ring makes a flat one. */
+  --elev-1:
+    0 2px 4px rgba(0, 0, 0, 0.45),
+    0 14px 34px -12px rgba(0, 0, 0, 0.66),
+    0 0 0 1px var(--card-border);
   --elev-2: 0 8px 24px -8px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--border);
   --elev-3: 0 24px 64px -16px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--border-strong);
 
