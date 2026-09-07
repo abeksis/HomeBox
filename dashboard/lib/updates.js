@@ -39,6 +39,7 @@ const docker = require('./docker');
 const composeLib = require('./compose');
 const registry = require('./registry');
 const modulesLib = require('./modules');
+
 const state = require('./state-store');
 const activity = require('./activity');
 
@@ -85,6 +86,58 @@ async function note(entry) {
 /* ------------------------------------------------------------- the check */
 
 /**
+ * Services their module builds on this box rather than pulling.
+ *
+ * The dashboard is the obvious one, and it is a trap: buildkit records a
+ * RepoDigest for a locally built image too, so "does it have a digest?" is
+ * not the question — asked that way we cheerfully went off to Docker Hub
+ * looking for `library/homebox-dashboard` and reported a 401 as if the
+ * registry were down. The compose file already says which services are
+ * built; that is the answer, and it costs one read.
+ *
+ * Scanned rather than parsed: lib/yaml.js exists to lift the x-homebox block
+ * out of a compose file, not to parse the whole of one — a real compose file
+ * has flow collections and anchors it refuses, by design. All that is needed
+ * here is "which service keys have a `build:` under them", and indentation
+ * answers that without pretending to be a YAML implementation.
+ */
+function builtServices(moduleId) {
+  const built = new Set();
+  let text;
+  try {
+    text = fs.readFileSync(path.join(state.ROOT, 'modules', moduleId, 'docker-compose.yml'), 'utf8');
+  } catch {
+    return built;   // unreadable: let the digest comparison speak for itself
+  }
+
+  let inServices = false;
+  let serviceIndent = null;
+  let current = null;
+
+  for (const raw of text.split(/\r?\n/)) {
+    if (!raw.trim() || /^\s*#/.test(raw)) continue;
+    const indent = raw.length - raw.trimStart().length;
+
+    if (indent === 0) {
+      inServices = /^services\s*:/.test(raw);
+      serviceIndent = null;
+      current = null;
+      continue;
+    }
+    if (!inServices) continue;
+
+    if (serviceIndent === null) serviceIndent = indent;
+    if (indent === serviceIndent) {
+      const name = /^([A-Za-z0-9_.-]+)\s*:/.exec(raw.trim());
+      current = name ? name[1] : null;
+    } else if (current && indent > serviceIndent && /^build\s*:/.test(raw.trim())) {
+      built.add(current);
+    }
+  }
+  return built;
+}
+
+/**
  * Every service this box runs that HomeBox owns, paired with the image its
  * container is actually running.
  *
@@ -96,6 +149,7 @@ async function targets() {
   const containers = await docker.listContainers();
   const { modules } = await modulesLib.loadAll();
   const titles = new Map(modules.map((m) => [m.id, m.title]));
+  const builds = new Map();
 
   const out = [];
   for (const c of containers) {
@@ -103,6 +157,8 @@ async function targets() {
     if (c.state === 'stopped') continue;      // nothing to update on a stopped app
     const moduleId = c.project.slice('homebox-'.length);
     if (!c.service || !titles.has(moduleId)) continue;
+    if (!builds.has(moduleId)) builds.set(moduleId, builtServices(moduleId));
+    if (builds.get(moduleId).has(c.service)) continue;
     out.push({
       module: moduleId,
       title: titles.get(moduleId),
