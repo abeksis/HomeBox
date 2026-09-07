@@ -33,6 +33,15 @@ x-homebox:
       type: "text"
       default: "1000"
       config_editable: true
+    HB_QBIT_USER:
+      label: "qBittorrent web UI username"
+      type: "text"
+      default: "admin"
+      config_editable: true
+    HB_QBIT_PASS:
+      label: "qBittorrent web UI password"
+      type: "secret"
+      config_editable: true
   services:
     radarr:
       friendly_name: "Radarr"
@@ -69,7 +78,7 @@ x-homebox:
       icon: "qbittorrent.svg"
       port_map: 8080
       url_scheme: "http"
-      first_login: "User `admin`; the first-run password is printed in the container log — `homebox logs qbittorrent`."
+      first_login: "The account HomeBox seeded at install — `homebox secrets media` prints it."
     flaresolverr:
       friendly_name: "FlareSolverr"
       description: "Solves Cloudflare challenges for indexers"

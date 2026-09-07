@@ -240,7 +240,7 @@ const BAD_LOGIN =
   'qBittorrent rejected the username or password. Check them against qBittorrent itself '
   + '(Options → Web UI). If you never set a password there, it generates a new temporary one '
   + 'every restart and prints it to the log — set a permanent one, then put it in '
-  + 'Settings → Server Config → Live activity.';
+  + 'Settings → Server Config → Media Stack.';
 
 async function qbLogin(base, user, pass) {
   if (qbSession && Date.now() - qbSession.at < QB_SESSION_MS) return qbSession.cookie;
@@ -287,7 +287,7 @@ async function qbittorrent(containers, env) {
     return {
       installed: true,
       needsSetup: true,
-      error: 'Add the qBittorrent username and password under Settings → Live activity.',
+      error: 'Add the qBittorrent username and password under Settings → Server Config → Media Stack.',
     };
   }
 

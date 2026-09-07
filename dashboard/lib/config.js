@@ -76,19 +76,6 @@ const BASE_GROUPS = [
     ],
   },
   {
-    id: 'insights',
-    title: 'Live activity',
-    description:
-      'The Home card that shows what your apps are doing — transfer speed, download queues '
-      + 'and what is due out. Radarr and Sonarr need nothing here: they keep an API key in '
-      + 'their own config and HomeBox reads it. qBittorrent has no such file, so its Web UI '
-      + 'login goes here. Leave both blank and the card simply leaves qBittorrent out.',
-    keys: [
-      { key: 'HB_QBIT_USER', label: 'qBittorrent username', placeholder: 'admin' },
-      { key: 'HB_QBIT_PASS', label: 'qBittorrent password', secret: true, hint: 'The same one you sign in to the qBittorrent web UI with.' },
-    ],
-  },
-  {
     id: 'backup',
     title: 'Backup',
     description: 'Change this and every existing archive becomes unreadable.',

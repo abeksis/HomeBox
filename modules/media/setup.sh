@@ -45,3 +45,71 @@ done
 chown -R "$PUID:$PGID" "$HB_ROOT/modules/media/config" 2>/dev/null || true
 
 echo "media: pool ready at $MEDIA_ROOT ($DOWNLOADS, $MOVIES, $TV) — all mounted as /data"
+
+# ---------------------------------------------------------------------------
+# Give qBittorrent a web UI account that survives a restart.
+#
+# Left alone, qBittorrent has NO stored account: it falls back to `admin` with
+# a TEMPORARY password that it regenerates on every single start and prints to
+# its log. So a fresh Media Stack install hands you an app you cannot sign in
+# to without going to read a container log — and the moment the container
+# restarts, whatever you found there stops working. Anyone who had not
+# discovered that gets a flat "Unauthorized" and no idea why.
+#
+# Every other app in HomeBox is seeded with a generated password at install.
+# This makes qBittorrent behave the same way: the password lives in .env, the
+# dashboard's Live activity card reads it from there, and `homebox secrets
+# media` prints it.
+#
+# Written ONLY when there is no account yet, so a password the user set
+# themselves in the web UI is never overwritten by a re-run.
+# ---------------------------------------------------------------------------
+QBT_CONF="$HB_ROOT/modules/media/config/qbittorrent/qBittorrent/qBittorrent.conf"
+QBIT_USER="${HB_QBIT_USER:-admin}"
+
+seed_qbittorrent_login() {
+  [ -n "${HB_QBIT_PASS:-}" ] || { echo "media: no HB_QBIT_PASS in .env — leaving qBittorrent on its temporary password"; return 0; }
+
+  if [ -f "$QBT_CONF" ] && grep -q '^WebUI\\Password_PBKDF2=' "$QBT_CONF"; then
+    echo "media: qBittorrent already has a saved web UI password — leaving it alone"
+    return 0
+  fi
+
+  # qBittorrent stores PBKDF2-HMAC-SHA512, 100k iterations, 64-byte key, with
+  # a 16-byte salt, as "@ByteArray(<base64 salt>:<base64 key>)".
+  #
+  # python3 only, deliberately. The same thing in pure shell needs a hex->raw
+  # conversion, and every way of doing that with printf loses bytes: a \x00
+  # is dropped by command substitution, so one salt in sixteen comes out
+  # short and the hash silently does not match. A path that fails one time in
+  # sixteen is worse than not having it.
+  command -v python3 >/dev/null 2>&1 || {
+    echo "media: python3 not found — cannot seed the qBittorrent password; it stays on the temporary one from its log"
+    return 0
+  }
+
+  local hashed
+  hashed=$(QB_PASS="$HB_QBIT_PASS" python3 - <<'PY'
+import base64, hashlib, os
+salt = os.urandom(16)
+key = hashlib.pbkdf2_hmac("sha512", os.environ["QB_PASS"].encode(), salt, 100000, 64)
+print(f"@ByteArray({base64.b64encode(salt).decode()}:{base64.b64encode(key).decode()})")
+PY
+  ) || { echo "media: could not generate the qBittorrent password hash"; return 0; }
+
+  mkdir -p "$(dirname "$QBT_CONF")"
+  [ -f "$QBT_CONF" ] || printf '[Preferences]\n' > "$QBT_CONF"
+  # A [Preferences] section has to exist for the keys to mean anything; a
+  # conf written by qBittorrent itself always has one.
+  grep -q '^\[Preferences\]' "$QBT_CONF" || printf '\n[Preferences]\n' >> "$QBT_CONF"
+
+  # Replace rather than append if a username line is already there, so a
+  # re-run cannot leave two.
+  sed -i '/^WebUI\\Username=/d; /^WebUI\\Password_PBKDF2=/d' "$QBT_CONF"
+  sed -i "/^\[Preferences\]/a WebUI\\\\Username=$QBIT_USER\nWebUI\\\\Password_PBKDF2=\"$hashed\"" "$QBT_CONF"
+
+  chown "$PUID:$PGID" "$QBT_CONF" 2>/dev/null || true
+  echo "media: seeded the qBittorrent web UI account ($QBIT_USER) — \`homebox secrets media\` prints the password"
+}
+
+seed_qbittorrent_login
