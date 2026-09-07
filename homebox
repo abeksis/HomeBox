@@ -404,6 +404,17 @@ cmd_bootstrap_token() {
   esac
 }
 
+# Too many wrong passwords locks an address out for fifteen minutes. That is
+# the right behaviour for a stranger and the wrong one for the owner who just
+# fumbled a paste, so this exists. The counter lives only in the dashboard
+# process, so restarting it IS the reset — sessions survive, because those are
+# on disk.
+cmd_unlock() {
+  step "Restarting the dashboard to clear the login lockout"
+  dk restart dashboard >/dev/null 2>&1 || die "could not restart the dashboard container"
+  info "  done — try signing in again"
+}
+
 cmd_update() {
   require_module "${1:-}"
   local id="$1"
@@ -605,6 +616,7 @@ case "$cmd" in
   install|add) cmd_install "$@" ;;
   remove|rm|uninstall) cmd_remove "$@" ;;
   bootstrap-token) cmd_bootstrap_token "$@" ;;
+  unlock) cmd_unlock "$@" ;;
   update|upgrade) cmd_update "$@" ;;
   up|start) cmd_up "$@" ;;
   down|stop) cmd_down "$@" ;;

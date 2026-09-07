@@ -43,6 +43,12 @@ const MIN_PASSWORD = 8;
 // restarting is not something an attacker can do from the login form.
 const FAIL_WINDOW_MS = 15 * 60 * 1000;
 const FAIL_MAX = 8;
+// Claiming is a separate budget, and a bigger one. The bootstrap token is 32
+// random characters that people paste, and a partial paste is a much more
+// likely failure than an attack — locking someone out of claiming their own
+// box for fifteen minutes at exactly the moment they are trying to set it up
+// is the wrong trade. Guessing the token remains infeasible either way.
+const CLAIM_MAX = 25;
 const failures = new Map();
 
 /* ------------------------------------------------------------------ store */
@@ -169,11 +175,11 @@ async function isAuthenticated(req, preloaded) {
   return !!(session && typeof session.expires === 'number' && session.expires > Date.now());
 }
 
-function rateLimit(ip) {
+function rateLimit(ip, max = FAIL_MAX) {
   const now = Date.now();
   const entry = failures.get(ip) || { count: 0, first: now };
   if (now - entry.first > FAIL_WINDOW_MS) { entry.count = 0; entry.first = now; }
-  if (entry.count >= FAIL_MAX) {
+  if (entry.count >= max) {
     const mins = Math.ceil((FAIL_WINDOW_MS - (now - entry.first)) / 60000);
     throw Object.assign(new Error(`too many attempts — wait ${mins} minute${mins === 1 ? '' : 's'}`), { status: 429 });
   }
@@ -188,7 +194,7 @@ function noteFailure(ip, entry) {
 /** First run: prove you have the installer's token, then set the password. */
 async function claim(req, { token, password }) {
   const ip = clientIp(req);
-  const entry = rateLimit(ip);
+  const entry = rateLimit(ip, CLAIM_MAX);
   const data = await read();
 
   if (data.password) throw Object.assign(new Error('this box has already been claimed'), { status: 409 });
@@ -262,6 +268,13 @@ function clientIp(req) {
   const fwd = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
   return fwd || req.socket.remoteAddress || 'unknown';
 }
+
+// The lockout is deliberately in memory and nowhere else: it must not cost a
+// disk write per failed attempt, and losing it on restart is harmless — an
+// attacker cannot restart the server from the login form. That does mean it
+// can only be cleared by restarting this process, which is what
+// `homebox unlock` does; a function here could only ever clear the CLI's own
+// short-lived Map, which would look like it worked and do nothing.
 
 module.exports = {
   status, isAuthenticated, claim, login, logout, changePassword,
