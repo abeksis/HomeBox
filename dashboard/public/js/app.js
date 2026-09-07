@@ -394,7 +394,18 @@ function launchTile(tile) {
   //   Referer header: 'http://192.168.1.77:8443/' Target origin: '192.168.1.77:8080'
   //
   // Every outbound link on this page carries it, for the same reason.
-  return `<a class="launch${down ? ' is-down' : ''}" href="${escapeHtml(tile.url)}" target="_blank" rel="noopener noreferrer"
+  // A service with a first_login note has something to say before it opens —
+  // usually the generated password, which otherwise lives only in .env and a
+  // CLI command. Marked here; the click is intercepted once, and the tick in
+  // that dialog removes the marker for good.
+  let first = '';
+  try {
+    if (tile.first_login && !localStorage.getItem(seenKey(tile.name))) {
+      first = ` data-first-login="1" data-service="${escapeHtml(tile.name)}" data-module="${escapeHtml(tile.module.id)}"`;
+    }
+  } catch { /* localStorage blocked: show it, which is the safe direction */ }
+
+  return `<a class="launch${down ? ' is-down' : ''}" href="${escapeHtml(tile.url)}" target="_blank" rel="noopener noreferrer"${first}
       title="${escapeHtml(tile.description || tile.friendly_name)}">
       <span class="keycap">${art}${pip}</span>
       <span class="launch-name">${escapeHtml(tile.friendly_name)}</span>
@@ -677,7 +688,18 @@ function renderIncludedServices(m) {
       ? `<a href="${escapeHtml(svc.url)}" target="_blank" rel="noopener noreferrer" class="app-service-open"
            title="Open ${escapeHtml(svc.friendly_name)} in a new tab">Open ↗</a>`
       : (svc.port ? `<span class="app-service-port">:${escapeHtml(String(svc.port))}</span>` : '');
+    // Every service already declares its own icon, and the module's emoji
+    // stands in for the ones that do not — a row of names alone is harder to
+    // scan than the same row with the marks people actually recognise.
+    const art = iconArt(
+      svc.icon || (m.theme && m.theme.emoji),
+      `<span class="app-service-mono">${escapeHtml(
+        String(svc.friendly_name || '?').replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase() || '?',
+      )}</span>`,
+      'app-service',
+    );
     return `<div class="app-service-row"${svc.description ? ` title="${escapeHtml(svc.description)}"` : ''}>
+      <span class="app-service-mark">${art}</span>
       <span class="app-service-name">${escapeHtml(svc.friendly_name)}</span>
       <span class="app-service-right">
         ${m.installed ? `<span class="status-dot ${live ? 'on' : 'off'}"></span>` : ''}${right}
@@ -927,7 +949,10 @@ function updatePortainerAction() {
   if (svc) {
     link.href = svc.url;
     link.target = '_blank';
-    link.rel = 'noopener';
+    // noreferrer as well, for the same reason every other outbound link on
+    // this page carries it: an app with a strict referer check refuses a
+    // request that says it came from the dashboard's port.
+    link.rel = 'noopener noreferrer';
     delete link.dataset.page;
     link.title = 'Open Portainer';
   } else {
@@ -1855,11 +1880,20 @@ function renderSettings() {
       for (const name of mod.env_vars) rows.push({ mod, name });
     }
     $('#secrets-meta').textContent = `${rows.length} across ${new Set(rows.map((r) => r.mod.id)).size} modules`;
+    // The value, not a command to go and run. This page used to list the
+    // names and tell you to SSH in — which meant the answer to "what is my
+    // qBittorrent password" was never on the screen showing your passwords.
+    // /api/config already returns these behind the same session gate.
     secretsBody.innerHTML = rows.map((r) => `
       <tr>
         <td class="cell-name">${escapeHtml(r.mod.title)}</td>
         <td class="cell-dim">${escapeHtml(r.name)}</td>
-        <td class="cell-dim mono">homebox secrets ${escapeHtml(r.mod.id)}</td>
+        <td class="cell-dim">
+          <span class="secret-value" data-secret="${escapeHtml(r.mod.id)}:${escapeHtml(r.name)}">
+            <span class="secret-hidden">••••••••</span>
+            <button type="button" class="btn-soft secret-reveal">Show</button>
+          </span>
+        </td>
       </tr>`).join('') || '<tr><td colspan="3" class="cell-dim">No module declares a secret.</td></tr>';
   }
 
@@ -2297,6 +2331,164 @@ async function savePrefs(patch) {
     /* appearance is cosmetic; a failed save is not worth an error banner */
   }
 }
+
+/* ------------------------------------------------------- first login */
+
+/**
+ * "What is the username and password for this app?"
+ *
+ * HomeBox generates a password for every module that needs one and writes it
+ * to .env — and until now the only way to read it was to SSH in and run
+ * `homebox secrets <module>`. Installing the Media Stack handed you a
+ * qBittorrent you could not sign in to without leaving the dashboard, which
+ * is the one thing a dashboard exists to prevent.
+ *
+ * The source solves it by intercepting the FIRST click on an app's launcher
+ * tile and showing the credentials before the app opens, with a "don't show
+ * this again" tick. This is that, built on what HomeBox already has: the
+ * module's own `env_vars` declare the keys, /api/config already returns their
+ * values behind the session, and `first_login` already carries the sentence
+ * explaining the app's own quirks.
+ *
+ * Dismissal is per-browser (localStorage) and per-service, because it is a
+ * statement about what THIS person has already seen, not about the box.
+ */
+const seenKey = (service) => `hb-first-login-seen-${service}`;
+
+/** Every setting a module declares, with its current value. */
+async function moduleEnv(moduleId) {
+  if (!configSchema) {
+    try {
+      configSchema = await (await fetch('api/config')).json();
+    } catch {
+      return [];
+    }
+  }
+  const group = (configSchema.groups || []).find((g) => g.id === `module-${moduleId}`);
+  return group ? group.keys : [];
+}
+
+/**
+ * Just the ones that read as a sign-in, for the first-login dialog.
+ *
+ * A module declares plenty of settings that are not credentials — PUID is
+ * not a password, and listing it in a dialog headed "signing in" is noise
+ * that makes the two lines that matter harder to find.
+ */
+async function moduleCredentials(moduleId) {
+  const keys = await moduleEnv(moduleId);
+  return keys.filter((k) => (k.secret || /USER|NAME|EMAIL/.test(k.key)) && k.value);
+}
+
+/**
+ * The first-run dialog for one service. Resolves when it is dismissed.
+ */
+async function firstLoginDialog(svc, mod) {
+  const creds = await moduleCredentials(mod.id);
+  const rows = creds.map((c) => `
+    <div class="cred-row">
+      <span class="cred-label">${escapeHtml(c.label || c.key)}</span>
+      <code class="cred-value mono">${escapeHtml(c.value)}</code>
+      <button type="button" class="btn-soft cred-copy" data-copy="${escapeHtml(c.value)}">Copy</button>
+    </div>`).join('');
+
+  const body = `
+    ${svc.first_login ? `<p class="cred-hint">${escapeHtml(svc.first_login)}</p>` : ''}
+    ${rows
+      ? `<div class="cred-box">${rows}</div>
+         <p class="cred-note">HomeBox generated these at install. They are also under
+            Settings → Passwords, and on the server with
+            <code class="mono">homebox secrets ${escapeHtml(mod.id)}</code>.</p>`
+      : `<p class="cred-note">This module declares no generated credentials — whatever
+            ${escapeHtml(svc.friendly_name)} asks for on first run is yours to choose.</p>`}
+    <label class="cred-dismiss">
+      <input type="checkbox" id="cred-dismiss-box">
+      <span>Don't show this again for ${escapeHtml(svc.friendly_name)}</span>
+    </label>`;
+
+  // The dialog removes itself before the promise resolves, so the tick has to
+  // be recorded while the box still exists. Honoured whichever button was
+  // pressed: someone who ticks it and then closes has still said they do not
+  // want to see it again.
+  let dismiss = false;
+  const watch = (event) => {
+    if (event.target.id === 'cred-dismiss-box') dismiss = event.target.checked;
+  };
+  document.addEventListener('change', watch);
+
+  const ok = await confirmDialog({
+    title: `Signing in to ${svc.friendly_name}`,
+    bodyHtml: body,
+    confirmLabel: `Open ${svc.friendly_name}`,
+    cancelLabel: 'Close',
+    wide: true,
+  });
+
+  document.removeEventListener('change', watch);
+  return { open: ok, dismiss };
+}
+
+/**
+ * Intercept the first launch of a service that has something to tell you.
+ *
+ * Bound in the capture phase on the whole document so it runs before the link
+ * navigates, and so a tile re-rendered by the 20s poll is still covered —
+ * rebinding per tile would lose the handler on every refresh.
+ */
+document.addEventListener('click', async (event) => {
+  const link = event.target.closest('.launch[data-first-login]');
+  if (!link) return;
+  event.preventDefault();
+
+  const service = link.dataset.service;
+  const mod = state.modules.find((m) => m.id === link.dataset.module);
+  const svc = mod && mod.services.find((s) => s.name === service);
+  if (!svc) { window.open(link.href, '_blank', 'noopener,noreferrer'); return; }
+
+  const { open, dismiss } = await firstLoginDialog(svc, mod);
+  if (dismiss) {
+    try { localStorage.setItem(seenKey(service), '1'); } catch { /* private mode: it just asks again */ }
+    link.removeAttribute('data-first-login');
+  }
+  if (open) window.open(link.href, '_blank', 'noopener,noreferrer');
+});
+
+/**
+ * Reveal one secret on the Passwords tab.
+ *
+ * One row at a time and never on load: a page that prints every password the
+ * moment it opens is a page you cannot show anyone, screen-share, or
+ * screenshot for a support question.
+ */
+document.addEventListener('click', async (event) => {
+  const btn = event.target.closest('.secret-reveal');
+  if (!btn) return;
+  const wrap = btn.closest('.secret-value');
+  const [moduleId, key] = String(wrap.dataset.secret || '').split(':');
+  const found = (await moduleEnv(moduleId)).find((c) => c.key === key && c.value);
+  if (!found) {
+    wrap.querySelector('.secret-hidden').textContent = 'not set';
+    btn.remove();
+    return;
+  }
+  wrap.innerHTML = `<code class="mono">${escapeHtml(found.value)}</code>`
+    + `<button type="button" class="btn-soft cred-copy" data-copy="${escapeHtml(found.value)}">Copy</button>`;
+});
+
+/** Copy buttons inside the credentials dialog. */
+document.addEventListener('click', async (event) => {
+  const btn = event.target.closest('.cred-copy');
+  if (!btn) return;
+  event.preventDefault();
+  try {
+    await navigator.clipboard.writeText(btn.dataset.copy);
+    const was = btn.textContent;
+    btn.textContent = 'Copied';
+    setTimeout(() => { btn.textContent = was; }, 1200);
+  } catch {
+    toast('The browser would not let the page copy — select the value and copy it by hand.', 'error');
+  }
+});
 
 /* ----------------------------------------------------- live activity */
 

@@ -1878,7 +1878,27 @@ code.mono {
   padding: 0.2rem 0;
   font-size: 0.82rem;
 }
-.app-service-name { color: var(--text); font-weight: 500; }
+/* The service's own mark, so the well reads as a list of apps rather than a
+   list of strings. Small and quiet — it is there to make the row scannable,
+   not to compete with the name. */
+.app-service-mark {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  background: var(--bg-0);
+  box-shadow: 0 0 0 1px var(--border-hair);
+  overflow: hidden;
+}
+.app-service-mark img { width: 14px; height: 14px; object-fit: contain; }
+.app-service-mono { font-size: 0.55rem; font-weight: 800; color: var(--accent); }
+.app-service-mark .app-service-emoji { font-size: 0.8rem; }
+/* `flex: 1` and not the row's space-between: with three children that parks
+   the name in the middle of the row, away from its own icon. Same trap the
+   Settings editor rows hit. */
+.app-service-name { flex: 1; min-width: 0; color: var(--text); font-weight: 500; }
 .app-service-right { display: flex; align-items: center; gap: 0.35rem; flex: none; }
 .app-service-port {
   font-family: var(--mono);
@@ -2661,3 +2681,73 @@ code.mono {
 /* The card's timestamp doubles as its refresh button. */
 #live-meta { cursor: pointer; }
 #live-meta:hover { color: var(--text); }
+
+/* ========================= FIRST-LOGIN CREDENTIALS =========================
+   Shown once, on the first click of an app that generated a password at
+   install. The whole point is that nobody should have to SSH in and run
+   `homebox secrets <module>` to find out how to sign in to their own app. */
+
+.cred-hint {
+  margin: 0 0 0.8rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+.cred-box {
+  border-radius: var(--radius-sm);
+  background: var(--tile-bg);
+  box-shadow: 0 0 0 1px var(--tile-ring);
+  padding: 0.35rem 0.9rem;
+}
+.cred-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--border-hair);
+}
+.cred-row:first-child { border-top: 0; }
+.cred-label { font-size: 0.82rem; color: var(--text-muted); flex: none; min-width: 8.5rem; }
+/* The value is the reason the dialog exists, so it gets the room: selectable,
+   wrapping rather than truncated, and never behind a hover. */
+.cred-value {
+  flex: 1;
+  min-width: 0;
+  padding: 0.2rem 0.45rem;
+  border-radius: 5px;
+  background: var(--bg-0);
+  box-shadow: 0 0 0 1px var(--border-hair);
+  font-size: 0.85rem;
+  color: var(--text);
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+.cred-copy { flex: none; }
+.cred-note {
+  margin: 0.75rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+.cred-dismiss {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+/* The Passwords tab shows the same values, revealed one row at a time. */
+.secret-value { display: flex; align-items: center; gap: 0.45rem; }
+.secret-value code {
+  padding: 0.12rem 0.4rem;
+  border-radius: 5px;
+  background: var(--bg-0);
+  box-shadow: 0 0 0 1px var(--border-hair);
+  font-size: 0.8rem;
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+.secret-hidden { color: var(--text-muted); letter-spacing: 0.15em; }
