@@ -2306,3 +2306,20 @@ code.mono {
   cursor: pointer;
 }
 .topbar-signout:hover { color: var(--text); border-color: var(--border-strong); }
+
+/* The icon on a Settings editor row. Small and quiet: it is there to make a
+   list scannable, not to compete with the name beside it. */
+.editor-icon {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--bg-0);
+  box-shadow: 0 0 0 1px var(--border-hair);
+  overflow: hidden;
+}
+.editor-icon img { width: 20px; height: 20px; object-fit: contain; }
+.editor-icon-mono { font-size: 0.68rem; font-weight: 800; color: var(--accent); }
+.editor-emoji { font-size: 1.05rem; }

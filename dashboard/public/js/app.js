@@ -183,6 +183,18 @@ function iconArt(icon, mono, cls) {
   return mono;
 }
 
+/**
+ * The small icon on a Settings editor row. Same resolver as everywhere else,
+ * so a downloaded URL, a shipped filename and an emoji all work — a row that
+ * showed only text made a list of sixteen modules read as a list of strings
+ * rather than a list of apps.
+ */
+function editorIcon(icon, label) {
+  const initials = String(label || '?').replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase() || '?';
+  const mono = `<span class="editor-icon-mono">${escapeHtml(initials)}</span>`;
+  return `<span class="editor-icon">${iconArt(icon, mono, 'editor')}</span>`;
+}
+
 function iconHtml(icon, label, theme, cls) {
   const color = (theme && theme.color) || 'var(--accent)';
   const bg = (theme && theme.bg) || 'var(--accent-soft)';
@@ -1373,6 +1385,7 @@ function renderQuickEditor() {
 
   list.innerHTML = items.map((b, i) => `
     <div class="editor-row">
+      ${editorIcon(b.icon, b.name)}
       <span class="editor-row-info">
         <span class="editor-row-name">${escapeHtml(b.name)}${b.subtitle ? `<span class="editor-badge">${escapeHtml(b.subtitle)}</span>` : ''}</span>
         <span class="editor-row-meta">${escapeHtml(b.url)}</span>
@@ -1510,6 +1523,9 @@ function renderLauncherEditor() {
         key,
         name: over.name || svc.friendly_name,
         url: svc.url,
+        // The same order the Launcher itself resolves: a per-browser override
+        // first, then the service's own icon, then the module's emoji.
+        icon: over.icon || svc.icon || (mod.theme && mod.theme.emoji),
         hidden: hidden.has(key),
         edited: !!(over.name || over.icon),
         custom: false,
@@ -1538,6 +1554,7 @@ function renderLauncherEditor() {
       : `<button type="button" class="btn-pill" data-launcher-rename="${escapeHtml(r.key)}">Rename</button>
          <button type="button" class="btn-pill" data-launcher-toggle="${escapeHtml(r.key)}">${r.hidden ? 'Restore' : 'Hide'}</button>`;
     return `<div class="editor-row${r.hidden ? ' is-off' : ''}">
+      ${editorIcon(r.icon, r.name)}
       <span class="editor-row-info">
         <span class="editor-row-name">${escapeHtml(r.name)}</span>
         <span class="editor-row-meta">${escapeHtml(source)} · ${escapeHtml(r.url)}</span>
@@ -1605,6 +1622,7 @@ function renderCatalogEditor() {
     const badge = m.user_created ? '<span class="editor-badge">Added here</span>'
       : edited ? '<span class="editor-badge is-edited">Edited</span>' : '';
     return `<div class="editor-row">
+      ${editorIcon(m.icon || (m.theme && m.theme.emoji), m.title)}
       <span class="editor-row-info">
         <span class="editor-row-name">${escapeHtml(m.title)}${badge}</span>
         <span class="editor-row-meta">${escapeHtml(m.tagline || m.id)}</span>
