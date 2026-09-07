@@ -42,7 +42,7 @@ x-homebox:
       port_map: 81
       container_port: 81
       url_scheme: "http"
-      first_login: "Signs in with the generated admin password — `homebox secrets core`."
+      first_login: "The proxy admin account, seeded at first boot. Change the password inside Nginx Proxy Manager afterwards if you like — HomeBox does not need it again."
     portainer:
       friendly_name: "Portainer"
       color: "#13bef9"
@@ -50,7 +50,7 @@ x-homebox:
       icon: "portainer.svg"
       port_map: 9000
       url_scheme: "http"
-      first_login: "The admin password is seeded from .env — `homebox secrets core`."
+      first_login: "Portainer's admin account, seeded from .env at first start."
 
 services:
   npm:

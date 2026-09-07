@@ -34,7 +34,7 @@ x-homebox:
       icon: "linkding.svg"
       port_map: 9090
       url_scheme: "http"
-      first_login: "User `admin`, password from `homebox secrets bookmarks`."
+      first_login: "Linkding creates its admin account on first start from the credentials HomeBox generated."
 
 services:
   linkding:

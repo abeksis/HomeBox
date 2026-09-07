@@ -42,7 +42,7 @@ x-homebox:
       port_map: 8053
       container_port: 80
       url_scheme: "http"
-      first_login: "Log in at /admin with the password from `homebox secrets pi-hole`."
+      first_login: "Log in at /admin. There is no username — just the password HomeBox generated."
 
 services:
   pihole:
