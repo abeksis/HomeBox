@@ -230,35 +230,47 @@ async function arrCalendar(serviceName, containers, days) {
 let qbSession = null;   // { cookie, at }
 const QB_SESSION_MS = 30 * 60 * 1000;
 
+// One message for every shape of "that login did not work", because from the
+// user's side they are the same problem. The temporary-password note is here
+// because it is the likeliest cause on a fresh box and the least guessable:
+// a qBittorrent that has never had a password set generates a NEW one every
+// restart and prints it to its log, so the panel works today and fails
+// tomorrow for a reason that looks nothing like a rotated password.
+const BAD_LOGIN =
+  'qBittorrent rejected the username or password. Check them against qBittorrent itself '
+  + '(Options → Web UI). If you never set a password there, it generates a new temporary one '
+  + 'every restart and prints it to the log — set a permanent one, then put it in '
+  + 'Settings → Server Config → Live activity.';
+
 async function qbLogin(base, user, pass) {
   if (qbSession && Date.now() - qbSession.at < QB_SESSION_MS) return qbSession.cookie;
 
   const body = `username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`;
-  const res = await request(`${base}/api/v2/auth/login`, {
-    method: 'POST', body, raw: true,
-    // qBittorrent rejects a login whose Referer is not its own origin. This
-    // is its CSRF defence and it applies to us as much as to a browser.
-    headers: { referer: base, origin: base },
-  });
+  let res;
+  try {
+    res = await request(`${base}/api/v2/auth/login`, {
+      method: 'POST', body, raw: true,
+      // qBittorrent rejects a login whose Referer is not its own origin. This
+      // is its CSRF defence and it applies to us as much as to a browser.
+      headers: { referer: base, origin: base },
+    });
+  } catch (err) {
+    // Version drift again, and this one reaches the user as a bare status
+    // code: 4.x answered bad credentials with `200 Fails.`, 5.x answers
+    // 401 (403 once it has banned the client for trying too often). Left to
+    // the generic handler that surfaces as "qbittorrent:8080 answered 401",
+    // which tells someone nothing about which password to go and check.
+    if (err.status === 401 || err.status === 403) throw new Error(BAD_LOGIN);
+    throw err;
+  }
 
   // The cookie IS the success signal, and it is the only reliable one.
   // qBittorrent 4.x answered a good login with `200 Ok.`; 5.x answers
   // `204 No Content` with an empty body, so checking the text for "Ok"
-  // reports a perfectly successful login as wrong credentials. A refused
-  // login is `200 Fails.` and sets no cookie either way.
-  if (/fails/i.test(res.text)) {
-    // Worth naming the likely cause. A qBittorrent that has never had a
-    // password set generates a TEMPORARY one per session and prints it to
-    // its log — so this panel works until the container restarts and then
-    // fails for a reason that looks nothing like "the password rotated".
-    throw new Error(
-      'qBittorrent rejected the username or password. If you never set one, it generates '
-      + 'a new temporary password every restart — set a permanent one in qBittorrent under '
-      + 'Options → Web UI, then put it in Settings → Server Config → Live activity.',
-    );
-  }
+  // reports a perfectly successful login as wrong credentials.
+  if (/fails/i.test(res.text)) throw new Error(BAD_LOGIN);
   const setCookie = [].concat(res.headers['set-cookie'] || [])[0];
-  if (!setCookie) throw new Error('qBittorrent accepted nothing back — check the username and password');
+  if (!setCookie) throw new Error(BAD_LOGIN);
 
   qbSession = { cookie: setCookie.split(';')[0], at: Date.now() };
   return qbSession.cookie;
@@ -295,7 +307,8 @@ async function qbittorrent(containers, env) {
       // A session expires, qBittorrent restarts, the cookie stops working.
       // One silent re-login is the difference between a card that recovers
       // by itself and one that shows an error until someone reloads.
-      if (err.status !== 403) throw err;
+      // Both codes, not just 403: an unauthenticated call to 5.x is a 401.
+      if (err.status !== 401 && err.status !== 403) throw err;
       qbSession = null;
       const fresh = await qbLogin(base, user, pass);
       return request(`${base}${p}`, { headers: { cookie: fresh } });
