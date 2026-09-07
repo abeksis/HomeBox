@@ -48,9 +48,9 @@ function moduleFile(id) {
  * id is validated above, but keeping argv-style execution means even a bad
  * one cannot become shell syntax.
  */
-function run(command, args, { timeout = 600000, cwd = ROOT, onLine = null } = {}) {
+function run(command, args, { timeout = 600000, cwd = ROOT, onLine = null, env = null } = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd, env: { ...process.env, HB_ROOT: ROOT } });
+    const child = spawn(command, args, { cwd, env: { ...process.env, HB_ROOT: ROOT, ...(env || {}) } });
     let stdout = '';
     let stderr = '';
     // Pulling images produces a lot of progress output; keep only the tail so
@@ -104,14 +104,41 @@ function composeArgs(id, rest) {
 const compose = (id, rest, options) => run('docker', composeArgs(id, rest), options);
 
 /**
+ * `.env` as an object, for handing to a child process.
+ *
+ * Deliberately the same shape compose gets from `--env-file`: a setup script
+ * should see exactly what the services it is preparing will see.
+ */
+function envFileVars() {
+  const out = {};
+  try {
+    for (const line of fs.readFileSync(ENV_FILE, 'utf8').split(/\r?\n/)) {
+      const m = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
+      if (m) out[m[1]] = m[2].replace(/^["']|["']$/g, '');
+    }
+  } catch { /* no .env yet — a first install has nothing to pass */ }
+  return out;
+}
+
+/**
  * A module may ship setup.sh to seed config an image will not create itself
- * (File Browser's config.yaml, the media pool's directory layout). It runs
- * before the first start and must be safe to re-run.
+ * (File Browser's config.yaml, the media pool's directory layout, the
+ * qBittorrent web UI account). It runs before the first start and must be
+ * safe to re-run.
+ *
+ * `.env` is passed in explicitly, and that is not a detail.
+ *
+ * This process's own environment is the DASHBOARD CONTAINER's environment,
+ * which holds the two variables its compose file happens to declare — TZ and
+ * HB_HOST_ADDRESS — and nothing else. A setup script reading HB_QBIT_PASS
+ * from it got an empty string and quietly skipped its work, every time
+ * anyone installed from the UI. The script was right; it was being handed
+ * an environment that could not answer.
  */
 async function runSetup(id, { onLine = null } = {}) {
   const script = path.join(MODULES_DIR, id, 'setup.sh');
   if (!fs.existsSync(script)) return null;
-  return run('bash', [script], { timeout: 120000, onLine });
+  return run('bash', [script], { timeout: 120000, onLine, env: envFileVars() });
 }
 
 /** Full install: seed, pull, start. Returns the combined transcript. */
