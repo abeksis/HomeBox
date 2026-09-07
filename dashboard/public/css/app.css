@@ -1003,8 +1003,22 @@ code.mono {
 /* Let the LAST column swallow the leftover width, so the others shrink to
    their content and the row reads left to right. Without this the browser
    spreads three short columns evenly across a 1500px card and a port number
-   ends up a hand-span away from the app that owns it. */
-.table td:last-child, .table th:last-child { width: 100%; }
+   ends up a hand-span away from the app that owns it.
+
+   The two rules below are the other half of that, and it took a second look
+   to see it. "Shrink to their content" means shrink to MINIMUM content
+   width — so "Proxy Manager" broke across two lines while 600px of the same
+   row sat empty. And the width the last column swallowed became dead air to
+   the right of its own text.
+
+   So: nothing wraps (the wrapper already scrolls horizontally for anything
+   genuinely long, which is better than breaking an image tag over two
+   lines), and the last column's content is pushed to the right edge, which
+   is where it looks placed rather than abandoned. In every table here that
+   column is the one that belongs there — a container name, an actions
+   button, a reveal button. */
+.table td:last-child, .table th:last-child { width: 100%; text-align: right; }
+.table th, .table td { white-space: nowrap; }
 .table tbody tr:hover { background: var(--bg-2); }
 .cell-name { font-weight: 600; }
 .cell-dim { color: var(--text-muted); font-family: var(--mono); font-size: 0.76rem; }
