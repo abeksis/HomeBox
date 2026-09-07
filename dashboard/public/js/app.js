@@ -2278,7 +2278,11 @@ function updateBadge(count) {
   if (!badge) return;
   // A dot, not a number. These are optional rebuilds, and a red "12" reads
   // like twelve things are broken — the source made the same call.
-  badge.classList.toggle('hidden', !count);
+  //
+  // The `hidden` ATTRIBUTE, not a `.hidden` class: this stylesheet styles
+  // `[hidden]` and defines no `.hidden` rule, so a class here is a button
+  // that is always on screen no matter what the code thinks it set.
+  badge.hidden = !count;
   badge.title = count
     ? `${count} container${count === 1 ? ' has' : 's have'} a newer image available`
     : '';
@@ -2319,7 +2323,9 @@ function renderUpdates(data) {
       + (skipped ? ` · ${skipped} could not be reached` : '');
   }
 
-  $('#updates-all').classList.toggle('hidden', count < 2);
+  // Only worth offering when there is more than one thing to do — with a
+  // single update the row's own button is the same action, one click closer.
+  $('#updates-all').hidden = count < 2;
 
   if (!data.lastCheck) {
     list.innerHTML = '<p class="empty-state">Press <strong>Check now</strong> to compare every running image against its registry.</p>';
