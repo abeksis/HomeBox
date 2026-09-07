@@ -1921,7 +1921,12 @@ code.mono {
 /* A hidden item stays listed and legible — it is one click from coming back,
    so it must not read as broken. */
 .editor-row.is-off { opacity: 0.55; }
-.editor-row-info { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+/* flex: 1 so this absorbs the free space and the actions are pushed to the
+   right by it. The row is `justify-content: space-between`, which was fine
+   with two children — text left, buttons right — but adding the icon made
+   three, and space-between then parked the text in the MIDDLE of the row with
+   a gap on either side. */
+.editor-row-info { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; }
 .editor-row-name { font-weight: 600; font-size: 0.88rem; display: flex; align-items: center; gap: 0.4rem; }
 .editor-row-meta {
   font-size: 0.78rem;
