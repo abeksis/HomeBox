@@ -33,6 +33,7 @@ const icons = require('./lib/icons');
 const bookmarks = require('./lib/bookmarks');
 const auth = require('./lib/auth');
 const updates = require('./lib/updates');
+const insights = require('./lib/insights');
 const stats = require('./lib/stats');
 const state = require('./lib/state-store');
 
@@ -88,7 +89,16 @@ const THEMES = [
   'light', 'light-forest', 'light-sunset', 'light-arctic', 'light-rose',
 ];
 const BACKGROUNDS = ['aurora', 'nebula', 'deep', 'slate', 'void', 'solid', 'wp-purple', 'wp-blue'];
-const DEFAULT_PREFS = { theme: 'dark', atmo: 'aurora' };
+
+// Which panels the Live activity card shows. Defaults to on: the card hides
+// itself when it has nothing to say, so a box with no media apps never sees
+// it and a box with them gets the numbers without going looking for a switch.
+const INSIGHT_PANELS = ['transfers', 'queues', 'upcoming'];
+const DEFAULT_PREFS = {
+  theme: 'dark',
+  atmo: 'aurora',
+  insights: { enabled: true, transfers: true, queues: true, upcoming: true },
+};
 
 /**
  * Both values end up in a DOM attribute the stylesheet selects on, so they
@@ -97,9 +107,15 @@ const DEFAULT_PREFS = { theme: 'dark', atmo: 'aurora' };
  */
 function cleanPrefs(input) {
   const p = input && typeof input === 'object' ? input : {};
+  const i = p.insights && typeof p.insights === 'object' ? p.insights : {};
+  // Whitelisted the same way as the two above, and booleans coerced rather
+  // than trusted: these come from an API body, and `"false"` is truthy.
+  const insights = { enabled: i.enabled !== false };
+  for (const name of INSIGHT_PANELS) insights[name] = i[name] !== false;
   return {
     theme: THEMES.includes(p.theme) ? p.theme : DEFAULT_PREFS.theme,
     atmo: BACKGROUNDS.includes(p.atmo) ? p.atmo : DEFAULT_PREFS.atmo,
+    insights,
   };
 }
 
@@ -649,6 +665,22 @@ const server = http.createServer(async (req, res) => {
       if (req.method !== 'POST') return sendJson(res, 405, { error: 'method not allowed' });
       const result = await runAction(decodeURIComponent(action[1]), action[2]);
       return sendJson(res, result.status, result.body);
+    }
+
+    // --- Live activity ---
+    //
+    // What the installed apps are doing right now: transfer rates, queues,
+    // and what is due out. Read-only, and best-effort by design — see
+    // lib/insights.js for why a source that cannot be reached says so rather
+    // than reporting a zero. POST is the same read with the caches dropped,
+    // which is what the card's own refresh button wants.
+    if (route === '/api/insights') {
+      if (req.method === 'POST') insights.invalidate();
+      try {
+        return sendJson(res, 200, await insights.snapshot());
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
     }
 
     // --- Updates ---

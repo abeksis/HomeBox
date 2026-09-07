@@ -2495,3 +2495,124 @@ code.mono {
   font-size: 0.8rem;
   line-height: 1.65;
 }
+
+/* =========================== LIVE ACTIVITY ===========================
+   The Home card that shows what the apps are doing. Panels sit side by
+   side on a wide screen and stack on a narrow one; each is independent,
+   because each comes from a different app that may or may not answer. */
+
+.live-panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.1rem;
+}
+.live-panel { min-width: 0; }
+.live-panel h3 {
+  margin: 0 0 0.6rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.live-panel h3 small {
+  margin-left: 0.4rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.75;
+}
+/* An app that could not be reached says why, in words. Never a fake zero. */
+.live-note { margin: 0.2rem 0; font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; }
+
+.live-figures { display: flex; align-items: baseline; gap: 1.1rem; margin-bottom: 0.7rem; flex-wrap: wrap; }
+.live-figure { display: flex; align-items: baseline; gap: 0.3rem; }
+.live-figure strong { font-size: 1.12rem; font-weight: 700; letter-spacing: -0.02em; }
+.live-figure.quiet strong { color: var(--text-secondary); }
+.live-figure.quiet span { font-size: 0.76rem; color: var(--text-muted); }
+.live-arrow { font-size: 0.9rem; font-weight: 700; }
+.live-arrow.down { color: var(--good); }
+.live-arrow.up { color: var(--accent); }
+
+.live-torrent { margin-bottom: 0.6rem; }
+.live-torrent-top { display: flex; gap: 0.6rem; align-items: baseline; }
+.live-torrent-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.live-torrent-eta { font-size: 0.72rem; color: var(--text-muted); flex: none; }
+.live-torrent-foot { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.15rem; }
+.live-bar {
+  height: 4px;
+  margin-top: 0.25rem;
+  border-radius: 2px;
+  background: var(--bg-input);
+  overflow: hidden;
+}
+.live-bar span { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+
+.live-queue-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.7rem;
+  padding: 0.4rem 0;
+  border-top: 1px solid var(--border-hair);
+}
+.live-queue-row:first-of-type { border-top: 0; }
+.live-queue-app { font-size: 0.82rem; font-weight: 600; }
+.live-queue-nums { font-size: 0.78rem; color: var(--text-muted); }
+.live-queue-nums b { color: var(--text); font-weight: 700; }
+
+.live-soon {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.32rem 0;
+  border-top: 1px solid var(--border-hair);
+  font-size: 0.8rem;
+}
+.live-soon:first-of-type { border-top: 0; }
+/* Filled = the file is already here. Hollow = still waiting for it. The
+   whole point of the row is telling those two apart at a glance. */
+.live-soon-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--text-muted);
+}
+.live-soon-dot.have { background: var(--good); box-shadow: 0 0 0 1px var(--good); }
+.live-soon-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live-soon-detail {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.live-soon-when { flex: none; color: var(--text-secondary); font-size: 0.75rem; }
+
+/* The Settings switches for the card above. */
+.live-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+  cursor: pointer;
+}
+.live-toggle input { margin-top: 0.2rem; flex: none; }
+.live-toggle span { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.live-toggle strong { font-size: 0.84rem; font-weight: 600; }
+.live-toggle small { font-size: 0.76rem; color: var(--text-muted); line-height: 1.45; }
+.live-setup-note { margin-top: 0.7rem; }
+
+/* The card's timestamp doubles as its refresh button. */
+#live-meta { cursor: pointer; }
+#live-meta:hover { color: var(--text); }

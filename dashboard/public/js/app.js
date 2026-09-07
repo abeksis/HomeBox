@@ -225,6 +225,7 @@ function show(page) {
     else el.removeAttribute('aria-current');
   });
   if (target !== 'home') loadModules();
+  if (target === 'home') loadInsights();
   if (target === 'updates') loadUpdates();
   if (target === 'settings') { loadBackups(); loadConfig(); loadCatalog(); }
   if (target === 'settings' || target === 'home') loadBookmarks();
@@ -2220,6 +2221,33 @@ function applyPrefs(prefs) {
   document.documentElement.dataset.theme = prefs.theme;
   document.documentElement.dataset.atmo = prefs.atmo;
   renderSwatches();
+  renderInsightToggles();
+  // A panel that was just switched off should leave the card now, not at the
+  // next poll — the checkbox is a claim about the page and it should be true
+  // by the time the eye moves back to it.
+  if (insightsData) renderInsights(insightsData);
+  else if (insightsOn()) loadInsights();
+}
+
+/** The Settings checkboxes, from whatever the server actually stored. */
+function renderInsightToggles() {
+  const i = (state.prefs && state.prefs.insights) || {};
+  const set = (sel, value) => { const el = $(sel); if (el) el.checked = value !== false; };
+  set('#live-enabled', i.enabled);
+  set('#live-transfers', i.transfers);
+  set('#live-queues', i.queues);
+  set('#live-upcoming', i.upcoming);
+}
+
+function saveInsightPrefs() {
+  savePrefs({
+    insights: {
+      enabled: $('#live-enabled').checked,
+      transfers: $('#live-transfers').checked,
+      queues: $('#live-queues').checked,
+      upcoming: $('#live-upcoming').checked,
+    },
+  });
 }
 
 /**
@@ -2256,6 +2284,176 @@ async function savePrefs(patch) {
     /* appearance is cosmetic; a failed save is not worth an error banner */
   }
 }
+
+/* ----------------------------------------------------- live activity */
+
+/**
+ * The Home card that answers "what are my apps doing right now".
+ *
+ * The rule throughout: a source that could not be reached SAYS so. Painting a
+ * calm `0 B/s` for an app that never answered would send someone looking for
+ * a stalled download that is actually fine — so an unreachable app gets a
+ * line of plain text explaining itself, and a working one gets numbers.
+ *
+ * The whole card hides when every panel is empty. A box with no media apps
+ * should not carry a permanent invitation to configure something.
+ */
+let insightsData = null;
+let insightsTimer = null;
+
+const insightsOn = () => !state.prefs || !state.prefs.insights || state.prefs.insights.enabled !== false;
+const panelOn = (name) => {
+  const i = (state.prefs && state.prefs.insights) || {};
+  return i[name] !== false;
+};
+
+function rate(bytesPerSecond) {
+  if (!bytesPerSecond) return '0 B/s';
+  return `${bytes(bytesPerSecond)}/s`;
+}
+
+/** "2h 14m", "3m", "48s" — the shape a person reads, not 8040 seconds. */
+function etaText(seconds) {
+  if (seconds == null) return null;
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h) return `${h}h ${m}m left`;
+  if (m) return `${m}m left`;
+  return `${seconds}s left`;
+}
+
+/** "tonight", "Fri", "in 12 days" — a date only matters relative to today. */
+function whenText(iso) {
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) return '';
+  const days = Math.round((then.setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000);
+  if (days < 0) return 'out now';
+  if (days === 0) return 'today';
+  if (days === 1) return 'tomorrow';
+  if (days < 7) return new Date(iso).toLocaleDateString(undefined, { weekday: 'long' });
+  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+
+function transfersPanel(qb) {
+  if (!qb || qb.installed === false) return '';
+  if (qb.error) {
+    return `<section class="live-panel">
+      <h3>Transfers</h3>
+      <p class="live-note">${escapeHtml(qb.error)}</p>
+    </section>`;
+  }
+  const moving = qb.torrents || [];
+  const rows = moving.length
+    ? moving.map((t) => `
+        <div class="live-torrent">
+          <div class="live-torrent-top">
+            <span class="live-torrent-name">${escapeHtml(t.name)}</span>
+            <span class="live-torrent-eta mono">${escapeHtml(etaText(t.eta) || '')}</span>
+          </div>
+          <div class="live-bar"><span style="width:${Math.max(0, Math.min(100, t.progress))}%"></span></div>
+          <div class="live-torrent-foot mono">${t.progress.toFixed(1)}% · ${escapeHtml(rate(t.downSpeed))}</div>
+        </div>`).join('')
+    : '<p class="live-note">Nothing is downloading right now.</p>';
+
+  return `<section class="live-panel">
+    <h3>Transfers <small>qBittorrent</small></h3>
+    <div class="live-figures">
+      <div class="live-figure"><span class="live-arrow down">↓</span><strong class="mono">${escapeHtml(rate(qb.downSpeed))}</strong></div>
+      <div class="live-figure"><span class="live-arrow up">↑</span><strong class="mono">${escapeHtml(rate(qb.upSpeed))}</strong></div>
+      <div class="live-figure quiet"><strong class="mono">${qb.activeCount}</strong><span>active</span></div>
+    </div>
+    ${rows}
+  </section>`;
+}
+
+function queuesPanel(data) {
+  const apps = [
+    { name: 'Radarr', kind: 'films', d: data.radarr },
+    { name: 'Sonarr', kind: 'episodes', d: data.sonarr },
+  ].filter((a) => a.d && a.d.installed !== false);
+  if (!apps.length) return '';
+
+  return `<section class="live-panel">
+    <h3>Download queue <small>Radarr &amp; Sonarr</small></h3>
+    ${apps.map((a) => (a.d.error
+      ? `<div class="live-queue-row"><span class="live-queue-app">${escapeHtml(a.name)}</span><span class="live-note">${escapeHtml(a.d.error)}</span></div>`
+      : `<div class="live-queue-row">
+           <span class="live-queue-app">${escapeHtml(a.name)}</span>
+           <span class="live-queue-nums mono"><b>${a.d.queue}</b> fetching · <b>${a.d.missing}</b> missing</span>
+         </div>`)).join('')}
+  </section>`;
+}
+
+function upcomingPanel(data) {
+  const rows = data.upcoming || [];
+  if (!rows.length && !data.upcomingError) return '';
+  return `<section class="live-panel">
+    <h3>Coming soon <small>next ${data.upcomingDays} days</small></h3>
+    ${data.upcomingError
+      ? `<p class="live-note">${escapeHtml(data.upcomingError)}</p>`
+      : rows.map((r) => `
+          <div class="live-soon">
+            <span class="live-soon-dot ${r.have ? 'have' : ''}" title="${r.have ? 'already downloaded' : 'not downloaded yet'}"></span>
+            <span class="live-soon-title">${escapeHtml(r.title)}</span>
+            <span class="live-soon-detail">${escapeHtml(r.detail)}</span>
+            <span class="live-soon-when">${escapeHtml(whenText(r.date))}</span>
+          </div>`).join('')}
+  </section>`;
+}
+
+function renderInsights(data) {
+  insightsData = data;
+  const card = $('#live-card');
+  const box = $('#live-panels');
+  if (!card || !box) return;
+
+  if (!insightsOn()) { card.hidden = true; return; }
+
+  const panels = [
+    panelOn('transfers') ? transfersPanel(data.qbittorrent) : '',
+    panelOn('queues') ? queuesPanel(data) : '',
+    panelOn('upcoming') ? upcomingPanel(data) : '',
+  ].filter(Boolean);
+
+  // Nothing to say: no media apps installed, or every panel switched off.
+  // Hiding beats an empty card asking to be configured.
+  card.hidden = !panels.length;
+  if (!panels.length) return;
+
+  box.innerHTML = panels.join('');
+  $('#live-meta').textContent = new Date(data.at).toLocaleTimeString();
+}
+
+async function loadInsights({ force = false } = {}) {
+  if (!insightsOn()) { const c = $('#live-card'); if (c) c.hidden = true; return; }
+  try {
+    const res = await fetch('api/insights', force ? { method: 'POST' } : {});
+    renderInsights(await res.json());
+  } catch {
+    /* the card keeps what it had; a poll that missed is not worth a banner */
+  }
+}
+
+/**
+ * Poll only while Home is on screen and the tab is visible.
+ *
+ * Every tick asks qBittorrent and (past its cache) Radarr and Sonarr for
+ * numbers, and doing that to a backgrounded tab for hours is load on the
+ * user's own apps in exchange for a card nobody is looking at.
+ */
+function scheduleInsights() {
+  clearInterval(insightsTimer);
+  insightsTimer = null;
+  if (!insightsOn()) return;
+  insightsTimer = setInterval(() => {
+    if (document.hidden || currentPage() !== 'home') return;
+    loadInsights();
+  }, 10000);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && currentPage() === 'home') loadInsights();
+});
 
 /* ----------------------------------------------------------- updates */
 
@@ -3034,6 +3232,16 @@ $('#quick-form').addEventListener('submit', submitQuickForm);
 $('#password-form').addEventListener('submit', submitPasswordChange);
 state.launcherPrefs = readLauncherPrefs();
 
+['#live-enabled', '#live-transfers', '#live-queues', '#live-upcoming'].forEach((sel) => {
+  $(sel).addEventListener('change', saveInsightPrefs);
+});
+$('#live-card').addEventListener('click', (event) => {
+  // The timestamp is the refresh control: clicking it drops the server-side
+  // caches and asks every app again, which is what someone wants when they
+  // just started a download and the card still says nothing is moving.
+  if (event.target.closest('#live-meta')) loadInsights({ force: true });
+});
+
 $('#updates-check').addEventListener('click', () => runUpdateCheck());
 $('#updates-all').addEventListener('click', () => applyUpdate('all'));
 $('#updates-list').addEventListener('click', (event) => {
@@ -3078,6 +3286,8 @@ async function init() {
   // dozen registry round-trips, and it must never set them off either.
   fetch('api/updates').then((r) => r.json())
     .then((d) => updateBadge((d.available || []).length)).catch(() => {});
+  loadInsights();
+  scheduleInsights();
   connect();
   setInterval(() => loadModules(true), 20000);
 }

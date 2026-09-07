@@ -214,6 +214,17 @@
         <div class="quick-row" id="quick-row"></div>
       </div>
 
+      <!-- LIVE ACTIVITY — what the apps are DOING, not just that they are up.
+           Hidden until there is something to say: a box with no media apps
+           never sees an empty card asking to be configured. -->
+      <div class="bento-card bento-12 bento-live" id="live-card" style="--bento-delay:140ms" hidden>
+        <div class="card-header">
+          <span class="card-label">Live activity</span>
+          <span class="card-meta mono" id="live-meta"></span>
+        </div>
+        <div class="live-panels" id="live-panels"></div>
+      </div>
+
     </div>
 
     <!-- Band 2: everything around the apps -->
@@ -451,6 +462,39 @@
             <div class="setting-title">Background</div>
             <div class="setting-sub">What sits behind the cards.</div>
             <div class="swatches" id="atmo-swatches"></div>
+          </div>
+        </div>
+
+        <div class="bento-card">
+          <div class="card-header"><span class="card-label">Live activity</span></div>
+          <div class="setting-block">
+            <div class="setting-title">The Home card</div>
+            <div class="setting-sub">
+              What your apps are doing right now, without opening them. Each panel appears only
+              when the app behind it is installed and answering — turning one off here hides it
+              even when it has something to show.
+            </div>
+            <label class="live-toggle">
+              <input type="checkbox" id="live-enabled" checked>
+              <span><strong>Show the card on Home</strong><small>Off hides all of it.</small></span>
+            </label>
+            <label class="live-toggle">
+              <input type="checkbox" id="live-transfers" checked>
+              <span><strong>Transfer speed</strong><small>qBittorrent: down and up right now, and what is moving.</small></span>
+            </label>
+            <label class="live-toggle">
+              <input type="checkbox" id="live-queues" checked>
+              <span><strong>Download queues</strong><small>Radarr and Sonarr: fetching now, and wanted but missing.</small></span>
+            </label>
+            <label class="live-toggle">
+              <input type="checkbox" id="live-upcoming" checked>
+              <span><strong>Coming soon</strong><small>Release and air dates for what you follow, next three weeks.</small></span>
+            </label>
+            <p class="setting-sub live-setup-note">
+              Radarr and Sonarr need no setup — HomeBox reads the API key they write themselves.
+              qBittorrent has no such file, so its web UI login goes in
+              <a href="#settings" data-stab="server">Server&nbsp;Config → Live&nbsp;activity</a>.
+            </p>
           </div>
         </div>
 
