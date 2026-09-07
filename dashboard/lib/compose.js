@@ -236,6 +236,45 @@ function retag(imageId, ref) {
 }
 
 /**
+ * Recreate the dashboard itself, from outside the dashboard.
+ *
+ * A settings change the dashboard reads — TZ, the paths, the LAN address —
+ * means its container has to be replaced like any other, because a container
+ * keeps the environment it was created with. It cannot do that by running
+ * `compose up -d` itself: the first thing compose does is STOP the container,
+ * which kills the process running compose, so the create half never gets
+ * sent. The result is a dashboard that takes itself down and does not come
+ * back. Measured, on a live box, the hard way — a delay does not help, since
+ * the problem is not timing but that the process dies mid-command.
+ *
+ * So the work is handed to a container that outlives us: a detached, throwaway
+ * sibling running the same image (guaranteed present — we are running it),
+ * holding the Docker socket and the HomeBox tree, whose only job is that one
+ * compose command. Docker keeps it alive after this container is gone.
+ *
+ * Returns once the helper has been STARTED, not once the recreate is done —
+ * by then this process is being stopped, so there is nothing left to wait
+ * with.
+ */
+async function selfRecreate(image) {
+  if (!/^[A-Za-z0-9][A-Za-z0-9_.\-/:]{0,255}$/.test(String(image || ''))) {
+    throw new ComposeError(`refusing to run a helper from a suspicious image: ${image}`);
+  }
+  const args = [
+    'run', '--detach', '--rm',
+    '-v', '/var/run/docker.sock:/var/run/docker.sock',
+    '-v', `${ROOT}:${ROOT}`,
+    '-w', ROOT,
+    '--entrypoint', 'docker',
+    image,
+    'compose', '-p', 'homebox-dashboard', '-f', moduleFile('dashboard'),
+  ];
+  if (fs.existsSync(ENV_FILE)) args.push('--env-file', ENV_FILE);
+  args.push('up', '-d', '--remove-orphans');
+  return run('docker', args, { timeout: 60000 });
+}
+
+/**
  * Per-container lifecycle, for the Running list's Logs / Restart / Pause
  * buttons. It goes through the docker CLI rather than the Engine API so that
  * every write on this box lands in one file — and through the same argv-only
@@ -267,6 +306,6 @@ async function available() {
 
 module.exports = {
   install, start, stop, restart, down, purge, update, pull, available, runSetup,
-  pullService, upService, retag,
+  pullService, upService, retag, selfRecreate,
   containerAction, CONTAINER_ACTIONS, ComposeError, ID_PATTERN,
 };

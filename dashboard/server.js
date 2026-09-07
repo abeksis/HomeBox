@@ -451,25 +451,28 @@ async function applySaved(keys) {
     }
   }
   // The dashboard reads TZ and the paths too, so a setting it uses means it
-  // has to be recreated like everything else. It just cannot do that DURING
-  // the request — compose would stop this process before the answer is
-  // written, and the page would see a dead socket instead of "saved".
+  // has to be recreated like everything else — and "restart it yourself" is
+  // the same trip through a terminal this settings page exists to remove.
   //
-  // So it is scheduled instead: answer first, then recreate. The browser gets
-  // its confirmation, the socket closes, and a moment later compose replaces
-  // the container. The page reconnects on its own — it already has to, since
-  // the same thing happens on every `homebox update dashboard`.
+  // It cannot run the recreate itself: compose STOPS the container first,
+  // which kills the process running compose, so the create half is never
+  // sent and the dashboard goes down and stays down. Delaying it does not
+  // help — the problem is not timing, it is that the process dies mid
+  // command. lib/compose.js hands the job to a detached sibling container
+  // that outlives this one.
   //
-  // Telling the user to go and run a CLI command was the alternative, and it
-  // is the same round trip through a terminal this whole settings page exists
-  // to remove.
+  // If the helper cannot even be started, say so rather than leaving someone
+  // to discover it: the old `manual` wording is exactly right then.
   if (selfRestart.length) {
-    restarting.push(...selfRestart);
-    setTimeout(() => {
-      composeLib.start('dashboard').catch((err) => {
-        console.error(`[homebox] self-restart after a settings change failed: ${err.message}`);
-      });
-    }, 1500).unref();
+    const me = containers.find((c) => c.service === 'dashboard' && c.state !== 'stopped');
+    try {
+      if (!me || !me.image) throw new Error('cannot tell which image this dashboard is running');
+      await composeLib.selfRecreate(me.image);
+      restarting.push(...selfRestart);
+    } catch (err) {
+      console.error(`[homebox] could not schedule the dashboard's own recreate: ${err.message}`);
+      manual.push(...selfRestart);
+    }
   }
 
   return { restarting, failed, manual };
