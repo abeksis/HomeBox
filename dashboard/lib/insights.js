@@ -241,9 +241,14 @@ async function qbLogin(base, user, pass) {
     headers: { referer: base, origin: base },
   });
 
-  if (!/ok/i.test(res.text)) throw new Error('qBittorrent rejected the username or password');
+  // The cookie IS the success signal, and it is the only reliable one.
+  // qBittorrent 4.x answered a good login with `200 Ok.`; 5.x answers
+  // `204 No Content` with an empty body, so checking the text for "Ok"
+  // reports a perfectly successful login as wrong credentials. A refused
+  // login is `200 Fails.` and sets no cookie either way.
+  if (/fails/i.test(res.text)) throw new Error('qBittorrent rejected the username or password');
   const setCookie = [].concat(res.headers['set-cookie'] || [])[0];
-  if (!setCookie) throw new Error('qBittorrent accepted the login but set no session cookie');
+  if (!setCookie) throw new Error('qBittorrent accepted nothing back — check the username and password');
 
   qbSession = { cookie: setCookie.split(';')[0], at: Date.now() };
   return qbSession.cookie;
