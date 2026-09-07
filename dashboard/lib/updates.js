@@ -302,6 +302,45 @@ function stamp() {
  * an update can damage in a way that reinstalling does not fix. A module with
  * no config directory yet (nothing has run) archives nothing and says so.
  */
+const BACKUPS_KEPT = 10;
+
+/**
+ * Hand a file back to whoever owns the state directory.
+ *
+ * This process runs as root inside its container so it can open the Docker
+ * socket, so everything it writes into the bind-mounted state directory lands
+ * root-owned — and the account that owns /opt/homebox can then neither read
+ * nor delete its own pre-update backups. lib/state-store.js does the same for
+ * the JSON it writes, for the same reason.
+ */
+async function matchStateOwner(file) {
+  try {
+    const dir = await fsp.stat(path.join(state.ROOT, 'state'));
+    await fsp.chown(file, dir.uid, dir.gid);
+  } catch {
+    /* not root, or a filesystem that will not chown — the file still stands */
+  }
+}
+
+/**
+ * Keep the last few archives per module and delete the rest.
+ *
+ * Left alone this directory grows by the size of an app's database on every
+ * update, forever, on the box's system disk. Ten is enough to go back through
+ * a bad run and few enough that nobody discovers it when the disk fills.
+ */
+async function pruneBackups(id) {
+  try {
+    const names = (await fsp.readdir(BACKUP_DIR))
+      .filter((n) => n.startsWith(`${id}-`) && n.endsWith('.tar.gz'))
+      .sort()                       // the stamp sorts chronologically
+      .slice(0, -BACKUPS_KEPT);
+    for (const name of names) await fsp.rm(path.join(BACKUP_DIR, name), { force: true });
+  } catch {
+    /* a failed prune is not a reason to fail an update */
+  }
+}
+
 async function backupModule(id, onLine) {
   const dir = path.join(state.ROOT, 'modules', id, 'config');
   if (!fs.existsSync(dir)) {
@@ -309,6 +348,7 @@ async function backupModule(id, onLine) {
     return null;
   }
   await fsp.mkdir(BACKUP_DIR, { recursive: true });
+  await matchStateOwner(BACKUP_DIR);
   const file = path.join(BACKUP_DIR, `${id}-${stamp()}.tar.gz`);
   if (onLine) onLine(`==> Backing up modules/${id}/config`, false);
 
@@ -328,6 +368,8 @@ async function backupModule(id, onLine) {
   const { size } = await fsp.stat(file);
   if (!size) throw new Error('backup failed: the archive came out empty');
   await fsp.chmod(file, 0o600).catch(() => {});
+  await matchStateOwner(file);
+  await pruneBackups(id);
   if (onLine) onLine(`==> Backup saved: ${path.basename(file)} (${Math.round(size / 1024)} KB)`, false);
   return file;
 }
