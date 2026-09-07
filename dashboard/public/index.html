@@ -661,6 +661,60 @@
           <div class="card-header"><span class="card-label">Addresses</span></div>
           <div class="network-grid" id="settings-network-grid"></div>
         </div>
+        <!-- REMOTE STORAGE — attach a NAS without opening a terminal -->
+        <div class="bento-card">
+          <div class="card-header">
+            <span class="card-label">Remote storage</span>
+            <span class="card-meta mono" id="storage-meta"></span>
+          </div>
+          <p class="hint">
+            A library on a NAS has to be mounted on this box before the apps can see it — a
+            container bind mount cannot address a network share. HomeBox writes a systemd
+            automount rather than an fstab line, so an app never starts against an empty folder
+            and concludes its library vanished. Once it is mounted, point
+            <a href="#settings" data-stab="server">Server&nbsp;Config → Media</a> at it.
+          </p>
+
+          <div id="storage-list"></div>
+
+          <form class="storage-form" id="storage-form" autocomplete="off">
+            <div class="setting-row">
+              <label class="setting-label" for="storage-kind">Type</label>
+              <select class="pill-select" id="storage-kind">
+                <option value="nfs">NFS — keeps hardlinks, use this for media</option>
+                <option value="cifs">SMB / Windows share — copies on import</option>
+              </select>
+            </div>
+            <div class="setting-row" id="storage-server-row">
+              <label class="setting-label" for="storage-server">NAS address</label>
+              <input class="setting-input" id="storage-server" placeholder="192.168.1.48" spellcheck="false">
+            </div>
+            <div class="setting-row">
+              <label class="setting-label" for="storage-share">
+                <span id="storage-share-label">Export path</span>
+              </label>
+              <input class="setting-input" id="storage-share" placeholder="/mnt/media/media_disk" spellcheck="false">
+            </div>
+            <div class="setting-row storage-smb" hidden>
+              <label class="setting-label" for="storage-user">Username</label>
+              <input class="setting-input" id="storage-user" spellcheck="false" autocomplete="off">
+            </div>
+            <div class="setting-row storage-smb" hidden>
+              <label class="setting-label" for="storage-pass">Password</label>
+              <input class="setting-input" id="storage-pass" type="password" autocomplete="new-password">
+            </div>
+            <div class="setting-row">
+              <label class="setting-label" for="storage-mountpoint">Mount it at</label>
+              <input class="setting-input" id="storage-mountpoint" value="/mnt/media_disk" spellcheck="false">
+            </div>
+            <div class="settings-group-note storage-actions">
+              <button type="button" class="btn-soft" id="storage-check">Check the NAS</button>
+              <button type="submit" class="btn-pill primary" id="storage-mount">Mount</button>
+            </div>
+            <div id="storage-probe"></div>
+          </form>
+        </div>
+
         <div class="bento-card">
           <div class="card-header"><span class="card-label">Published ports</span><span class="card-meta mono" id="ports-meta"></span></div>
           <p class="hint">Every port this box answers on, and which app owns it. Anything listed here is reachable from your LAN.</p>

@@ -75,10 +75,22 @@ CREDS="/etc/homebox-smb-credentials"
 if [ "$KIND" = cifs ]; then
   [ -n "$SMB_USER" ] || die "cifs needs a username as the fourth argument"
   if [ ! -f "$CREDS" ]; then
-    step "SMB password for $SMB_USER"
-    # Read it here rather than putting it in the unit file: a password in
-    # /etc/systemd/system is world-readable.
-    read -r -s -p "  password: " smb_pass; echo
+    # The password never goes in the unit file: /etc/systemd/system is
+    # world-readable. It lands in $CREDS at 0600 instead.
+    #
+    # HB_SMB_PASS_FILE lets the dashboard drive this without a terminal. A
+    # FILE and not a variable: an env var is visible in `docker inspect` and
+    # an argument is visible in `ps`, and neither is an acceptable place for
+    # somebody's NAS password. The file is read once and deleted here.
+    if [ -n "${HB_SMB_PASS_FILE:-}" ] && [ -f "$HB_SMB_PASS_FILE" ]; then
+      smb_pass="$(cat "$HB_SMB_PASS_FILE")"
+      rm -f "$HB_SMB_PASS_FILE"
+    elif [ -t 0 ]; then
+      step "SMB password for $SMB_USER"
+      read -r -s -p "  password: " smb_pass; echo
+    else
+      die "no terminal and no HB_SMB_PASS_FILE — cannot ask for the SMB password"
+    fi
     printf 'username=%s\npassword=%s\n' "$SMB_USER" "$smb_pass" > "$CREDS"
     chmod 600 "$CREDS"
     unset smb_pass

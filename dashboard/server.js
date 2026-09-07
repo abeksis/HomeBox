@@ -34,6 +34,7 @@ const bookmarks = require('./lib/bookmarks');
 const auth = require('./lib/auth');
 const updates = require('./lib/updates');
 const insights = require('./lib/insights');
+const storage = require('./lib/storage');
 const stats = require('./lib/stats');
 const state = require('./lib/state-store');
 
@@ -722,6 +723,59 @@ const server = http.createServer(async (req, res) => {
       if (req.method !== 'POST') return sendJson(res, 405, { error: 'method not allowed' });
       const result = await runAction(decodeURIComponent(action[1]), action[2]);
       return sendJson(res, result.status, result.body);
+    }
+
+    // --- Remote storage ---
+    //
+    // GET  /api/storage          what is mounted
+    // POST /api/storage/probe    {kind, server} — ask an NFS server what it exports
+    // POST /api/storage/mount    the form — streams, because it installs a
+    //                            package and reloads systemd
+    // POST /api/storage/unmount  {mountpoint}
+    //
+    // These reach the HOST through a privileged helper container. That is a
+    // real capability and it is deliberate — see the header of lib/storage.js
+    // for why it does not widen what this process could already do, and for
+    // what is validated before any of it leaves here.
+    if (route.startsWith('/api/storage')) {
+      const tail = route.slice('/api/storage'.length).replace(/^\//, '');
+      try {
+        if (!tail && req.method === 'GET') return sendJson(res, 200, await storage.list());
+
+        if (tail === 'probe' && req.method === 'POST') {
+          return sendJson(res, 200, await storage.probe(await readBody(req)));
+        }
+
+        if (tail === 'unmount' && req.method === 'POST') {
+          const body = await readBody(req);
+          const result = await storage.unmount(body);
+          activity.note({ name: body.mountpoint, action: 'unmounted', level: 'info' });
+          return sendJson(res, 200, { ok: true, ...result });
+        }
+
+        if (tail === 'mount' && req.method === 'POST') {
+          const body = await readBody(req);
+          res.writeHead(200, {
+            'content-type': 'application/x-ndjson; charset=utf-8',
+            'cache-control': 'no-store',
+            'x-accel-buffering': 'no',
+          });
+          const send = (obj) => { if (!res.writableEnded) res.write(`${JSON.stringify(obj)}\n`); };
+          try {
+            const result = await storage.mount(body, { onLine: (line, err) => send({ line, err }) });
+            activity.note({ name: result.mountpoint, action: 'mounted', level: 'info' });
+            send({ done: true, ok: true, ...result });
+          } catch (err) {
+            send({ line: err.message, err: true });
+            send({ done: true, ok: false, error: err.message });
+          }
+          return res.end();
+        }
+
+        return sendJson(res, 404, { error: 'no such endpoint' });
+      } catch (err) {
+        return sendJson(res, err.status || 500, { error: err.message });
+      }
     }
 
     // --- Live activity ---

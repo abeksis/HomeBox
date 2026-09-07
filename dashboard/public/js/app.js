@@ -230,7 +230,7 @@ function show(page) {
   if (target !== 'home') loadModules();
   if (target === 'home') loadInsights();
   if (target === 'updates') loadUpdates();
-  if (target === 'settings') { loadBackups(); loadConfig(); loadCatalog(); }
+  if (target === 'settings') { loadBackups(); loadConfig(); loadCatalog(); loadStorage(); }
   if (target === 'settings' || target === 'home') loadBookmarks();
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
@@ -2353,6 +2353,170 @@ async function savePrefs(patch) {
   }
 }
 
+/* ----------------------------------------------------- remote storage */
+
+/**
+ * Attaching a NAS from Settings, instead of from an SSH session.
+ *
+ * The "Check the NAS" step exists because of one specific failure: a box that
+ * is not in the server's export list gets a mount that hangs and then dies
+ * with "access denied by server", which reads like a credentials problem and
+ * is not one. Asking the server what it exports takes a second and turns that
+ * into "add 192.168.1.218 on the NAS" while the form is still open.
+ */
+async function loadStorage() {
+  const list = $('#storage-list');
+  if (!list) return;
+  try {
+    const data = await (await fetch('api/storage')).json();
+    const mounts = data.mounts || [];
+    $('#storage-meta').textContent = mounts.length ? `${mounts.length} mounted` : '';
+    list.innerHTML = mounts.length
+      ? mounts.map((m) => `
+          <div class="storage-row">
+            <div class="storage-row-info">
+              <div class="storage-row-target mono">${escapeHtml(m.target)}</div>
+              <div class="storage-row-source mono">${escapeHtml(m.source)} · ${escapeHtml(m.fstype || '')}${
+                m.size ? ` · ${escapeHtml(m.used || '?')} of ${escapeHtml(m.size)} used` : ''}</div>
+            </div>
+            <button type="button" class="btn-soft" data-unmount="${escapeHtml(m.target)}">Detach</button>
+          </div>`).join('')
+      : '<p class="empty-state">No network share is mounted on this box.</p>';
+  } catch {
+    list.innerHTML = '<p class="empty-state">Could not read what is mounted.</p>';
+  }
+}
+
+function storageKindChanged() {
+  const smb = $('#storage-kind').value === 'cifs';
+  $$('.storage-smb').forEach((el) => { el.hidden = !smb; });
+  $('#storage-server-row').hidden = smb;
+  $('#storage-share-label').textContent = smb ? 'Share' : 'Export path';
+  $('#storage-share').placeholder = smb ? '//192.168.1.48/media' : '/mnt/media/media_disk';
+  // Probing is an NFS thing — SMB has no equivalent of showmount.
+  $('#storage-check').hidden = smb;
+  $('#storage-probe').innerHTML = '';
+}
+
+async function probeStorage() {
+  const box = $('#storage-probe');
+  const server = $('#storage-server').value.trim();
+  if (!server) { box.innerHTML = '<p class="storage-note bad">Enter the NAS address first.</p>'; return; }
+
+  const btn = $('#storage-check');
+  btn.disabled = true;
+  btn.textContent = 'Asking…';
+  box.innerHTML = '';
+  try {
+    const res = await fetch('api/storage/probe', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ kind: 'nfs', server }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'the probe failed');
+
+    if (!data.exports.length) {
+      box.innerHTML = `<p class="storage-note bad">${escapeHtml(server)} answered, but exports nothing.</p>`;
+      return;
+    }
+    const me = (data.addresses || []).join(', ') || 'this box';
+    box.innerHTML = `
+      <p class="storage-note">${escapeHtml(server)} exports these. This box is ${escapeHtml(me)}.</p>
+      ${data.exports.map((e) => `
+        <div class="storage-export ${e.allowed ? 'ok' : 'bad'}">
+          <button type="button" class="storage-export-pick mono" data-export="${escapeHtml(e.path)}">${escapeHtml(e.path)}</button>
+          <span class="storage-export-clients">${e.allowed
+            ? 'allowed here'
+            : `only for ${escapeHtml(e.clients.join(', '))} — add this box on the NAS first`}</span>
+        </div>`).join('')}`;
+  } catch (err) {
+    box.innerHTML = `<p class="storage-note bad">${escapeHtml(err.message)}</p>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Check the NAS';
+  }
+}
+
+async function submitStorageForm(event) {
+  event.preventDefault();
+  const kind = $('#storage-kind').value;
+  const body = {
+    kind,
+    server: $('#storage-server').value.trim(),
+    share: $('#storage-share').value.trim(),
+    mountpoint: $('#storage-mountpoint').value.trim(),
+    user: $('#storage-user').value.trim(),
+    password: $('#storage-pass').value,
+  };
+
+  const ok = await confirmDialog({
+    title: `Mount ${body.share || 'the share'}?`,
+    body: 'HomeBox writes a systemd automount on this box and mounts it now. Nothing on the NAS is '
+      + 'changed or written to. Afterwards, point Server Config → Media at the mountpoint — the apps '
+      + 'keep the bind they were created with, so they are recreated for you when you save that.',
+    confirmLabel: 'Mount',
+  });
+  if (!ok) return;
+
+  openProgress(`Mounting ${body.share}`);
+  let success = false;
+  try {
+    const res = await fetch('api/storage/mount', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const raw of lines) {
+        if (!raw.trim()) continue;
+        let msg;
+        try { msg = JSON.parse(raw); } catch { continue; }
+        if (msg.done) success = msg.ok === true;
+        else if (typeof msg.line === 'string') progressLine(msg.line);
+      }
+    }
+  } catch (err) {
+    progressLine(`ERROR: ${err.message}`);
+  }
+  closeProgress(success, success ? 'Mounted' : 'Could not mount');
+  $('#storage-pass').value = '';
+  if (success) toast('Mounted. Now set the Library root under Server Config → Media.', 'success', 9000);
+  loadStorage();
+}
+
+async function detachStorage(mountpoint) {
+  const ok = await confirmDialog({
+    title: `Detach ${mountpoint}?`,
+    body: 'The share is unmounted and its systemd units removed. Nothing on the NAS is deleted — but '
+      + 'any app pointing at this path loses its library until you attach it again.',
+    confirmLabel: 'Detach',
+    danger: true,
+  });
+  if (!ok) return;
+  try {
+    const res = await fetch('api/storage/unmount', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ mountpoint }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'could not detach');
+    toast(`${mountpoint} detached.`, 'success');
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+  loadStorage();
+}
+
 /* ------------------------------------------------------- first login */
 
 /**
@@ -3504,6 +3668,19 @@ $('#live-card').addEventListener('click', (event) => {
   // caches and asks every app again, which is what someone wants when they
   // just started a download and the card still says nothing is moving.
   if (event.target.closest('#live-meta')) loadInsights({ force: true });
+});
+
+$('#storage-kind').addEventListener('change', storageKindChanged);
+$('#storage-check').addEventListener('click', probeStorage);
+$('#storage-form').addEventListener('submit', submitStorageForm);
+$('#storage-list').addEventListener('click', (event) => {
+  const btn = event.target.closest('[data-unmount]');
+  if (btn) detachStorage(btn.dataset.unmount);
+});
+$('#storage-probe').addEventListener('click', (event) => {
+  // Clicking an export fills the field, so nobody retypes a path they can see.
+  const pick = event.target.closest('[data-export]');
+  if (pick) $('#storage-share').value = pick.dataset.export;
 });
 
 $('#updates-check').addEventListener('click', () => runUpdateCheck());

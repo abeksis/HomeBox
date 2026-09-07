@@ -2751,3 +2751,54 @@ code.mono {
   overflow-wrap: anywhere;
 }
 .secret-hidden { color: var(--text-muted); letter-spacing: 0.15em; }
+
+/* ========================== REMOTE STORAGE ==========================
+   Attaching a NAS from Settings. The probe results are the interesting
+   part: an export this box may use reads differently from one it may
+   not, because that distinction is the whole reason the step exists. */
+
+.storage-row {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--border-hair);
+}
+.storage-row:first-child { border-top: 0; }
+.storage-row-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+.storage-row-target { font-weight: 650; font-size: 0.85rem; overflow-wrap: anywhere; }
+.storage-row-source { font-size: 0.76rem; color: var(--text-muted); overflow-wrap: anywhere; }
+
+.storage-form { margin-top: 0.9rem; }
+.storage-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+
+.storage-note { margin: 0.6rem 0 0.35rem; font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; }
+.storage-note.bad { color: var(--warn); }
+
+.storage-export {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.35rem 0.6rem;
+  margin-bottom: 0.3rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+}
+/* Green means "this box is in the export list"; amber means the mount will
+   be refused until somebody edits the NAS. Saying that here is the entire
+   point of probing before writing anything. */
+.storage-export.ok { background: var(--good-soft); box-shadow: 0 0 0 1px var(--good-line); }
+.storage-export.bad { background: var(--warn-soft); box-shadow: 0 0 0 1px var(--warn-line); }
+.storage-export-pick {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-family: var(--mono);
+  color: var(--text);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.storage-export-clients { color: var(--text-muted); font-size: 0.76rem; }

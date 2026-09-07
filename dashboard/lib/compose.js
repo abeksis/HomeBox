@@ -334,5 +334,9 @@ async function available() {
 module.exports = {
   install, start, stop, restart, down, purge, update, pull, available, runSetup,
   pullService, upService, retag, selfRecreate,
+  // The argv-only runner itself, for lib/storage.js — it drives `docker run`
+  // rather than `docker compose`, and reimplementing the line buffering and
+  // the timeout a second time is how the two drift apart.
+  run,
   containerAction, CONTAINER_ACTIONS, ComposeError, ID_PATTERN,
 };
