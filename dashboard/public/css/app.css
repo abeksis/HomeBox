@@ -2501,27 +2501,57 @@ code.mono {
    side on a wide screen and stack on a narrow one; each is independent,
    because each comes from a different app that may or may not answer. */
 
+/* Same surface as Quick access above it: one rounded panel holding the
+   columns, hairlines between them rather than gaps. Two cards sitting side
+   by side in the same band should read as the same kind of object — the
+   flat-text version looked like something that had not been styled yet. */
 .live-panels {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.1rem;
+  border-radius: var(--radius);
+  background: var(--tile-bg);
+  box-shadow: 0 0 0 1px var(--tile-ring);
+  overflow: hidden;
 }
-.live-panel { min-width: 0; }
-.live-panel h3 {
-  margin: 0 0 0.6rem;
-  font-size: 0.68rem;
+.live-panel {
+  min-width: 0;
+  padding: 0.9rem 1.1rem;
+  /* Drawn on the left and suppressed on the first, the same way .quick-item
+     does it: a border-right leaves a stray line at the end of the row. */
+  box-shadow: inset 1px 0 0 var(--border-hair);
+}
+.live-panel:first-child { box-shadow: none; }
+/* The panel heading, built like a .quick-item: icon tile, then a bold name
+   over a muted line saying what it is. */
+.live-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 0.75rem;
+  min-width: 0;
+}
+.live-head-icon {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--bg-0);
+  box-shadow: 0 0 0 1px var(--border-hair);
+  overflow: hidden;
+}
+.live-head-icon img { width: 22px; height: 22px; object-fit: contain; }
+.live-head-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.live-head-text strong {
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
+  font-size: 0.9rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.live-panel h3 small {
-  margin-left: 0.4rem;
-  font-weight: 600;
-  letter-spacing: 0;
-  text-transform: none;
-  opacity: 0.75;
-}
+.live-head-text small { font-size: 0.76rem; color: var(--text-muted); }
 /* An app that could not be reached says why, in words. Never a fake zero. */
 .live-note { margin: 0.2rem 0; font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; }
 
@@ -2557,14 +2587,29 @@ code.mono {
 
 .live-queue-row {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.7rem;
-  padding: 0.4rem 0;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0;
   border-top: 1px solid var(--border-hair);
 }
 .live-queue-row:first-of-type { border-top: 0; }
+.live-queue-icon {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--bg-0);
+  box-shadow: 0 0 0 1px var(--border-hair);
+  overflow: hidden;
+}
+.live-queue-icon img { width: 15px; height: 15px; object-fit: contain; }
+/* The numbers go right; `margin-left:auto` on them rather than
+   space-between on the row, which with three children parks the middle one
+   in the centre away from its own icon. */
 .live-queue-app { font-size: 0.82rem; font-weight: 600; }
+.live-queue-nums, .live-queue-row .live-note { margin-left: auto; text-align: right; }
 .live-queue-nums { font-size: 0.78rem; color: var(--text-muted); }
 .live-queue-nums b { color: var(--text); font-weight: 700; }
 

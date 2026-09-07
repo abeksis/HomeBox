@@ -2347,11 +2347,29 @@ function whenText(iso) {
   return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
 
+/**
+ * A panel heading, built like a Quick access item: the app's own icon in a
+ * small tile, then the name and what it is. Two cards in the same band should
+ * read as the same kind of object, and an icon is what anchors a row.
+ *
+ * The icon files already ship in public/icons — these are HomeBox's own
+ * modules, so there is nothing to download or configure.
+ */
+function liveHead(icon, title, sub) {
+  return `<div class="live-head">
+    <span class="live-head-icon"><img src="icons/${escapeHtml(icon)}" alt="" loading="lazy"></span>
+    <span class="live-head-text">
+      <strong>${escapeHtml(title)}</strong>
+      <small>${escapeHtml(sub)}</small>
+    </span>
+  </div>`;
+}
+
 function transfersPanel(qb) {
   if (!qb || qb.installed === false) return '';
   if (qb.error) {
     return `<section class="live-panel">
-      <h3>Transfers</h3>
+      ${liveHead('qbittorrent.svg', 'Transfers', 'qBittorrent')}
       <p class="live-note">${escapeHtml(qb.error)}</p>
     </section>`;
   }
@@ -2369,7 +2387,7 @@ function transfersPanel(qb) {
     : '<p class="live-note">Nothing is downloading right now.</p>';
 
   return `<section class="live-panel">
-    <h3>Transfers <small>qBittorrent</small></h3>
+    ${liveHead('qbittorrent.svg', 'Transfers', 'qBittorrent')}
     <div class="live-figures">
       <div class="live-figure"><span class="live-arrow down">↓</span><strong class="mono">${escapeHtml(rate(qb.downSpeed))}</strong></div>
       <div class="live-figure"><span class="live-arrow up">↑</span><strong class="mono">${escapeHtml(rate(qb.upSpeed))}</strong></div>
@@ -2381,19 +2399,25 @@ function transfersPanel(qb) {
 
 function queuesPanel(data) {
   const apps = [
-    { name: 'Radarr', kind: 'films', d: data.radarr },
-    { name: 'Sonarr', kind: 'episodes', d: data.sonarr },
+    { name: 'Radarr', icon: 'radarr.png', d: data.radarr },
+    { name: 'Sonarr', icon: 'sonarr.png', d: data.sonarr },
   ].filter((a) => a.d && a.d.installed !== false);
   if (!apps.length) return '';
 
+  // Named after whichever is actually installed — "Radarr & Sonarr" on a box
+  // running only one of them is a heading that describes someone else's box.
+  const sub = apps.map((a) => a.name).join(' & ');
+
   return `<section class="live-panel">
-    <h3>Download queue <small>Radarr &amp; Sonarr</small></h3>
-    ${apps.map((a) => (a.d.error
-      ? `<div class="live-queue-row"><span class="live-queue-app">${escapeHtml(a.name)}</span><span class="live-note">${escapeHtml(a.d.error)}</span></div>`
-      : `<div class="live-queue-row">
-           <span class="live-queue-app">${escapeHtml(a.name)}</span>
-           <span class="live-queue-nums mono"><b>${a.d.queue}</b> fetching · <b>${a.d.missing}</b> missing</span>
-         </div>`)).join('')}
+    ${liveHead(apps.length === 1 ? apps[0].icon : 'radarr.png', 'Download queue', sub)}
+    ${apps.map((a) => `
+      <div class="live-queue-row">
+        <span class="live-queue-icon"><img src="icons/${escapeHtml(a.icon)}" alt="" loading="lazy"></span>
+        <span class="live-queue-app">${escapeHtml(a.name)}</span>
+        ${a.d.error
+          ? `<span class="live-note">${escapeHtml(a.d.error)}</span>`
+          : `<span class="live-queue-nums mono"><b>${a.d.queue}</b> fetching · <b>${a.d.missing}</b> missing</span>`}
+      </div>`).join('')}
   </section>`;
 }
 
@@ -2401,7 +2425,7 @@ function upcomingPanel(data) {
   const rows = data.upcoming || [];
   if (!rows.length && !data.upcomingError) return '';
   return `<section class="live-panel">
-    <h3>Coming soon <small>next ${data.upcomingDays} days</small></h3>
+    ${liveHead('sonarr.png', 'Coming soon', `next ${data.upcomingDays} days`)}
     ${data.upcomingError
       ? `<p class="live-note">${escapeHtml(data.upcomingError)}</p>`
       : rows.map((r) => `
