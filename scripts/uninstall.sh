@@ -219,6 +219,41 @@ if [ -d "$HB_ROOT" ]; then
   fi
 fi
 
+# ------------------------------------------------- 4. the last of the debris
+#
+# Removing HomeBox's own objects still leaves three kinds of rubbish that
+# belong to nobody:
+#
+#   - anonymous volumes ORPHANED by an earlier uninstall. Once their
+#     container is gone there is nothing left to attribute them to, so the
+#     inventory above cannot see them. Five survived on the test box.
+#   - dangling images: the untagged layers left behind every time the
+#     dashboard was rebuilt. 322MB, invisible to `docker image ls`.
+#   - the build cache from building the dashboard. 465MB.
+#
+# A blanket prune is only safe when nothing else on this machine uses Docker,
+# so that is checked rather than assumed: if any container or tagged image
+# survives, this is skipped entirely and says what it found instead. Someone
+# running HomeBox next to their own stacks does not lose their leftovers to
+# an uninstall of something else.
+if [ "${#DOCKER[@]}" -gt 0 ] && docker info >/dev/null 2>&1 && [ "$KEEP_DATA" -ne 1 ] && [ "$KEEP_IMAGES" -ne 1 ]; then
+  others_c="$(docker ps -aq 2>/dev/null | grep -c . || true)"
+  others_i="$(docker image ls --format '{{.Repository}}' 2>/dev/null | grep -vc '^<none>$' || true)"
+  if [ "${others_c:-0}" -eq 0 ] && [ "${others_i:-0}" -eq 0 ]; then
+    step "Clearing what is left over"
+    freed="$(docker system df --format '{{.Type}} {{.Size}}' 2>/dev/null | tr '\n' ' ')"
+    docker volume prune -f >/dev/null 2>&1 || true
+    docker image prune -af >/dev/null 2>&1 || true
+    docker builder prune -af >/dev/null 2>&1 || true
+    printf '  orphaned volumes, dangling images and the build cache\n'
+    printf '  %swas: %s%s\n' "$DIM" "$freed" "$RESET"
+    printf '  %snow: %s%s\n' "$DIM" "$(docker system df --format '{{.Type}} {{.Size}}' 2>/dev/null | tr '\n' ' ')" "$RESET"
+  else
+    warn "other containers or images are on this machine, so orphaned volumes, dangling images and the build cache were left alone."
+    warn "nothing else uses Docker here? clear them with:  docker system prune -a --volumes"
+  fi
+fi
+
 # The systemd units scripts/mount-remote.sh writes are deliberately left in
 # place: they mount a NAS, which has nothing to do with HomeBox being here,
 # and removing them would unmount a share other things may be using.
