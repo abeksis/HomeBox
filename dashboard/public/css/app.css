@@ -17,7 +17,13 @@ body {
   color: var(--text);
   font-family: var(--font);
   font-size: 14px;
-  font-weight: 500;
+  /* 400, like the source, which sets no weight at all here.
+     500 as the BASE made every piece of text that does not choose its own
+     weight render a step heavy — page subtitles, hints, table cells — and
+     flattened the contrast against the 600s and 700s that are supposed to
+     stand out. It reads as "bigger" even though every size matches the
+     source to the pixel. */
+  font-weight: 400;
   line-height: 1.5;
   letter-spacing: -0.005em;
   -webkit-font-smoothing: antialiased;

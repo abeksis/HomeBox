@@ -108,7 +108,15 @@
   --radius-sm: 10px;
   --radius-pill: 999px;
 
-  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* The source's stack, verbatim (style.css:179). The order matters more than
+     it looks: Inter is not installed on a typical machine and neither the
+     source nor this ships it, so what actually renders is the FALLBACK.
+     `system-ui` and `Segoe UI` were in here, which on Windows resolves to
+     Segoe UI — a rounder, wider face than the Arial the source falls through
+     to, and the reason the same 34.4px heading looked heavier here than
+     there. Measured with a canvas probe: Inter 121.3px, Segoe UI 130.0px,
+     Arial 132.5px for the same string. */
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
   --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
 
   --shell-max: 1320px;
