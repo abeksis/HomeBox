@@ -381,7 +381,20 @@ function launchTile(tile) {
     mono, 'keycap',
   );
 
-  return `<a class="launch${down ? ' is-down' : ''}" href="${escapeHtml(tile.url)}" target="_blank" rel="noopener"
+  // `noreferrer` is not decoration, and it is not the same as `noopener`.
+  //
+  // Without it the browser sends `Referer: http://<box>:8443/` to the app
+  // being opened, and an app with CSRF protection compares that origin to
+  // its own, sees a mismatch and refuses the request. qBittorrent answers a
+  // bare "Unauthorized" — no login form, no explanation — so it reads as a
+  // broken password rather than a header the launcher should not have sent.
+  // Its log is where this is actually visible:
+  //
+  //   WebUI: Referer header & Target origin mismatch!
+  //   Referer header: 'http://192.168.1.77:8443/' Target origin: '192.168.1.77:8080'
+  //
+  // Every outbound link on this page carries it, for the same reason.
+  return `<a class="launch${down ? ' is-down' : ''}" href="${escapeHtml(tile.url)}" target="_blank" rel="noopener noreferrer"
       title="${escapeHtml(tile.description || tile.friendly_name)}">
       <span class="keycap">${art}${pip}</span>
       <span class="launch-name">${escapeHtml(tile.friendly_name)}</span>
@@ -661,7 +674,7 @@ function renderIncludedServices(m) {
     const st = svc.container && svc.container.state;
     const live = !!st && st !== 'stopped' && st !== 'unhealthy';
     const right = m.installed && svc.url && live
-      ? `<a href="${escapeHtml(svc.url)}" target="_blank" rel="noopener" class="app-service-open"
+      ? `<a href="${escapeHtml(svc.url)}" target="_blank" rel="noopener noreferrer" class="app-service-open"
            title="Open ${escapeHtml(svc.friendly_name)} in a new tab">Open ↗</a>`
       : (svc.port ? `<span class="app-service-port">:${escapeHtml(String(svc.port))}</span>` : '');
     return `<div class="app-service-row"${svc.description ? ` title="${escapeHtml(svc.description)}"` : ''}>
@@ -1798,7 +1811,7 @@ function renderSettings() {
     $('#ports-meta').textContent = `${rows.length} published`;
     portsBody.innerHTML = rows.map((r) => `
       <tr>
-        <td class="cell-name mono"><a class="link-btn" href="http://${escapeHtml(host)}:${r.port}" target="_blank" rel="noopener">${r.port}</a></td>
+        <td class="cell-name mono"><a class="link-btn" href="http://${escapeHtml(host)}:${r.port}" target="_blank" rel="noopener noreferrer">${r.port}</a></td>
         <td>${escapeHtml(r.app)}</td>
         <td class="cell-dim">${escapeHtml(r.container)}</td>
       </tr>`).join('') || '<tr><td colspan="3" class="cell-dim">Nothing published yet.</td></tr>';
@@ -1882,7 +1895,7 @@ function renderSettings() {
     } else if (mon.installed) {
       const svc = mon.services.find((x) => x.url);
       monModule.innerHTML = `<p class="hint">Uptime Kuma is watching. It is the piece that tells you something went down while you were not looking at this page.</p>
-        ${svc ? `<div class="drawer-actions"><a class="btn btn-primary" href="${escapeHtml(svc.url)}" target="_blank" rel="noopener">Open Uptime Kuma</a></div>` : ''}`;
+        ${svc ? `<div class="drawer-actions"><a class="btn btn-primary" href="${escapeHtml(svc.url)}" target="_blank" rel="noopener noreferrer">Open Uptime Kuma</a></div>` : ''}`;
     } else {
       monModule.innerHTML = `<p class="hint">Nothing is alerting you yet. This page only tells you about a problem while you are looking at it.</p>
         <div class="drawer-actions"><button type="button" class="btn btn-primary" data-action="install" data-id="monitoring">Install Monitoring</button></div>`;
@@ -1963,7 +1976,7 @@ function openModule(id) {
           <span class="svc-desc">${escapeHtml(s.description || (s.internal ? 'internal service' : s.name))}</span>
         </span>
         ${s.container ? `<span class="state" data-state="${escapeHtml(s.container.state)}">${escapeHtml(s.container.state)}</span>` : ''}
-        ${s.url ? `<a class="link-btn" href="${escapeHtml(s.url)}" target="_blank" rel="noopener">open</a>` : ''}
+        ${s.url ? `<a class="link-btn" href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">open</a>` : ''}
       </div>
       ${s.first_login ? `<p class="svc-note">${escapeHtml(s.first_login)}</p>` : ''}
     `).join('')}
