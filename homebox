@@ -249,6 +249,29 @@ cmd_status() {
   printf '\n%s/%s containers up\n' "$up" "$total"
 }
 
+# Run a module's setup.sh with .env in its environment.
+#
+# It used to get HB_ROOT and nothing else, so a setup script that needed a
+# generated secret found an empty variable and skipped its work while
+# reporting the secret "not in .env" about a file that had it all along.
+# wg-easy hit this: no password hash, and a container that refused to start.
+# The dashboard's own runner had the identical hole.
+#
+# Read line by line rather than `source`d: .env is not a shell script, and
+# sourcing it would execute anything a value happened to contain.
+run_setup() {
+  local id="$1" script="$2"
+  local -a vars=()
+  if [ -f "$ENV_FILE" ]; then
+    while IFS= read -r line; do
+      case "$line" in
+        [A-Za-z_]*=*) vars+=("$line") ;;
+      esac
+    done < "$ENV_FILE"
+  fi
+  env HB_ROOT="$HB_ROOT" "${vars[@]}" bash "$script"
+}
+
 # install = enable + seed + start. The one command someone actually wants.
 cmd_install() {
   require_module "${1:-}"
@@ -258,7 +281,7 @@ cmd_install() {
   local setup="$MODULES_DIR/$id/setup.sh"
   if [ -f "$setup" ]; then
     step "Running setup for $id"
-    HB_ROOT="$HB_ROOT" bash "$setup"
+    run_setup "$id" "$setup"
   fi
 
   # Skip the pull for a module built here. There is no such image in any
