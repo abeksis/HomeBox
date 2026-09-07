@@ -1965,13 +1965,6 @@ function renderSettings() {
       'homebox status                  every container HomeBox runs',
     ].join(NL);
   }
-  const rebuild = $('#tools-rebuild');
-  if (rebuild) {
-    rebuild.textContent = [
-      `cd ${cfg.root || '/opt/homebox'} && docker compose -p homebox-dashboard \\`,
-      '  -f modules/dashboard/docker-compose.yml --env-file .env up -d --build',
-    ].join(NL);
-  }
 }
 
 function kvRows(pairs) {
