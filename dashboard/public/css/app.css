@@ -1175,7 +1175,13 @@ code.mono {
   transition: all 0.15s ease;
 }
 .settings-tab:hover { color: var(--text-secondary); }
-.settings-tab.active { color: var(--text); background: var(--card-bg); box-shadow: var(--elev-1); }
+/* `--bg-1` and not `--card-bg`, which is what the source does here
+   (`--bg-card: var(--bg-1)`, style.css:63). Our --bg-1 is already the same
+   #1a1d26 the source uses; --card-bg is a slightly different shade AND
+   translucent at 0.98, so the lighter track underneath bled through and the
+   lifted tab read as washed out rather than as a card sitting on a groove.
+   Opaque, so the tile is the colour it claims to be. */
+.settings-tab.active { color: var(--text); background: var(--bg-1); box-shadow: var(--elev-1); }
 
 .settings-panel { display: none; animation: fadeIn 0.15s ease; }
 .settings-panel.active { display: block; }
