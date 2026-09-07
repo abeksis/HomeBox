@@ -2364,6 +2364,29 @@ async function savePrefs(patch) {
  * is not one. Asking the server what it exports takes a second and turns that
  * into "add 192.168.1.218 on the NAS" while the form is still open.
  */
+let storageMounts = [];
+
+/**
+ * Warn when the mountpoint in the form is already in use.
+ *
+ * The field is pre-filled with /mnt/media_disk because that is the right
+ * answer on a fresh box — and the wrong one on a box that already has it,
+ * where pressing Mount unmounts and remounts a live library. The script
+ * handles it safely; the form should still not invite it.
+ */
+function checkMountpointCollision() {
+  const field = $('#storage-mountpoint');
+  const note = $('#storage-collision');
+  if (!field || !note) return;
+  const target = field.value.trim().replace(/\/+$/, '');
+  const clash = storageMounts.includes(target);
+  note.hidden = !clash;
+  if (clash) {
+    note.textContent = `${target} is already mounted. Mounting here again unmounts the current share `
+      + 'first — fine if you are repointing it at a different export, but not what you want otherwise.';
+  }
+}
+
 async function loadStorage() {
   const list = $('#storage-list');
   if (!list) return;
@@ -2371,6 +2394,10 @@ async function loadStorage() {
     const data = await (await fetch('api/storage')).json();
     const mounts = data.mounts || [];
     $('#storage-meta').textContent = mounts.length ? `${mounts.length} mounted` : '';
+    // Remember them for the collision check below.
+    storageMounts = mounts.map((m) => m.target);
+    checkMountpointCollision();
+
     list.innerHTML = mounts.length
       ? mounts.map((m) => `
           <div class="storage-row">
@@ -3672,6 +3699,7 @@ $('#live-card').addEventListener('click', (event) => {
 
 $('#storage-kind').addEventListener('change', storageKindChanged);
 $('#storage-check').addEventListener('click', probeStorage);
+$('#storage-mountpoint').addEventListener('input', checkMountpointCollision);
 $('#storage-form').addEventListener('submit', submitStorageForm);
 $('#storage-list').addEventListener('click', (event) => {
   const btn = event.target.closest('[data-unmount]');
