@@ -246,7 +246,17 @@ async function qbLogin(base, user, pass) {
   // `204 No Content` with an empty body, so checking the text for "Ok"
   // reports a perfectly successful login as wrong credentials. A refused
   // login is `200 Fails.` and sets no cookie either way.
-  if (/fails/i.test(res.text)) throw new Error('qBittorrent rejected the username or password');
+  if (/fails/i.test(res.text)) {
+    // Worth naming the likely cause. A qBittorrent that has never had a
+    // password set generates a TEMPORARY one per session and prints it to
+    // its log — so this panel works until the container restarts and then
+    // fails for a reason that looks nothing like "the password rotated".
+    throw new Error(
+      'qBittorrent rejected the username or password. If you never set one, it generates '
+      + 'a new temporary password every restart — set a permanent one in qBittorrent under '
+      + 'Options → Web UI, then put it in Settings → Server Config → Live activity.',
+    );
+  }
   const setCookie = [].concat(res.headers['set-cookie'] || [])[0];
   if (!setCookie) throw new Error('qBittorrent accepted nothing back — check the username and password');
 
