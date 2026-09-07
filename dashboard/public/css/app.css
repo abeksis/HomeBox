@@ -993,6 +993,11 @@ code.mono {
 }
 .table td { padding: 0.6rem 1rem; border-bottom: 1px solid var(--border-hair); vertical-align: middle; }
 .table tr:last-child td { border-bottom: 0; }
+/* Let the LAST column swallow the leftover width, so the others shrink to
+   their content and the row reads left to right. Without this the browser
+   spreads three short columns evenly across a 1500px card and a port number
+   ends up a hand-span away from the app that owns it. */
+.table td:last-child, .table th:last-child { width: 100%; }
 .table tbody tr:hover { background: var(--bg-2); }
 .cell-name { font-weight: 600; }
 .cell-dim { color: var(--text-muted); font-family: var(--mono); font-size: 0.76rem; }
