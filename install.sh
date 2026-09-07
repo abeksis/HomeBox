@@ -244,8 +244,14 @@ HB_TZ="$(detect_tz)"
 set_env TZ "$HB_TZ"
 case "$HB_TZ" in
   UTC|Etc/UTC)
-    warn "timezone is $HB_TZ - container logs will be in UTC."
-    warn "Set it with: sudo timedatectl set-timezone Area/City, then re-run this script."
+    warn "timezone is $HB_TZ - container logs, app schedules and the release calendar will be in UTC."
+    warn "Set the host clock:  sudo timedatectl set-timezone Area/City"
+    # NOT "re-run this script". set_env never overwrites a key .env already
+    # has -- that rule exists so a re-run cannot regenerate a secret an app
+    # has already encrypted something with -- so on any box that has been
+    # installed once, a second run leaves TZ exactly as it was. Telling
+    # someone to re-run is telling them to do something that does nothing.
+    warn "Then set it in the dashboard: Settings > Server Config > Timezone (a re-run of this script will not change it, because .env already has a value)."
     ;;
 esac
 set_env PUID "$(id -u "$HB_USER")"
