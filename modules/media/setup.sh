@@ -92,24 +92,50 @@ seed_qbittorrent_login() {
   # qBittorrent stores PBKDF2-HMAC-SHA512, 100k iterations, 64-byte key, with
   # a 16-byte salt, as "@ByteArray(<base64 salt>:<base64 key>)".
   #
-  # python3 only, deliberately. The same thing in pure shell needs a hex->raw
-  # conversion, and every way of doing that with printf loses bytes: a \x00
-  # is dropped by command substitution, so one salt in sixteen comes out
-  # short and the hash silently does not match. A path that fails one time in
-  # sixteen is worse than not having it.
-  command -v python3 >/dev/null 2>&1 || {
-    echo "media: python3 not found — cannot seed the qBittorrent password; it stays on the temporary one from its log"
+  # NODE, not python3, and the reason matters.
+  #
+  # This script runs in two very different places. From the CLI it runs on the
+  # host, which has both. From the dashboard's "Install" button it runs INSIDE
+  # the dashboard container — a node image with no python3 at all. Written
+  # against python3 it therefore worked in every test I ran over SSH and did
+  # nothing whatsoever for anyone installing the normal way: the seeding was
+  # skipped, qBittorrent kept generating a temporary password each boot, and
+  # the dialog confidently showed a password the app had never heard of.
+  #
+  # node is present in both: the dashboard image is built on it, and install.sh
+  # already requires it on the host to read module metadata.
+  #
+  # Not pure shell: the hex->raw step loses bytes to command substitution
+  # (a \x00 vanishes, so one salt in sixteen comes out short and the hash
+  # silently does not match). Measured — the openssl variant produced a
+  # 15-byte salt on the first try.
+  local runner=''
+  if command -v node >/dev/null 2>&1; then runner=node
+  elif command -v python3 >/dev/null 2>&1; then runner=python3
+  else
+    echo "media: neither node nor python3 is available — cannot seed the qBittorrent password; it stays on the temporary one from its log"
     return 0
-  }
+  fi
 
+  # qBittorrent stores PBKDF2-HMAC-SHA512, 100k iterations, 64-byte key, with
+  # a 16-byte salt, as "@ByteArray(<base64 salt>:<base64 key>)".
   local hashed
-  hashed=$(QB_PASS="$HB_QBIT_PASS" python3 - <<'PY'
+  if [ "$runner" = node ]; then
+    hashed=$(QB_PASS="$HB_QBIT_PASS" node -e '
+const crypto = require("crypto");
+const salt = crypto.randomBytes(16);
+const key = crypto.pbkdf2Sync(process.env.QB_PASS, salt, 100000, 64, "sha512");
+process.stdout.write(`@ByteArray(${salt.toString("base64")}:${key.toString("base64")})`);
+') || { echo "media: could not generate the qBittorrent password hash"; return 0; }
+  else
+    hashed=$(QB_PASS="$HB_QBIT_PASS" python3 - <<'PY'
 import base64, hashlib, os
 salt = os.urandom(16)
 key = hashlib.pbkdf2_hmac("sha512", os.environ["QB_PASS"].encode(), salt, 100000, 64)
 print(f"@ByteArray({base64.b64encode(salt).decode()}:{base64.b64encode(key).decode()})")
 PY
-  ) || { echo "media: could not generate the qBittorrent password hash"; return 0; }
+    ) || { echo "media: could not generate the qBittorrent password hash"; return 0; }
+  fi
 
   mkdir -p "$(dirname "$QBT_CONF")"
   [ -f "$QBT_CONF" ] || printf '[Preferences]\n' > "$QBT_CONF"
