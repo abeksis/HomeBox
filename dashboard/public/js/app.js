@@ -32,7 +32,10 @@ const state = {
   containerFilter: 'all',
   containerQuery: '',
   busy: new Set(),
-  prefs: { theme: 'dark', atmo: 'aurora' },
+  // Mirrors DEFAULT_PREFS in server.js. Only ever seen for the moment before
+  // /api/prefs answers, but a mismatch here is a visible flash of the wrong
+  // background on every load.
+  prefs: { theme: 'dark', atmo: 'wp-purple' },
 };
 
 /* ------------------------------------------------------------- utilities */
@@ -2267,15 +2270,18 @@ const THEMES = [
   { id: 'light-rose', label: 'Light Rose' },
 ];
 
+// Order is the recommendation. The wallpapers lead because they are what a
+// fresh install looks like, and the first swatch is the one someone compares
+// the rest against; the generated gradients follow.
 const BACKGROUNDS = [
+  { id: 'wp-purple', label: 'Purple Sky' },
+  { id: 'wp-blue', label: 'Deep Blue' },
   { id: 'aurora', label: 'Aurora' },
   { id: 'nebula', label: 'Nebula' },
   { id: 'deep', label: 'Deep' },
   { id: 'slate', label: 'Slate' },
   { id: 'void', label: 'Void' },
   { id: 'solid', label: 'Solid' },
-  { id: 'wp-purple', label: 'Purple Sky' },
-  { id: 'wp-blue', label: 'Deep Blue' },
 ];
 
 function applyPrefs(prefs) {

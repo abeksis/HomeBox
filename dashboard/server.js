@@ -88,7 +88,10 @@ const THEMES = [
   'dark', 'midnight-purple', 'forest', 'sunset', 'arctic', 'rose',
   'light', 'light-forest', 'light-sunset', 'light-arctic', 'light-rose',
 ];
-const BACKGROUNDS = ['aurora', 'nebula', 'deep', 'slate', 'void', 'solid', 'wp-purple', 'wp-blue'];
+// Wallpapers first, matching the order the Settings swatches are drawn in —
+// this list is the validator, and two lists that disagree about what exists
+// is how a background silently falls back to the default.
+const BACKGROUNDS = ['wp-purple', 'wp-blue', 'aurora', 'nebula', 'deep', 'slate', 'void', 'solid'];
 
 // Which panels the Live activity card shows. Defaults to on: the card hides
 // itself when it has nothing to say, so a box with no media apps never sees
@@ -96,7 +99,8 @@ const BACKGROUNDS = ['aurora', 'nebula', 'deep', 'slate', 'void', 'solid', 'wp-p
 const INSIGHT_PANELS = ['transfers', 'queues', 'upcoming'];
 const DEFAULT_PREFS = {
   theme: 'dark',
-  atmo: 'aurora',
+  // What a fresh install looks like before anyone opens Settings.
+  atmo: 'wp-purple',
   insights: { enabled: true, transfers: true, queues: true, upcoming: true },
 };
 
