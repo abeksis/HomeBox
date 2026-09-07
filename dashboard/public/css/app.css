@@ -445,7 +445,14 @@ code.mono {
   margin-bottom: 0.55rem;
   background: var(--keycap-bg);
   box-shadow: var(--shadow-keycap);
-  overflow: visible;
+  /* Clipped, like the source's .launcher-icon-circle (style.css:2996).
+     The status pip is a CHILD of the key and sits at bottom/right -2px, so
+     hiding the overflow is what tucks it under the key's rounded corner
+     instead of letting it hang off the edge as a full circle. Its pulse ring
+     is clipped with it, which is the difference between a dot that glows
+     quietly at the corner and one that flashes an open halo — the source's
+     own spinner comment calls out the same overflow for the same reason. */
+  overflow: hidden;
   transition: opacity 0.18s ease, transform 0.12s ease, filter 0.18s ease;
 }
 .keycap img { width: 30px; height: 30px; object-fit: contain; }
