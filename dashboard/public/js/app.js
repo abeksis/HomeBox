@@ -3167,7 +3167,41 @@ function renderUpdates(data) {
       </div>`);
   }
 
+  renderNewVersions(data.newVersions || []);
   renderUpdateHistory(data.history || []);
+}
+
+/**
+ * Newer VERSIONS, kept apart from the rebuild list above.
+ *
+ * A rebuild is a button: the same version, safe to pull, rolled back if it
+ * misbehaves. A new version is a line in a compose file — it can change a
+ * config format or need a migration — so it is news to act on, not a click.
+ * One list would hide two very different risks behind one button.
+ */
+function renderNewVersions(rows) {
+  const box = $('#updates-versions');
+  if (!box) return;
+  if (!rows || !rows.length) { box.hidden = true; return; }
+  box.hidden = false;
+
+  box.innerHTML = `<div class="updates-card-head">
+      <div>
+        <h2>Newer versions published</h2>
+        <small>Not applied from here. A version change can need a config migration, so it arrives
+        with a HomeBox release — or edit the tag in the module and run
+        <code class="mono">homebox update &lt;module&gt;</code>.</small>
+      </div>
+    </div>` + rows.map((r) => `
+      <div class="update-row">
+        <div class="update-row-info">
+          <div class="update-row-name">${escapeHtml(r.container)}
+            <span class="update-tag version" title="A newer tag exists in the registry for this image.">new version</span>
+          </div>
+          <div class="update-row-image mono">${escapeHtml(r.image)}</div>
+          <div class="update-row-digest mono">${escapeHtml(r.tag)} → ${escapeHtml(r.newerVersion)}</div>
+        </div>
+      </div>`).join('');
 }
 
 function renderUpdateHistory(history) {

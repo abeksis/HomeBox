@@ -2929,3 +2929,11 @@ code.mono {
   color: var(--text-muted);
   margin-bottom: 0.5rem;
 }
+
+/* A "new version" reads differently from a "rebuild": it is news, not a
+   button. Amber rather than the accent, so the eye can tell the two lists
+   apart without reading either heading. */
+.update-tag.version {
+  background: var(--warn-soft);
+  color: var(--warn);
+}

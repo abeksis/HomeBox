@@ -38,6 +38,7 @@ const { spawn } = require('child_process');
 const docker = require('./docker');
 const composeLib = require('./compose');
 const registry = require('./registry');
+const versions = require('./versions');
 const modulesLib = require('./modules');
 
 const state = require('./state-store');
@@ -210,12 +211,25 @@ async function checkOne(target) {
   }
   if (!latest) return { ...target, skipped: 'registry-unavailable', reason: 'no digest returned' };
 
+  // A NEWER VERSION is a different question from a rebuild, and the digest
+  // above cannot answer it: a new release is a new tag, and nothing about the
+  // pinned one changes when it appears. Pinning buys control and costs that
+  // notice — this buys the notice back.
+  //
+  // Never fatal. Not every registry lists tags, and a repository that refuses
+  // must not turn a working rebuild check into an error.
+  let newer = null;
+  try {
+    newer = versions.newerThan(ref.tag, await registry.listTags(ref));
+  } catch { /* no tag listing here; the digest answer above still stands */ }
+
   return {
     ...target,
     tag: ref.tag,
     currentDigest: current,
     latestDigest: latest,
     updateAvailable: current !== latest,
+    newerVersion: newer ? newer.tag : null,
   };
 }
 
@@ -255,6 +269,24 @@ async function check() {
       }))
       .sort((a, b) => a.container.localeCompare(b.container));
 
+    // Kept apart from `available` on purpose. A rebuild is a button: same
+    // version, safe to pull, rolled back if it misbehaves. A new VERSION is
+    // a line in a compose file — it can change a config format or need a
+    // migration, so it is news to act on, not a click. Mixing the two into
+    // one list would put those two very different risks behind one button.
+    const newVersions = results
+      .filter((r) => r.newerVersion)
+      .map((r) => ({
+        module: r.module,
+        title: r.title,
+        service: r.service,
+        container: r.container,
+        image: r.image,
+        tag: r.tag,
+        newerVersion: r.newerVersion,
+      }))
+      .sort((a, b) => a.container.localeCompare(b.container));
+
     // "Skipped" is shown, not swallowed. A box where half the images could not
     // be reached and a box where everything is current look identical on a
     // page that only counts updates, and only one of them is fine.
@@ -267,6 +299,7 @@ async function check() {
       containers: list.length,
       checked: results.filter((r) => !r.skipped).length,
       available,
+      newVersions,
       skipped,
     };
     await state.writeJson(CACHE_FILE, cache);

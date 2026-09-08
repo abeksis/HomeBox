@@ -172,4 +172,52 @@ async function remoteDigest(ref) {
   return `sha256:${crypto.createHash('sha256').update(res.body, 'utf8').digest('hex')}`;
 }
 
-module.exports = { parseRef, remoteDigest, DOCKER_HUB };
+/**
+ * Every tag a repository publishes.
+ *
+ * The digest check above answers "was this exact version rebuilt". It cannot
+ * answer "is there a NEWER version", because a new release is a different
+ * tag and nothing about the pinned one changes when it appears. Pinning buys
+ * control and costs that notice; this is how the notice is bought back.
+ *
+ * Paginated, and the pages are NOT newest-first — the registry returns them
+ * in its own order, so the whole list has to be walked and sorted here. The
+ * page cap is a deliberate stop: a repository with tens of thousands of tags
+ * is not worth hanging an update check on.
+ */
+async function listTags(ref, { maxPages = 12, pageSize = 200 } = {}) {
+  if (!ref) return [];
+  const headers = { accept: 'application/json', 'user-agent': 'homebox-updates/1' };
+  let token = null;
+  let path = `/v2/${ref.repo}/tags/list?n=${pageSize}`;
+  const tags = [];
+
+  for (let page = 0; page < maxPages && path; page += 1) {
+    const auth = token ? { ...headers, authorization: `Bearer ${token}` } : headers;
+    let res = await request(`https://${ref.registry}${path}`, { headers: auth });
+
+    if (res.status === 401 && !token) {
+      const challenge = parseChallenge(res.headers['www-authenticate']);
+      if (!challenge) throw new Error('registry requires auth we cannot satisfy');
+      token = await tokenFor(ref, challenge);
+      res = await request(`https://${ref.registry}${path}`, { headers: { ...headers, authorization: `Bearer ${token}` } });
+    }
+    if (res.status !== 200) throw new Error(`registry answered ${res.status} listing tags`);
+
+    let body;
+    try {
+      body = JSON.parse(res.body);
+    } catch {
+      throw new Error('registry returned a tag list that is not JSON');
+    }
+    tags.push(...(body.tags || []));
+
+    // RFC 5988 `Link: </v2/...>; rel="next"`. Absent on the last page.
+    const link = res.headers.link;
+    const next = link && /<([^>]+)>\s*;\s*rel="next"/.exec(link);
+    path = next ? next[1] : null;
+  }
+  return tags;
+}
+
+module.exports = { parseRef, remoteDigest, listTags, DOCKER_HUB };
