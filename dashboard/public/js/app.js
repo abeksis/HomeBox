@@ -2902,6 +2902,43 @@ function liveHead(icon, title, sub) {
   </div>`;
 }
 
+/**
+ * The transfer sparkline: down as a filled area, up as a line over it.
+ *
+ * Hand-built SVG rather than a charting library, for the same reason the
+ * server has no dependencies — and because what is wanted here is one glance:
+ * is it moving, is it climbing, has it stalled. A chart with axes and a
+ * legend would answer questions nobody asks of a 200px card.
+ *
+ * BOTH SERIES SHARE ONE SCALE. Giving each its own would draw a 20 KB/s
+ * upload at the same height as a 5 MB/s download — two lines that look equal
+ * and are not, which is worse than no graph.
+ */
+function transferSpark(history) {
+  const pts = (history || []).filter((p) => p && typeof p.down === 'number');
+  // Two points is the minimum that can be a line rather than a dot.
+  if (pts.length < 2) return '';
+
+  const W = 100;
+  const H = 30;
+  const peak = Math.max(1, ...pts.map((p) => Math.max(p.down, p.up)));
+  const x = (i) => (i / (pts.length - 1)) * W;
+  const y = (v) => H - (v / peak) * (H - 1);
+
+  const line = (key) => pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(p[key]).toFixed(1)}`).join(' ');
+  const area = `${line('down')} L${W} ${H} L0 ${H} Z`;
+
+  return `<svg class="live-spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+      <path class="live-spark-fill" d="${area}"></path>
+      <path class="live-spark-down" d="${line('down')}"></path>
+      <path class="live-spark-up" d="${line('up')}"></path>
+    </svg>
+    <div class="live-spark-scale mono">
+      <span>${escapeHtml(rate(peak))} peak</span>
+      <span>${pts.length} samples</span>
+    </div>`;
+}
+
 function transfersPanel(qb) {
   if (!qb || qb.installed === false) return '';
   if (qb.error) {
@@ -2930,6 +2967,7 @@ function transfersPanel(qb) {
       <div class="live-figure"><span class="live-arrow up">↑</span><strong class="mono">${escapeHtml(rate(qb.upSpeed))}</strong></div>
       <div class="live-figure quiet"><strong class="mono">${qb.activeCount}</strong><span>active</span></div>
     </div>
+    ${transferSpark(qb.history)}
     ${rows}
   </section>`;
 }

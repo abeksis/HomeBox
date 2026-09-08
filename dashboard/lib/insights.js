@@ -233,6 +233,27 @@ async function arrCalendar(serviceName, containers, days) {
  * that hardcodes one gets a 403 on every call after a perfectly successful
  * login — which reads exactly like wrong credentials and is not.
  */
+/**
+ * A rolling history of transfer rates, for the sparkline on the card.
+ *
+ * Kept on the SERVER rather than in the page, so the graph is already
+ * populated when you open Home instead of drawing itself over the next ten
+ * minutes while you watch. It is appended only when a real sample is taken —
+ * inside the collector, past the cache — so a page that polls faster than the
+ * cache TTL cannot stretch the timeline with duplicates.
+ *
+ * Sixty points at roughly one per eight seconds is about eight minutes, which
+ * is the span where "is it moving, and has it stalled" is answerable. Older
+ * than that belongs to a monitoring tool, not a dashboard card.
+ */
+const HISTORY_MAX = 60;
+const qbHistory = [];
+
+function recordTransfer(down, up) {
+  qbHistory.push({ t: Date.now(), down, up });
+  if (qbHistory.length > HISTORY_MAX) qbHistory.splice(0, qbHistory.length - HISTORY_MAX);
+}
+
 let qbSession = null;   // { cookie, at }
 const QB_SESSION_MS = 30 * 60 * 1000;
 
@@ -327,11 +348,17 @@ async function qbittorrent(containers, env) {
   ]);
 
   const active = Array.isArray(torrents) ? torrents : [];
+  const downSpeed = Number(transfer.dl_info_speed) || 0;
+  const upSpeed = Number(transfer.up_info_speed) || 0;
+  recordTransfer(downSpeed, upSpeed);
+
   return {
     installed: true,
     connection: transfer.connection_status || 'unknown',
-    downSpeed: Number(transfer.dl_info_speed) || 0,
-    upSpeed: Number(transfer.up_info_speed) || 0,
+    downSpeed,
+    upSpeed,
+    // A copy, so a later sample cannot mutate what a response already sent.
+    history: qbHistory.slice(),
     downSession: Number(transfer.dl_info_data) || 0,
     upSession: Number(transfer.up_info_data) || 0,
     activeCount: active.length,
