@@ -51,6 +51,10 @@ function normalizeService(name, raw) {
     internal: svc.internal === true,
     tip: svc.tip || null,
     first_login: svc.first_login || null,
+    // Names a strategy in lib/reset.js. A fixed SET, not a command: the App
+    // Store lets anyone author a module, and a declared command would be
+    // arbitrary root execution written from a web form.
+    reset_login: svc.reset_login || null,
   };
 }
 

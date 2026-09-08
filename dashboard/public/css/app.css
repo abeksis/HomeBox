@@ -2828,3 +2828,37 @@ code.mono {
   text-underline-offset: 2px;
 }
 .storage-export-clients { color: var(--text-muted); font-size: 0.76rem; }
+
+/* ========================= RESET APP LOGIN ==========================
+   One row per app that can be unlocked. An app whose login is already
+   open shows "open" instead of a button — a control that does nothing
+   is worse than no control. */
+
+.reset-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--border-hair);
+}
+.reset-row:first-child { border-top: 0; }
+.reset-icon {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--bg-0);
+  box-shadow: 0 0 0 1px var(--border-hair);
+  overflow: hidden;
+}
+.reset-icon img { width: 20px; height: 20px; object-fit: contain; }
+.reset-mono { font-size: 0.66rem; font-weight: 800; color: var(--accent); }
+.reset-icon .reset-emoji { font-size: 1rem; }
+/* `flex: 1` and not space-between: three children put the name in the
+   middle of the row, away from its own icon. */
+.reset-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.1rem; }
+.reset-info strong { font-size: 0.86rem; font-weight: 650; }
+.reset-info small { font-size: 0.76rem; color: var(--text-muted); line-height: 1.45; }
+.reset-done { flex: none; font-size: 0.76rem; color: var(--good); }

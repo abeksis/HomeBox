@@ -35,6 +35,7 @@ const auth = require('./lib/auth');
 const updates = require('./lib/updates');
 const insights = require('./lib/insights');
 const storage = require('./lib/storage');
+const reset = require('./lib/reset');
 const stats = require('./lib/stats');
 const state = require('./lib/state-store');
 
@@ -723,6 +724,44 @@ const server = http.createServer(async (req, res) => {
       if (req.method !== 'POST') return sendJson(res, 405, { error: 'method not allowed' });
       const result = await runAction(decodeURIComponent(action[1]), action[2]);
       return sendJson(res, result.status, result.body);
+    }
+
+    // --- Reset an app's own login ---
+    //
+    // GET  /api/reset   which installed apps this build can unlock
+    // POST /api/reset   {module, service} — streams, it restarts a container
+    //
+    // This never reveals a password. It puts an app back into a state where
+    // the user can set a NEW one; see lib/reset.js for why the strategies are
+    // a fixed set rather than something a module can declare freely.
+    if (route.startsWith('/api/reset')) {
+      const tail = route.slice('/api/reset'.length).replace(/^\//, '');
+      try {
+        if (!tail && req.method === 'GET') {
+          return sendJson(res, 200, { apps: await reset.list(await docker.listContainers()) });
+        }
+        if (!tail && req.method === 'POST') {
+          const body = await readBody(req);
+          res.writeHead(200, {
+            'content-type': 'application/x-ndjson; charset=utf-8',
+            'cache-control': 'no-store',
+            'x-accel-buffering': 'no',
+          });
+          const send = (obj) => { if (!res.writableEnded) res.write(`${JSON.stringify(obj)}\n`); };
+          try {
+            const result = await reset.run(body, { onLine: (line, err) => send({ line, err }) });
+            activity.note({ name: result.title, action: 'login reset', level: 'info' });
+            send({ done: true, ...result });
+          } catch (err) {
+            send({ line: err.message, err: true });
+            send({ done: true, ok: false, error: err.message });
+          }
+          return res.end();
+        }
+        return sendJson(res, 404, { error: 'no such endpoint' });
+      } catch (err) {
+        return sendJson(res, err.status || 500, { error: err.message });
+      }
     }
 
     // --- Remote storage ---

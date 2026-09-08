@@ -230,7 +230,7 @@ function show(page) {
   if (target !== 'home') loadModules();
   if (target === 'home') loadInsights();
   if (target === 'updates') loadUpdates();
-  if (target === 'settings') { loadBackups(); loadConfig(); loadCatalog(); loadStorage(); }
+  if (target === 'settings') { loadBackups(); loadConfig(); loadCatalog(); loadStorage(); loadResets(); }
   if (target === 'settings' || target === 'home') loadBookmarks();
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
@@ -2346,6 +2346,87 @@ async function savePrefs(patch) {
   }
 }
 
+/* --------------------------------------------------- reset app login */
+
+/**
+ * The way back into an app you are locked out of.
+ *
+ * Each row is one installed service that declares a strategy lib/reset.js
+ * implements. An app whose login is already open says so and offers no
+ * button — there is nothing to do, and a button that does nothing is worse
+ * than no button.
+ */
+async function loadResets() {
+  const list = $('#reset-list');
+  if (!list) return;
+  try {
+    const { apps } = await (await fetch('api/reset')).json();
+    $('#reset-meta').textContent = apps.length ? `${apps.length} apps` : '';
+    list.innerHTML = apps.length
+      ? apps.map((a) => `
+          <div class="reset-row">
+            <span class="reset-icon">${iconArt(a.icon, `<span class="reset-mono">${escapeHtml(
+              String(a.title || '?').replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase(),
+            )}</span>`, 'reset')}</span>
+            <span class="reset-info">
+              <strong>${escapeHtml(a.title)}</strong>
+              <small>${escapeHtml(a.available ? a.label : (a.why || 'nothing to reset'))}</small>
+            </span>
+            ${a.available
+              ? `<button type="button" class="btn-soft" data-reset="${escapeHtml(a.module)}:${escapeHtml(a.service)}">Reset login</button>`
+              : '<span class="reset-done">open</span>'}
+          </div>`).join('')
+      : '<p class="empty-state">None of the installed apps declares a login this build can reset.</p>';
+  } catch {
+    list.innerHTML = '<p class="empty-state">Could not read which apps can be reset.</p>';
+  }
+}
+
+async function resetAppLogin(moduleId, service, title) {
+  const ok = await confirmDialog({
+    title: `Reset the login for ${title}?`,
+    body: `${title} will be restarted with its login turned off, so anyone who can reach its port `
+      + 'can use it until you set a new password. Its config file is backed up first, and none of '
+      + 'its data is touched. Do this only while you are at the keyboard and can finish the job.',
+    confirmLabel: 'Reset login',
+    danger: true,
+  });
+  if (!ok) return;
+
+  openProgress(`Resetting ${title}`);
+  let success = false;
+  let next = '';
+  try {
+    const res = await fetch('api/reset', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ module: moduleId, service }),
+    });
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const raw of lines) {
+        if (!raw.trim()) continue;
+        let msg;
+        try { msg = JSON.parse(raw); } catch { continue; }
+        if (msg.done) { success = msg.ok === true; next = msg.next || ''; }
+        else if (typeof msg.line === 'string') progressLine(msg.line);
+      }
+    }
+  } catch (err) {
+    progressLine(`ERROR: ${err.message}`);
+  }
+  closeProgress(success, success ? `${title} is open` : 'Could not reset it');
+  if (success && next) toast(next, 'info', 14000);
+  loadResets();
+}
+
 /* ----------------------------------------------------- remote storage */
 
 /**
@@ -3688,6 +3769,13 @@ $('#live-card').addEventListener('click', (event) => {
   // caches and asks every app again, which is what someone wants when they
   // just started a download and the card still says nothing is moving.
   if (event.target.closest('#live-meta')) loadInsights({ force: true });
+});
+
+$('#reset-list').addEventListener('click', (event) => {
+  const btn = event.target.closest('[data-reset]');
+  if (!btn) return;
+  const [moduleId, service] = btn.dataset.reset.split(':');
+  resetAppLogin(moduleId, service, btn.closest('.reset-row').querySelector('strong').textContent);
 });
 
 $('#storage-kind').addEventListener('change', storageKindChanged);

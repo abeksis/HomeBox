@@ -50,6 +50,7 @@ x-homebox:
       icon: "radarr.png"
       port_map: 7878
       url_scheme: "http"
+      reset_login: "arr-config"
     sonarr:
       friendly_name: "Sonarr"
       color: "#35c5f4"
@@ -57,6 +58,7 @@ x-homebox:
       icon: "sonarr.png"
       port_map: 8989
       url_scheme: "http"
+      reset_login: "arr-config"
     prowlarr:
       friendly_name: "Prowlarr"
       color: "#e5a00d"
@@ -64,6 +66,7 @@ x-homebox:
       icon: "prowlarr.svg"
       port_map: 9696
       url_scheme: "http"
+      reset_login: "arr-config"
     bazarr:
       friendly_name: "Bazarr"
       color: "#6b3fa0"
@@ -79,6 +82,7 @@ x-homebox:
       port_map: 8080
       url_scheme: "http"
       first_login: "qBittorrent's web UI account. HomeBox writes it into qBittorrent's own config before first start, so it survives restarts — left to itself qBittorrent invents a new temporary password every time it boots."
+      reset_login: "qbittorrent"
     flaresolverr:
       friendly_name: "FlareSolverr"
       description: "Solves Cloudflare challenges for indexers"

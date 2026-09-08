@@ -886,6 +886,21 @@
           <p class="hint">Checks the environment, then parses every module and lets compose validate it.</p>
           <code class="cmd">homebox doctor</code>
         </div>
+
+        <!-- RESET APP LOGIN — the way back into an app you are locked out of -->
+        <div class="bento-card">
+          <div class="card-header">
+            <span class="card-label">Reset app login</span>
+            <span class="card-meta mono" id="reset-meta"></span>
+          </div>
+          <p class="hint">
+            Locked out of one of your apps? This does not reveal a password — HomeBox does not know
+            an account you created inside an app, and should not. It puts the app back into a state
+            where you can set a <strong>new</strong> one yourself. Only apps this build knows how to
+            unlock are listed.
+          </p>
+          <div id="reset-list"></div>
+        </div>
       </div>
     </div>
   </section>

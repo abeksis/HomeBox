@@ -239,6 +239,10 @@ const pullService = (id, service, { onLine = null } = {}) =>
  * dependencies up too, which on a module with a database means restarting the
  * database to update the web front end.
  */
+/** Stop one service, leaving the rest of its module running. */
+const stopService = (id, service, { onLine = null } = {}) =>
+  compose(id, ['stop', checkService(service)], { timeout: 120000, onLine });
+
 const upService = (id, service, { onLine = null } = {}) =>
   compose(id, ['up', '-d', '--no-deps', checkService(service)], { timeout: 900000, onLine });
 
@@ -333,7 +337,7 @@ async function available() {
 
 module.exports = {
   install, start, stop, restart, down, purge, update, pull, available, runSetup,
-  pullService, upService, retag, selfRecreate,
+  pullService, upService, stopService, retag, selfRecreate,
   // The argv-only runner itself, for lib/storage.js — it drives `docker run`
   // rather than `docker compose`, and reimplementing the line buffering and
   // the timeout a second time is how the two drift apart.
