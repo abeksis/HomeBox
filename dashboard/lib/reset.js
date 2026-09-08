@@ -46,17 +46,36 @@ const configPath = (moduleId, service, file) =>
   path.join(state.ROOT, 'modules', moduleId, 'config', service, file);
 
 /**
- * When a container last started, as Docker reports it.
+ * The *arr apps keep their accounts in a `Users` table in their own SQLite.
  *
- * Used to PROVE a restart happened rather than trust that asking for one was
- * enough — the one step in this whole flow that already failed quietly once.
+ * node:sqlite is built into node 22, so reading and writing it costs no
+ * dependency in a server that deliberately has none — and no sqlite3 binary,
+ * which is in neither this image nor the apps'.
  */
-async function startedAt(name) {
+function openDb(file) {
+  // Required lazily: it is behind an experimental flag on some builds, and a
+  // module that cannot load must not take the whole dashboard down at boot.
+  const { DatabaseSync } = require('node:sqlite');
+  return new DatabaseSync(file);
+}
+
+function countUsers(file) {
+  const db = openDb(file);
   try {
-    const out = await composeLib.run('docker', ['inspect', name, '--format', '{{.State.StartedAt}}'], { timeout: 15000 });
-    return String(out.stdout || '').trim() || null;
-  } catch {
-    return null;
+    return db.prepare('select count(*) as c from Users').get().c;
+  } finally {
+    db.close();
+  }
+}
+
+function clearUsers(file) {
+  const db = openDb(file);
+  try {
+    const before = db.prepare('select count(*) as c from Users').get().c;
+    db.prepare('delete from Users').run();
+    return before;
+  } finally {
+    db.close();
   }
 }
 
@@ -76,60 +95,65 @@ const STRATEGIES = {
    * password.
    */
   'arr-config': {
-    label: 'Turn the login off, then set a new one inside the app',
+    label: 'Forget the saved account, so the app asks you to create a new one',
     async detail(moduleId, service) {
-      const file = configPath(moduleId, service, 'config.xml');
-      if (!fs.existsSync(file)) return { available: false, why: 'it has not written its config yet — start it once first' };
-      const xml = await fsp.readFile(file, 'utf8');
-      const current = /<AuthenticationMethod>([^<]*)</.exec(xml);
-      const method = current ? current[1] : 'unknown';
-      // `None` as well as `External`. Prowlarr ships with None on this box and
-      // was offering a Reset button for a login it does not have — a control
-      // that cannot do anything, which is worse than no control.
-      const open = method === 'External' || method === 'None';
-      return {
-        available: !open,
-        why: open ? 'it is not asking for a login' : null,
-        state: `authentication: ${method}`,
-      };
+      const db = configPath(moduleId, service, `${service}.db`);
+      if (!fs.existsSync(db)) return { available: false, why: 'it has not built its database yet — start it once first' };
+      try {
+        const users = countUsers(db);
+        return {
+          available: users > 0,
+          why: users === 0 ? 'it has no saved account to forget' : null,
+          state: users === 1 ? '1 account' : `${users} accounts`,
+        };
+      } catch (err) {
+        return { available: false, why: `could not read its database (${err.message})` };
+      }
     },
     async run(moduleId, service, { onLine }) {
-      const file = configPath(moduleId, service, 'config.xml');
-      if (!fs.existsSync(file)) throw new ResetError(`${service} has not written a config.xml yet`);
+      const db = configPath(moduleId, service, `${service}.db`);
+      const cfg = configPath(moduleId, service, 'config.xml');
+      if (!fs.existsSync(db)) throw new ResetError(`${service} has not built its database yet`);
 
+      // Config alone cannot do this, and the first attempt at it was wrong.
+      //
+      // `AuthenticationMethod: External` means "something in FRONT of me
+      // authenticates" -- the page loads but every API call still answers
+      // 401, so the app draws its login screen anyway and the reset looks
+      // like it did nothing. `DisabledForLocalAddresses` did not help either;
+      // measured from another LAN machine, still 401.
+      //
+      // The account is a row in the app's own SQLite. Remove it and the app
+      // presents its create-account screen on next start, which is the only
+      // state that actually lets someone back in.
       const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '');
-      const backup = `${file}.bak-reset-${stamp}`;
-      await fsp.copyFile(file, backup);
-      onLine(`==> Backed up config.xml to ${path.basename(backup)}`);
 
-      const xml = await fsp.readFile(file, 'utf8');
-      if (!/<AuthenticationMethod>/.test(xml)) throw new ResetError('that config.xml has no AuthenticationMethod to change');
-      const next = xml.replace(/<AuthenticationMethod>[^<]*<\/AuthenticationMethod>/, '<AuthenticationMethod>External</AuthenticationMethod>');
-      await fsp.writeFile(file, next, 'utf8');
-      onLine('==> Login turned off (AuthenticationMethod: External)');
+      onLine(`==> Stopping ${service} — its database must not be open while this is written`);
+      await composeLib.stopService(moduleId, service, { onLine });
 
-      // A real restart, not `up -d`. Compose recreates only when the compose
-      // SPEC changes, so after editing a bind-mounted config file it reports
-      // "up-to-date" and leaves the old process running — the file said
-      // External while the app carried on presenting its login, and the
-      // dashboard cheerfully reported success. Caught on the live box by the
-      // container's StartedAt being fifteen minutes older than the reset.
-      const before = await startedAt(service);
-      onLine(`==> Restarting ${service} so it re-reads the file`);
-      await composeLib.restartService(moduleId, service, { onLine });
+      await fsp.copyFile(db, `${db}.bak-reset-${stamp}`);
+      onLine(`==> Backed up ${path.basename(db)}`);
 
-      // Assert it, rather than assume it. This is the exact step that failed
-      // silently, so it is the one worth proving.
-      const after = await startedAt(service);
-      if (before && after && before === after) {
-        throw new ResetError(`${service} did not actually restart — its config was changed but the running app still has the old one`, { status: 500 });
+      const removed = clearUsers(db);
+      onLine(`==> Forgot ${removed} saved account${removed === 1 ? '' : 's'}`);
+
+      // Put authentication back to a state that ASKS. A reset that leaves the
+      // app wide open is not a fix, it is a different problem.
+      if (fs.existsSync(cfg)) {
+        await fsp.copyFile(cfg, `${cfg}.bak-reset-${stamp}`);
+        let xml = await fsp.readFile(cfg, 'utf8');
+        xml = xml.replace(/<AuthenticationMethod>[^<]*<\/AuthenticationMethod>/, '<AuthenticationMethod>Forms</AuthenticationMethod>');
+        xml = xml.replace(/<AuthenticationRequired>[^<]*<\/AuthenticationRequired>/, '<AuthenticationRequired>Enabled</AuthenticationRequired>');
+        await fsp.writeFile(cfg, xml, 'utf8');
+        onLine('==> Authentication set back to Forms');
       }
-      onLine('==> Restarted');
+
+      onLine(`==> Starting ${service}`);
+      await composeLib.upService(moduleId, service, { onLine });
 
       return {
-        next: `Open ${service} and go to Settings → General → Security. Set Authentication back to `
-          + '"Forms" and choose a new username and password. Until you do, anyone who can reach '
-          + 'that port can use the app without signing in.',
+        next: `Open ${service} — it will ask you to create a new username and password. `
+          + 'Nothing else was touched: your library, indexers and settings are all still there.',
       };
     },
   },
