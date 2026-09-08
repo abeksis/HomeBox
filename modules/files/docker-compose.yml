@@ -41,7 +41,7 @@ x-homebox:
 
 services:
   filebrowser:
-    image: gtstef/filebrowser:1.5.0-stable
+    image: gtstef/filebrowser:1.5.6-stable
     container_name: filebrowser
     user: "${PUID:-1000}:${PGID:-1000}"
     ports:

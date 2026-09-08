@@ -38,7 +38,7 @@ x-homebox:
 
 services:
   linkding:
-    image: sissbruecker/linkding:1.36.0
+    image: sissbruecker/linkding:1.46.2
     container_name: linkding
     environment:
       - TZ=${TZ:-UTC}
