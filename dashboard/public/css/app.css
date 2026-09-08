@@ -991,7 +991,17 @@ code.mono {
 
 /* ----------------------------------------------------------------- tables */
 
-.table-wrap { background: var(--bg-1); border-radius: var(--radius); box-shadow: var(--elev-1); overflow-x: auto; }
+/* An inner panel, not a card. It always sits inside a .bento-card, so it gets
+   the tile surface every other inset panel here uses (Quick access, Network,
+   Updates summary) rather than --bg-1 + --elev-1, which is the card recipe:
+   the same fill as its own parent, lifted on a card-sized shadow. That read
+   as a slab floating on top of the card instead of a well sunk into it. */
+.table-wrap {
+  background: var(--tile-bg);
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 1px var(--tile-ring);
+  overflow-x: auto;
+}
 .table { width: 100%; border-collapse: collapse; font-size: 0.84rem; min-width: 720px; }
 .table th {
   text-align: left;
