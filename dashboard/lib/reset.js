@@ -68,9 +68,13 @@ const STRATEGIES = {
       const xml = await fsp.readFile(file, 'utf8');
       const current = /<AuthenticationMethod>([^<]*)</.exec(xml);
       const method = current ? current[1] : 'unknown';
+      // `None` as well as `External`. Prowlarr ships with None on this box and
+      // was offering a Reset button for a login it does not have — a control
+      // that cannot do anything, which is worse than no control.
+      const open = method === 'External' || method === 'None';
       return {
-        available: method !== 'External',
-        why: method === 'External' ? 'its login is already turned off' : null,
+        available: !open,
+        why: open ? 'it is not asking for a login' : null,
         state: `authentication: ${method}`,
       };
     },
