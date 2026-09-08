@@ -184,8 +184,14 @@ async function arrCalendar(serviceName, containers, days) {
   const end = new Date(Date.now() + days * 86400000);
   const iso = (d) => d.toISOString().slice(0, 10);
 
+  // `includeSeries=true` is not optional for Sonarr, and its absence is
+  // invisible until you look at the rendered card: a calendar row carries
+  // seriesId but NOT the series itself unless asked, so every episode came
+  // out as "Unknown series" while the episode number and title beside it
+  // were perfectly correct — which reads like a lookup failure rather than a
+  // missing query parameter. Radarr ignores it; its rows are the film.
   const rows = await request(
-    `${base}/api/v3/calendar?start=${iso(start)}&end=${iso(end)}&unmonitored=false`,
+    `${base}/api/v3/calendar?start=${iso(start)}&end=${iso(end)}&unmonitored=false&includeSeries=true`,
     { headers: { 'x-api-key': key } },
   );
 
