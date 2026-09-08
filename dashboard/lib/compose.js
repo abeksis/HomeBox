@@ -239,6 +239,17 @@ const pullService = (id, service, { onLine = null } = {}) =>
  * dependencies up too, which on a module with a database means restarting the
  * database to update the web front end.
  */
+/**
+ * Restart one service, leaving the rest of its module running.
+ *
+ * NOT `up -d`: compose recreates a container only when the compose SPEC
+ * changes, so after editing a config file on a bind mount it reports
+ * "up-to-date" and leaves the old process running with the old config in
+ * memory. An app that reads its config at startup needs an actual restart.
+ */
+const restartService = (id, service, { onLine = null } = {}) =>
+  compose(id, ['restart', checkService(service)], { timeout: 180000, onLine });
+
 /** Stop one service, leaving the rest of its module running. */
 const stopService = (id, service, { onLine = null } = {}) =>
   compose(id, ['stop', checkService(service)], { timeout: 120000, onLine });
@@ -337,7 +348,7 @@ async function available() {
 
 module.exports = {
   install, start, stop, restart, down, purge, update, pull, available, runSetup,
-  pullService, upService, stopService, retag, selfRecreate,
+  pullService, upService, stopService, restartService, retag, selfRecreate,
   // The argv-only runner itself, for lib/storage.js — it drives `docker run`
   // rather than `docker compose`, and reimplementing the line buffering and
   // the timeout a second time is how the two drift apart.

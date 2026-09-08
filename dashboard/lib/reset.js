@@ -45,6 +45,21 @@ class ResetError extends Error {
 const configPath = (moduleId, service, file) =>
   path.join(state.ROOT, 'modules', moduleId, 'config', service, file);
 
+/**
+ * When a container last started, as Docker reports it.
+ *
+ * Used to PROVE a restart happened rather than trust that asking for one was
+ * enough — the one step in this whole flow that already failed quietly once.
+ */
+async function startedAt(name) {
+  try {
+    const out = await composeLib.run('docker', ['inspect', name, '--format', '{{.State.StartedAt}}'], { timeout: 15000 });
+    return String(out.stdout || '').trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 /* ---------------------------------------------------------- strategies */
 
 const STRATEGIES = {
@@ -93,8 +108,23 @@ const STRATEGIES = {
       await fsp.writeFile(file, next, 'utf8');
       onLine('==> Login turned off (AuthenticationMethod: External)');
 
-      onLine(`==> Restarting ${service}`);
-      await composeLib.upService(moduleId, service, { onLine });
+      // A real restart, not `up -d`. Compose recreates only when the compose
+      // SPEC changes, so after editing a bind-mounted config file it reports
+      // "up-to-date" and leaves the old process running — the file said
+      // External while the app carried on presenting its login, and the
+      // dashboard cheerfully reported success. Caught on the live box by the
+      // container's StartedAt being fifteen minutes older than the reset.
+      const before = await startedAt(service);
+      onLine(`==> Restarting ${service} so it re-reads the file`);
+      await composeLib.restartService(moduleId, service, { onLine });
+
+      // Assert it, rather than assume it. This is the exact step that failed
+      // silently, so it is the one worth proving.
+      const after = await startedAt(service);
+      if (before && after && before === after) {
+        throw new ResetError(`${service} did not actually restart — its config was changed but the running app still has the old one`, { status: 500 });
+      }
+      onLine('==> Restarted');
 
       return {
         next: `Open ${service} and go to Settings → General → Security. Set Authentication back to `
