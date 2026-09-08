@@ -91,7 +91,7 @@ x-homebox:
 
 services:
   qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:latest
+    image: lscr.io/linuxserver/qbittorrent:5.2.3_v2.0.14-ls475
     container_name: qbittorrent
     environment:
       - PUID=${PUID:-1000}
@@ -133,7 +133,7 @@ services:
     restart: always
 
   radarr:
-    image: lscr.io/linuxserver/radarr:latest
+    image: lscr.io/linuxserver/radarr:6.3.0.10514-ls315
     container_name: radarr
     environment:
       - PUID=${PUID:-1000}
@@ -160,7 +160,7 @@ services:
     restart: always
 
   sonarr:
-    image: lscr.io/linuxserver/sonarr:latest
+    image: lscr.io/linuxserver/sonarr:4.0.19.2979-ls323
     container_name: sonarr
     environment:
       - PUID=${PUID:-1000}
@@ -187,7 +187,7 @@ services:
     restart: always
 
   prowlarr:
-    image: lscr.io/linuxserver/prowlarr:latest
+    image: lscr.io/linuxserver/prowlarr:2.5.2.5491-ls158
     container_name: prowlarr
     environment:
       - PUID=${PUID:-1000}
@@ -212,7 +212,7 @@ services:
     restart: always
 
   bazarr:
-    image: lscr.io/linuxserver/bazarr:latest
+    image: lscr.io/linuxserver/bazarr:v1.6.0-ls362
     container_name: bazarr
     environment:
       - PUID=${PUID:-1000}
