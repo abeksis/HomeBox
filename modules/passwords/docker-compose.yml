@@ -19,6 +19,7 @@ x-homebox:
     color: "#175ddc"
     bg: "rgba(23,93,220,0.12)"
   tips:
+    - "This app CANNOT be used over http://<ip>:8222 — the vault encrypts in the browser via crypto.subtle, which browsers only expose over HTTPS or on localhost. Put it behind Proxy Manager with a certificate, or reach it through an SSH tunnel to localhost"
     - "Register your account first, then set SIGNUPS_ALLOWED=false and restart — otherwise anyone who reaches the page can create one"
     - "The official mobile apps refuse a self-signed certificate. For phone use this needs a real hostname with real TLS, not an IP"
     - "This is the one app where a tested restore matters more than a backup — the config directory IS the vault"
@@ -47,6 +48,10 @@ services:
       - TZ=${TZ:-UTC}
       - SIGNUPS_ALLOWED=true
       - ADMIN_TOKEN=${VAULTWARDEN_ADMIN_TOKEN:-}
+      # Set this once the vault is behind a proxy with a certificate, e.g.
+      # https://vault.example.com. Vaultwarden builds invite and reset links
+      # and scopes WebAuthn from it, so a wrong value breaks both silently.
+      - DOMAIN=${VAULTWARDEN_DOMAIN:-}
       - DATA_FOLDER=/data
       - ROCKET_PORT=80
     ports:
