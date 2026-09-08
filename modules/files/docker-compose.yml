@@ -55,7 +55,9 @@ services:
     volumes:
       # The whole pool, not just media: books, photos and downloads are
       # siblings of media/ and would be invisible if this bound one subfolder.
-      - ${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}:/folder
+      # Same expression the media apps use, so File Browser follows the pool
+      # when remote storage is configured instead of staying on the system disk.
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/folder
       - ${HB_ROOT:-/opt/homebox}/modules/files/config/filebrowser/config.yaml:/home/filebrowser/config.yaml:ro
       - ${HB_ROOT:-/opt/homebox}/modules/files/config/filebrowser/data:/home/filebrowser/data
     networks:
