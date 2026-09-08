@@ -39,6 +39,7 @@ const docker = require('./docker');
 const composeLib = require('./compose');
 const registry = require('./registry');
 const versions = require('./versions');
+const pins = require('./pins');
 const modulesLib = require('./modules');
 
 const state = require('./state-store');
@@ -541,4 +542,95 @@ async function apply(which, { onLine = null } = {}) {
   }
 }
 
-module.exports = { check, status, apply, readHistory, STALE_AFTER_MS };
+/**
+ * Move a service to a NEWER VERSION, from the button.
+ *
+ * The same care as a rebuild, plus one thing a rebuild does not need: the
+ * version itself has to be recorded, and recorded somewhere `git pull` will
+ * not fight over. lib/pins.js keeps it in state/ as a compose override, so
+ * the shipped module file is never edited.
+ *
+ * Rollback is the pin, not a re-tag. A rebuild rolls back by pointing the old
+ * tag at the image still on disk; here the previous version IS a different
+ * tag, so putting the pin back and recreating restores it exactly — and the
+ * old image is still local, so it does not even need the network.
+ */
+async function upgrade(which, { onLine = null } = {}) {
+  if (applying) throw Object.assign(new Error('an update is already running'), { status: 409 });
+  applying = true;
+  const say = (line, err = false) => { if (onLine) onLine(line, err); };
+  try {
+    const cache = await readCache();
+    const item = (cache.newVersions || []).find((v) => v.container === which);
+    if (!item) {
+      throw Object.assign(
+        new Error(`${which} is not on the list of newer versions — run a check and try again`),
+        { status: 409 },
+      );
+    }
+
+    const ref = registry.parseRef(item.image);
+    if (!ref) throw Object.assign(new Error(`cannot parse ${item.image}`), { status: 400 });
+    const repo = item.image.slice(0, item.image.lastIndexOf(':'));
+
+    say(`==> ${item.container}: ${item.tag} → ${item.newerVersion}`);
+
+    // The version change is the one path with no automatic rollback of DATA.
+    // A tag can be put back; a migration a new version ran on first start
+    // cannot. So the backup is not optional here and it happens first.
+    say('==> Backing up before anything changes — a new version may migrate its database');
+    const backupLib = require('./backup');
+    const made = await backupLib.create({ kind: 'config' });
+    say(`==> Backup: ${made.name} (${Math.round(made.size / 1048576)}MB, ${made.seconds}s)`);
+
+    const previous = await pins.set(item.module, item.service, repo, item.newerVersion);
+    say(`==> Pinned to ${item.newerVersion}`);
+
+    const restore = async () => {
+      if (previous) await pins.set(item.module, item.service, repo, previous);
+      else await pins.clear(item.module, item.service);
+      await composeLib.upService(item.module, item.service, { onLine });
+    };
+
+    try {
+      say('==> Pulling');
+      await composeLib.pullService(item.module, item.service, { onLine });
+      say('==> Recreating');
+      await composeLib.upService(item.module, item.service, { onLine });
+    } catch (err) {
+      say(`==> ${err.message} — putting the previous version back`, true);
+      await restore().catch(() => {});
+      throw Object.assign(new Error(`could not start ${item.newerVersion}: ${err.message}`), { status: 500 });
+    }
+
+    say('==> Waiting for it to come back healthy');
+    const health = await waitHealthy(item.container, onLine);
+    if (!health.ok) {
+      say(`==> ${item.container} is ${health.state} — rolling back to ${item.tag}`, true);
+      await restore().catch(() => {});
+      const back = await waitHealthy(item.container, onLine);
+      await note({
+        module: item.module, service: item.service, container: item.container,
+        image: item.image, success: false, rolledBack: back.ok,
+        reason: `${item.newerVersion} did not become healthy (${health.state})`,
+        backup: made.name,
+      });
+      return { ok: false, rolledBack: back.ok, from: item.tag, to: item.newerVersion, backup: made.name };
+    }
+
+    say(`==> ${item.container} is ${health.state} on ${item.newerVersion}`);
+    await note({
+      module: item.module, service: item.service, container: item.container,
+      image: `${repo}:${item.newerVersion}`, success: true,
+      reason: `upgraded from ${item.tag}`, backup: made.name,
+    });
+    activity.note({ name: item.container, action: `upgraded to ${item.newerVersion}`, level: 'info' });
+
+    await check().catch(() => {});
+    return { ok: true, from: item.tag, to: item.newerVersion, backup: made.name };
+  } finally {
+    applying = false;
+  }
+}
+
+module.exports = { check, status, apply, upgrade, readHistory, STALE_AFTER_MS };

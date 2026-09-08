@@ -851,6 +851,30 @@ const server = http.createServer(async (req, res) => {
           return sendJson(res, 200, { ok: true, ...(await updates.check()) });
         }
 
+        // Moving to a newer VERSION. Separate from `apply` because it is a
+        // different operation with a different risk: a rebuild rolls back by
+        // re-tagging an image still on disk, while a version change may have
+        // migrated a database on first start. See updates.upgrade().
+        if (tail === 'upgrade' && req.method === 'POST') {
+          const body = await readBody(req);
+          const which = String(body.container || '').trim();
+          if (!which) return sendJson(res, 400, { error: 'which container?' });
+          res.writeHead(200, {
+            'content-type': 'application/x-ndjson; charset=utf-8',
+            'cache-control': 'no-store',
+            'x-accel-buffering': 'no',
+          });
+          const send = (obj) => { if (!res.writableEnded) res.write(`${JSON.stringify(obj)}\n`); };
+          try {
+            const result = await updates.upgrade(which, { onLine: (line, err) => send({ line, err }) });
+            send({ done: true, ...result });
+          } catch (err) {
+            send({ line: err.message, err: true });
+            send({ done: true, ok: false, error: err.message });
+          }
+          return res.end();
+        }
+
         if (tail === 'apply' && req.method === 'POST') {
           const body = await readBody(req);
           const which = String(body.container || '').trim();
@@ -1046,6 +1070,42 @@ async function main() {
   server.listen(PORT, () => {
     console.log(`[homebox] v${VERSION} listening on :${PORT} (root ${state.ROOT}, host ${HOST_ADDRESS})`);
   });
+
+  scheduleUpdateChecks();
+}
+
+/**
+ * Check for updates on a timer, so the answer is waiting rather than fetched
+ * when somebody happens to open the tab.
+ *
+ * It only ever CHECKS. Nothing is pulled, nothing is recreated, nothing is
+ * decided — the buttons stay the only way anything changes on this box. An
+ * unattended dashboard that upgrades software by itself is a dashboard you
+ * cannot leave running.
+ *
+ * The first run is delayed: a box that has just booted is busy starting its
+ * containers, and a dozen registry round-trips is not what it needs in the
+ * first minute.
+ */
+const CHECK_EVERY_MS = 6 * 60 * 60 * 1000;   // four times a day
+const FIRST_CHECK_MS = 5 * 60 * 1000;
+
+function scheduleUpdateChecks() {
+  const run = () => {
+    updates.check()
+      .then((r) => {
+        const rebuilds = (r.available || []).length;
+        const newer = (r.newVersions || []).length;
+        if (rebuilds || newer) {
+          console.log(`[homebox] update check: ${rebuilds} rebuild(s), ${newer} newer version(s)`);
+        }
+      })
+      // A registry being unreachable is normal and not worth a stack trace in
+      // the log of a box that is otherwise fine.
+      .catch((err) => console.log(`[homebox] update check skipped: ${err.message}`));
+  };
+  setTimeout(run, FIRST_CHECK_MS).unref();
+  setInterval(run, CHECK_EVERY_MS).unref();
 }
 
 main().catch((err) => {

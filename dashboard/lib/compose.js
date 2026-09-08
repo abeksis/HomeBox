@@ -97,6 +97,12 @@ function run(command, args, { timeout = 600000, cwd = ROOT, onLine = null, env =
 
 function composeArgs(id, rest) {
   const args = ['compose', '-p', `homebox-${id}`, '-f', moduleFile(id)];
+  // A version chosen from the dashboard is a second -f, never an edit to the
+  // tracked file above — see lib/pins.js. It must be on EVERY compose call,
+  // not just the updating one: an override applied by `up` and forgotten by
+  // `restart` would silently put the shipped version back.
+  const override = path.join(ROOT, 'state', 'overrides', `${id}.yml`);
+  if (fs.existsSync(override)) args.push('-f', override);
   if (fs.existsSync(ENV_FILE)) args.push('--env-file', ENV_FILE);
   return args.concat(rest);
 }

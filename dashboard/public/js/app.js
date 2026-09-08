@@ -3201,6 +3201,7 @@ function renderNewVersions(rows) {
           <div class="update-row-image mono">${escapeHtml(r.image)}</div>
           <div class="update-row-digest mono">${escapeHtml(r.tag)} → ${escapeHtml(r.newerVersion)}</div>
         </div>
+        <button type="button" class="btn-soft" data-upgrade="${escapeHtml(r.container)}">Upgrade</button>
       </div>`).join('');
 }
 
@@ -3222,6 +3223,67 @@ function renderUpdateHistory(history) {
         ${h.reason ? `<span class="update-history-reason">${escapeHtml(h.reason)}</span>` : ''}
       </div>`;
   }).join('');
+}
+
+/**
+ * Move one service to a newer version, from the button.
+ *
+ * Warned about more heavily than a rebuild, because it is a heavier thing: a
+ * rebuild rolls back by re-tagging an image still on disk, while a new
+ * version may migrate a database on first start — and a migration is not
+ * undone by putting the old tag back. Hence the backup, and hence saying so.
+ */
+async function upgradeVersion(container, from, to) {
+  const ok = await confirmDialog({
+    title: `Upgrade ${container} to ${to}?`,
+    bodyHtml: `
+      <p>Moving from <code class="mono">${escapeHtml(from)}</code> to
+         <code class="mono">${escapeHtml(to)}</code>.</p>
+      <p class="cred-note">A full config backup is taken first, automatically. If the app does not
+      come back healthy, the previous version is put straight back.</p>
+      <p class="cred-note"><strong>Worth knowing:</strong> a new version can migrate its database on
+      first start, and putting the old version back does not undo a migration. That is what the
+      backup is for. The version is recorded in HomeBox's own state, so a later
+      <code class="mono">git pull</code> will not conflict.</p>`,
+    confirmLabel: `Upgrade to ${to}`,
+    danger: true,
+    wide: true,
+  });
+  if (!ok) return;
+
+  openProgress(`Upgrading ${container} to ${to}`);
+  let success = false;
+  try {
+    const res = await fetch('api/updates/upgrade', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ container }),
+    });
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const raw of lines) {
+        if (!raw.trim()) continue;
+        let msg;
+        try { msg = JSON.parse(raw); } catch { continue; }
+        if (msg.done) success = msg.ok === true;
+        else if (typeof msg.line === 'string') progressLine(msg.line);
+      }
+    }
+  } catch (err) {
+    progressLine(`ERROR: ${err.message}`);
+  }
+  closeProgress(success, success ? `${container} is on ${to}` : 'Rolled back');
+  toast(success
+    ? `${container} upgraded to ${to}.`
+    : `${container} was put back on ${from} — the log says why.`, success ? 'success' : 'error', 12000);
+  loadUpdates();
 }
 
 async function runUpdateCheck({ quiet = false } = {}) {
@@ -3932,6 +3994,12 @@ $('#updates-all').addEventListener('click', () => applyUpdate('all'));
 $('#updates-list').addEventListener('click', (event) => {
   const btn = event.target.closest('[data-update]');
   if (btn) applyUpdate(btn.dataset.update);
+});
+$('#updates-versions').addEventListener('click', (event) => {
+  const btn = event.target.closest('[data-upgrade]');
+  if (!btn) return;
+  const row = (updatesState.newVersions || []).find((v) => v.container === btn.dataset.upgrade);
+  if (row) upgradeVersion(row.container, row.tag, row.newerVersion);
 });
 
 $('#log-refresh').addEventListener('click', () => loadLogs());

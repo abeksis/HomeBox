@@ -76,7 +76,17 @@ meta() {
 
 compose() {
   local id="$1"; shift
-  dk compose -p "$(project_of "$id")" -f "$(module_file "$id")" --env-file "$ENV_FILE" "$@"
+  # A version pinned from the dashboard lands in state/overrides/<id>.yml as a
+  # compose override, never as an edit to the tracked module file. The CLI has
+  # to pass it too: if only the dashboard did, `homebox update` would quietly
+  # put the shipped version back and the two would disagree about what is
+  # installed — which is the one thing this project refuses to allow.
+  local override="$HB_ROOT/state/overrides/$id.yml"
+  if [ -f "$override" ]; then
+    dk compose -p "$(project_of "$id")" -f "$(module_file "$id")" -f "$override" --env-file "$ENV_FILE" "$@"
+  else
+    dk compose -p "$(project_of "$id")" -f "$(module_file "$id")" --env-file "$ENV_FILE" "$@"
+  fi
 }
 
 # True when a module builds its image here rather than pulling one. Asking
