@@ -2862,3 +2862,21 @@ code.mono {
 .reset-info strong { font-size: 0.86rem; font-weight: 650; }
 .reset-info small { font-size: 0.76rem; color: var(--text-muted); line-height: 1.45; }
 .reset-done { flex: none; font-size: 0.76rem; color: var(--good); }
+
+/* The four .editor-form forms — Add a link, Add a custom item, Add an
+   application, and the password change — take NAMES, ADDRESSES and
+   PASSWORDS. Human text.
+   
+   They were wearing .config-input, which is the RAW CONFIG EDITOR's style:
+   monospace, on --bg-input (#1e2230), because a path or a port or an API key
+   is code and reads better as code. Worn here it rendered "Router" and
+   "http://router.home/" in a code font, on a surface no other input in
+   Settings uses — every other one sits on --bg-2 (#262b37) in the page font.
+   Same field, two different appearances, for no reason a user could infer. */
+.editor-form .config-input {
+  background: var(--bg-2);
+  font-family: var(--font);
+  font-size: 0.88rem;
+  padding: 0.55rem 0.85rem;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
