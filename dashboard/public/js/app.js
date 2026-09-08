@@ -2058,6 +2058,55 @@ function closeDrawer() {
 
 /* ---------------------------------------------------------------- actions */
 
+/**
+ * "Remove" asks WHICH removal, instead of quietly picking one.
+ *
+ * Keeping the config directory is the right default — reinstalling then picks
+ * up your library, indexers and settings where you left them. But it is also
+ * how a broken app stays broken across a reinstall: a bad account, a config
+ * pointing at a database that is not there, a half-migrated restore. Someone
+ * removing an app to start over got the same app back, and nothing on screen
+ * had said the settings survived.
+ *
+ * Both readings of "remove" are legitimate, so the dialog asks rather than
+ * guesses. Unchecked keeps the safe default; checked is one click, and says
+ * exactly which directory goes.
+ *
+ * Resolves to 'remove', 'purge', or null if cancelled.
+ */
+async function removeDialog(title, id) {
+  // Cleared every time, or a box ticked once would silently erase the NEXT
+  // app someone removes.
+  removeDialog.erase = false;
+  const ok = await confirmDialog({
+    title: `Remove ${title}?`,
+    bodyHtml: `
+      <p>Its containers are deleted.</p>
+      <label class="remove-erase">
+        <input type="checkbox" id="remove-erase-box">
+        <span>
+          <strong>Also erase its settings and data</strong>
+          <small>Deletes <code class="mono">modules/${escapeHtml(id)}/config</code> — the app's database,
+          its accounts and everything it has learned. Installing it again gives you a brand new app.
+          Leave this off and a reinstall picks up exactly where you left off.</small>
+        </span>
+      </label>`,
+    confirmLabel: 'Remove',
+    danger: true,
+    wide: true,
+  });
+  if (!ok) return null;
+  // Read inside the dialog's lifetime — confirmDialog removes the node before
+  // it resolves, so a lookup after this point finds nothing.
+  return removeDialog.erase ? 'purge' : 'remove';
+}
+
+// The checkbox lives inside a dialog that is gone by the time the promise
+// settles, so its state is captured on change.
+document.addEventListener('change', (event) => {
+  if (event.target.id === 'remove-erase-box') removeDialog.erase = event.target.checked;
+});
+
 async function runAction(id, action) {
   if (state.busy.has(id)) return;
   const mod = state.modules.find((m) => m.id === id);
@@ -2069,13 +2118,9 @@ async function runAction(id, action) {
     if (!ok) return;
   }
   if (action === 'remove') {
-    const ok = await confirmDialog({
-      title: `Uninstall ${title}?`,
-      body: 'Its containers are deleted. Settings and data are kept, so you can install it again later.',
-      confirmLabel: 'Uninstall',
-      danger: true,
-    });
-    if (!ok) return;
+    const choice = await removeDialog(title, id);
+    if (!choice) return;
+    action = choice;   // 'remove' keeps the config directory, 'purge' erases it
   }
   if (action === 'purge') {
     const typed = prompt(`This deletes ${title} AND all of its data. There is no undo.
@@ -3462,12 +3507,27 @@ function installDisclosure(installIds, removeIds) {
       </div>
     </div>` : '';
 
+  // Removing from the App Store card offers the same choice the drawer does.
+  // Without it "Remove" here silently kept the config, which is how an app
+  // someone removed to start over came back with the same broken account.
+  const erase = removeMods.length ? `
+    <label class="remove-erase">
+      <input type="checkbox" id="remove-erase-box">
+      <span>
+        <strong>Also erase settings and data</strong>
+        <small>Deletes each removed app's <code class="mono">config</code> directory — its database,
+        its accounts, everything it has learned. Off means a reinstall picks up where you left off.</small>
+      </span>
+    </label>` : '';
+
+  removeDialog.erase = false;
   return confirmDialog({
     title: 'Apply these changes?',
     bodyHtml: `<p class="install-disclosure-intro">${escapeHtml(parts.join(' · '))}. Here is what will happen:</p>
       <div class="install-disclosure-list">${html}</div>
       <div class="install-disclosure-footer">
         ${meta.length ? `<div class="install-disclosure-meta">${escapeHtml(meta.join(' · '))}</div>` : ''}
+        ${erase}
         ${notice}
       </div>`,
     confirmLabel: installMods.length ? 'Install' : 'Remove',
@@ -3492,7 +3552,10 @@ async function applyPending() {
   // the link, and two sets of progress interleaved in one log is unreadable.
   let ok = true;
   for (const id of installIds) ok = (await runActionStreamed(id, 'install')) && ok;
-  for (const id of removeIds) ok = (await runActionStreamed(id, 'remove')) && ok;
+  // Whatever the disclosure's checkbox said, applied to every app being
+  // removed in this batch.
+  const removeVerb = removeDialog.erase ? 'purge' : 'remove';
+  for (const id of removeIds) ok = (await runActionStreamed(id, removeVerb)) && ok;
 
   closeProgress(ok, ok ? 'Done' : 'Something went wrong');
   if (ok) toast(total === 1 ? 'Done.' : `${total} apps done.`, 'success');

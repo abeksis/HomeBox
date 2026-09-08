@@ -2880,3 +2880,22 @@ code.mono {
   padding: 0.55rem 0.85rem;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
+
+/* The "also erase" choice on a removal. Deliberately a checkbox rather than
+   a second button: two buttons make the destructive one a mis-click, while
+   a box has to be ticked on purpose and can be read before it is. */
+.remove-erase {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius-sm);
+  background: var(--bad-soft);
+  box-shadow: 0 0 0 1px var(--bad-line);
+  cursor: pointer;
+}
+.remove-erase input { margin-top: 0.2rem; flex: none; }
+.remove-erase span { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.remove-erase strong { font-size: 0.86rem; }
+.remove-erase small { font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; }
