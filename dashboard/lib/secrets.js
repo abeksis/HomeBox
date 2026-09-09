@@ -35,10 +35,25 @@ const yaml = require('./yaml');
 const ENV_FILE = path.join(state.ROOT, '.env');
 const MODULES_DIR = path.join(state.ROOT, 'modules');
 
-// Same shape install.sh produces: url-safe, no quoting surprises in a shell
-// or in compose interpolation.
-function rand(bytes = 24) {
-  return crypto.randomBytes(bytes).toString('base64url');
+// Default shape is what install.sh produces: url-safe, no quoting surprises
+// in a shell or in compose interpolation.
+//
+// A module may need a different one. Laravel's APP_KEY has to be standard
+// base64 of exactly 32 bytes — base64url is the wrong alphabet (- and _
+// instead of + and /), and PHP's base64_decode does not reject those, it
+// silently decodes to something else. 24 url-safe bytes look like a perfectly
+// good key right up to the point where AES-256 is handed 24 of the 32 bytes
+// it needs. So a spec can say `bytes` and `format`.
+function rand(spec) {
+  const bytes = Number.isInteger(spec && spec.bytes) && spec.bytes >= 16 && spec.bytes <= 128
+    ? spec.bytes
+    : 24;
+  const buf = crypto.randomBytes(bytes);
+  switch (spec && spec.format) {
+    case 'base64': return buf.toString('base64');
+    case 'hex': return buf.toString('hex');
+    default: return buf.toString('base64url');
+  }
 }
 
 /** The `type: secret` keys a module declares, minus the ones it does not own. */
@@ -62,7 +77,7 @@ function declaredBy(id) {
       if (spec.generated === false) return false;
       return /^[A-Z][A-Z0-9_]*$/.test(key);
     })
-    .map(([key]) => key);
+    .map(([key, spec]) => ({ key, spec }));
 }
 
 function valueFrom(lines, key) {
@@ -94,7 +109,7 @@ async function ensureFor(id) {
   }
 
   const added = [];
-  for (const key of keys) {
+  for (const { key, spec } of keys) {
     if (valueFrom(lines, key)) continue;
     const at = lines.findIndex((l) => l.trim().startsWith(`${key}=`) && !l.trim().startsWith('#'));
     if (at === -1) {
@@ -102,9 +117,9 @@ async function ensureFor(id) {
       // install.
       let end = lines.length;
       while (end > 0 && lines[end - 1].trim() === '') end -= 1;
-      lines.splice(end, 0, `${key}=${rand()}`);
+      lines.splice(end, 0, `${key}=${rand(spec)}`);
     } else {
-      lines[at] = `${key}=${rand()}`;
+      lines[at] = `${key}=${rand(spec)}`;
     }
     added.push(key);
   }

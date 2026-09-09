@@ -1,0 +1,78 @@
+# ==========================================
+# HOMEBOX - Backup Module
+# Duplicati: the copy that lives somewhere else.
+# ==========================================
+
+x-homebox:
+  id: backup
+  added_at: "2026-09-09"
+  title: "Duplicati"
+  tagline: "The copy that is not in this room"
+  description: "Scheduled, encrypted, incremental backups to somewhere off this box — a NAS, S3, Backblaze, Google Drive, another machine over SFTP. Encrypted before it leaves, so the destination never sees your files. HomeBox's own `homebox backup` protects its config; this is for everything else, and for getting it out of the building."
+  icon: "duplicati.svg"
+  category: "system"
+  required: false
+  default: false
+  ram: "~300MB"
+  theme:
+    emoji: "💾"
+    color: "#2b5797"
+    bg: "rgba(43,87,151,0.12)"
+  tips:
+    - "A backup nobody has restored from is a hypothesis. Use Restore then pick a single file and bring it back, today, not the day you need it"
+    - "Write the encryption passphrase down somewhere off this machine. Without it the backup is a pile of noise, including to you"
+    - "3-2-1: three copies, two kinds of media, one off-site. A backup on the same box as the original survives a mistake but not a fire or a theft"
+  env_vars:
+    DUPLICATI_PASSWORD:
+      label: "Web UI password"
+      type: "secret"
+      config_editable: false
+  services:
+    backup:
+      friendly_name: "Duplicati"
+      color: "#2b5797"
+      description: "Encrypted off-site backups"
+      icon: "duplicati.svg"
+      port_map: 8200
+      container_port: 8200
+      url_scheme: "http"
+      first_login: "Signs in with the password HomeBox generated at install — `homebox secrets backup` prints it."
+
+services:
+  backup:
+    image: linuxserver/duplicati:2.3.0
+    container_name: duplicati
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      - SETTINGS_ENCRYPTION_KEY=${DUPLICATI_PASSWORD:-}
+      - DUPLICATI__WEBSERVICE_PASSWORD=${DUPLICATI_PASSWORD:-}
+    ports:
+      - "8200:8200"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/backup/config/duplicati:/config
+      # What it can back up. Read-only: a backup tool has no reason to write
+      # to the originals, and a misconfigured restore should not be able to.
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/source/pool:ro
+      - ${HB_ROOT:-/opt/homebox}/modules:/source/module-config:ro
+      # Where a restore is written. Separate and writable, so nothing can be
+      # restored over a live original by accident.
+      - ${HB_ROOT:-/opt/homebox}/modules/backup/config/restore:/restore
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

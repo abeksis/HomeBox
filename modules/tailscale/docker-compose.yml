@@ -1,0 +1,82 @@
+# ==========================================
+# HOMEBOX - Tailscale Module
+# A private network that ignores where you are.
+# ==========================================
+
+x-homebox:
+  id: tailscale
+  added_at: "2026-09-09"
+  title: "Tailscale"
+  tagline: "Your devices, one network, anywhere"
+  description: "Puts this box and your laptop and your phone on one private WireGuard network, wherever any of them happen to be. No port forwarding, no dynamic DNS, and it works from behind carrier-grade NAT where a normal VPN cannot. Advertise this box as a subnet router and the whole LAN comes with it."
+  icon: "tailscale-light.svg"
+  category: "network"
+  required: false
+  default: false
+  ram: "~60MB"
+  theme:
+    emoji: "🔗"
+    color: "#5e5eff"
+    bg: "rgba(94,94,255,0.12)"
+  tips:
+    - "Generate an auth key at login.tailscale.com under Settings then Keys, and paste it into Settings here. A reusable key survives a container rebuild; a one-off does not"
+    - "To reach the rest of the LAN, not just this box, set the extra arguments to --advertise-routes=192.168.1.0/24 and approve the route in the admin console"
+    - "This is the alternative to the VPN module, not a companion to it: WireGuard here means you run the coordination, Tailscale means they do"
+    - "It runs on the host network with NET_ADMIN and its own tun device, because that is what building a network interface takes"
+  env_vars:
+    TAILSCALE_AUTHKEY:
+      label: "Auth key"
+      type: "secret"
+      # Issued by Tailscale, tied to your account. Nothing here can invent one.
+      generated: false
+      dangerous: true
+    TAILSCALE_EXTRA_ARGS:
+      label: "Extra arguments"
+      type: "text"
+  services:
+    tailscale:
+      friendly_name: "Tailscale"
+      color: "#5e5eff"
+      description: "Mesh VPN client"
+      icon: "tailscale-light.svg"
+      # No page of its own: it is a network interface, and the admin console
+      # lives at login.tailscale.com.
+      internal: true
+
+services:
+  tailscale:
+    image: tailscale/tailscale:v1.102.3
+    container_name: tailscale
+    hostname: homebox
+    # Host networking is not a shortcut here. A mesh VPN whose interface lives
+    # inside a bridge namespace can route to that namespace and nothing else,
+    # which makes the subnet-router feature — the main reason to run this on a
+    # server rather than a laptop — impossible.
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - TZ=${TZ:-UTC}
+      - TS_AUTHKEY=${TAILSCALE_AUTHKEY:-}
+      - TS_STATE_DIR=/var/lib/tailscale
+      # Once authenticated, ignore the key on later starts. Without this a
+      # rebuild with an expired one-off key logs the machine out.
+      - TS_AUTH_ONCE=true
+      - TS_USERSPACE=false
+      - TS_EXTRA_ARGS=${TAILSCALE_EXTRA_ARGS:-}
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/tailscale/config/tailscale:/var/lib/tailscale
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '1.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always

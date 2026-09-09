@@ -1,0 +1,82 @@
+# ==========================================
+# HOMEBOX - Speedtest Module
+# Evidence for the conversation with the ISP.
+# ==========================================
+
+x-homebox:
+  id: speedtest
+  added_at: "2026-09-09"
+  title: "Speedtest Tracker"
+  tagline: "Proof that it slows down at eight"
+  description: "Runs a speed test on a schedule and keeps the results, so 'the internet is slow' becomes a graph with times on it. That is the difference between an argument with your provider and a support ticket they have to answer."
+  icon: "speedtest-tracker.png"
+  category: "network"
+  required: false
+  default: false
+  ram: "~250MB"
+  theme:
+    emoji: "📶"
+    color: "#0ea5e9"
+    bg: "rgba(14,165,233,0.12)"
+  tips:
+    - "Hourly is plenty. Every fifteen minutes mostly measures the speed tests fighting each other for the line"
+    - "Pin a specific test server in Settings, otherwise a change of server looks like a change of speed"
+    - "APP_KEY is generated at install and encrypts the stored results; replacing it makes the existing history unreadable"
+  env_vars:
+    SPEEDTEST_APP_KEY:
+      label: "Encryption key"
+      type: "secret"
+      # Laravel's APP_KEY, so exactly 32 bytes in STANDARD base64. The default
+      # 24 url-safe bytes fail twice over: too short for AES-256, and the
+      # url-safe alphabet is not the one PHP decodes — which it does not
+      # refuse, it just decodes to something else.
+      bytes: 32
+      format: "base64"
+      config_editable: false
+      dangerous: true
+  services:
+    speedtest:
+      friendly_name: "Speedtest Tracker"
+      color: "#0ea5e9"
+      description: "Scheduled connection speed tests"
+      icon: "speedtest-tracker.png"
+      port_map: 8765
+      container_port: 80
+      url_scheme: "http"
+      first_login: "Ships with admin@example.com / password. Change both on the first visit."
+
+services:
+  speedtest:
+    image: lscr.io/linuxserver/speedtest-tracker:1.14.5
+    container_name: speedtest
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      # Laravel refuses to boot without one, and it encrypts stored results.
+      # base64: prefix is required; the generated value supplies the rest.
+      - APP_KEY=base64:${SPEEDTEST_APP_KEY:-}
+      - APP_URL=${SPEEDTEST_URL:-http://${HB_HOST_ADDRESS:-localhost}:8765}
+      - DB_CONNECTION=sqlite
+      - SPEEDTEST_SCHEDULE=0 * * * *
+    ports:
+      - "8765:80"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/speedtest/config/speedtest:/config
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

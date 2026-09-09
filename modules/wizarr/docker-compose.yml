@@ -1,0 +1,74 @@
+# ==========================================
+# HOMEBOX - Wizarr Module
+# Inviting someone to Jellyfin without walking them through it.
+# ==========================================
+
+x-homebox:
+  id: wizarr
+  added_at: "2026-09-09"
+  title: "Wizarr"
+  tagline: "Invite links for your media server"
+  description: "Send someone a link and they end up with a working Jellyfin or Plex account, having been shown which app to install and how to sign in. Invitations can expire, be limited to one use, or grant access to only some libraries — instead of you creating accounts by hand and explaining the rest over the phone."
+  icon: "wizarr.svg"
+  category: "media"
+  required: false
+  default: false
+  ram: "~200MB"
+  theme:
+    emoji: "🪄"
+    color: "#fe4155"
+    bg: "rgba(254,65,85,0.12)"
+  tips:
+    - "Connect it to Jellyfin at http://jellyfin:8096 with an API key — the container name, not the LAN address"
+    - "An invite link is a working account for whoever holds it. Set an expiry and a use limit rather than sending an open one"
+    - "Binds to this box only by default, because the first-run screen makes whoever opens it the admin. Share it on the LAN from Settings once your account exists"
+  env_vars:
+    WIZARR_BIND_IP:
+      label: "Listen address"
+      type: "text"
+      default: "127.0.0.1"
+  services:
+    wizarr:
+      friendly_name: "Wizarr"
+      color: "#fe4155"
+      description: "Media server invitations"
+      icon: "wizarr.svg"
+      port_map: 5690
+      container_port: 5690
+      url_scheme: "http"
+      first_login: "No default account — the first-run screen hands admin to whoever reaches it first. Set yours up immediately after install."
+
+services:
+  wizarr:
+    image: ghcr.io/wizarrrr/wizarr:v2026.7.1
+    container_name: wizarr
+    environment:
+      - TZ=${TZ:-UTC}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+    ports:
+      # Localhost by default: there is a window between first start and first
+      # registration where anyone who reaches this page becomes the admin of
+      # the thing that hands out accounts to your media server.
+      - "${WIZARR_BIND_IP:-127.0.0.1}:5690:5690"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/wizarr/config/wizarr:/data/database
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.00'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

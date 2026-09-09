@@ -1,0 +1,71 @@
+# ==========================================
+# HOMEBOX - Syncthing Module
+# Dropbox, minus Dropbox.
+# ==========================================
+
+x-homebox:
+  id: syncthing
+  added_at: "2026-09-09"
+  title: "Syncthing"
+  tagline: "Folders that follow you, privately"
+  description: "Continuous file sync between your own devices — laptop, phone, this box — with no server in the middle and no account anywhere. Every device holds the whole folder, changes propagate directly over the network, and nothing is stored on hardware you do not own."
+  icon: "syncthing.svg"
+  category: "files"
+  required: false
+  default: false
+  ram: "~200MB"
+  theme:
+    emoji: "🔄"
+    color: "#0891d1"
+    bg: "rgba(8,145,209,0.12)"
+  tips:
+    - "Pairing is mutual: adding a device on one side only shows a pending request on the other until you accept it there too"
+    - "Set a GUI password on the first visit. Without one, anyone who reaches the page can add a device and pull the whole folder"
+    - "It is a sync tool, not a backup. Delete a file on the laptop and it is deleted here too — turn on File Versioning per folder if that matters"
+  services:
+    syncthing:
+      friendly_name: "Syncthing"
+      color: "#0891d1"
+      description: "Peer-to-peer file sync"
+      icon: "syncthing.svg"
+      port_map: 8384
+      url_scheme: "http"
+      first_login: "No password at all until you set one under Actions then Settings. Do it on the first visit."
+
+services:
+  syncthing:
+    image: lscr.io/linuxserver/syncthing:2.1.2
+    container_name: syncthing
+    hostname: homebox
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    ports:
+      # 8384 is the web UI. 22000 is the actual sync protocol and needs both
+      # TCP and UDP; 21027/udp is local discovery, without which devices on
+      # this LAN only find each other through the global relay.
+      - "8384:8384"
+      - "22000:22000/tcp"
+      - "22000:22000/udp"
+      - "21027:21027/udp"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/syncthing/config/syncthing:/config
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/data
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

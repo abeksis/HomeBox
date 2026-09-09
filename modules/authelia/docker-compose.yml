@@ -1,0 +1,100 @@
+# ==========================================
+# HOMEBOX - Authelia Module
+# One login in front of everything that has none.
+# ==========================================
+
+x-homebox:
+  id: authelia
+  added_at: "2026-09-09"
+  title: "Authelia"
+  tagline: "One door, with two locks"
+  description: "An authentication gateway that sits in front of your other apps through the proxy. Half the things in this catalog have no login at all, and several hand admin to whoever opens them first — Authelia puts a single sign-on page with two-factor in front of all of them, so exposing one does not mean exposing it to everyone."
+  icon: "authelia.svg"
+  category: "security"
+  required: false
+  default: false
+  ram: "~120MB"
+  theme:
+    emoji: "🔑"
+    color: "#0072ff"
+    bg: "rgba(0,114,255,0.12)"
+  tips:
+    - "It protects nothing on its own. The proxy has to be told to ask it — in Nginx Proxy Manager that is an advanced config block forwarding to /api/verify"
+    - "Cookies are scoped to a domain, so this needs a real hostname. It cannot work on an IP address, which is why the install stops until Domain is set"
+    - "The first account is created at install with a generated password: `homebox secrets authelia` prints it. Register a TOTP app on the first login"
+    - "Second factor codes are emailed by default, and without a mail server configured that email is written to a file in the config directory instead"
+  env_vars:
+    AUTHELIA_DOMAIN:
+      label: "Cookie domain"
+      type: "text"
+    AUTHELIA_URL:
+      label: "Public URL"
+      type: "text"
+    AUTHELIA_ADMIN_PASSWORD:
+      label: "Admin password"
+      type: "secret"
+      config_editable: false
+    AUTHELIA_JWT_SECRET:
+      label: "Reset-token signing key"
+      type: "secret"
+      bytes: 64
+      config_editable: false
+      dangerous: true
+    AUTHELIA_SESSION_SECRET:
+      label: "Session signing key"
+      type: "secret"
+      bytes: 64
+      config_editable: false
+      dangerous: true
+    AUTHELIA_STORAGE_KEY:
+      label: "Storage encryption key"
+      type: "secret"
+      bytes: 64
+      config_editable: false
+      dangerous: true
+  services:
+    authelia:
+      friendly_name: "Authelia"
+      color: "#0072ff"
+      description: "Single sign-on and 2FA gateway"
+      icon: "authelia.svg"
+      port_map: 9091
+      url_scheme: "http"
+      first_login: "Signs in as admin with the password HomeBox generated at install, then asks you to enrol a second factor."
+
+services:
+  authelia:
+    image: authelia/authelia:4.39.20
+    container_name: authelia
+    environment:
+      - TZ=${TZ:-UTC}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      # Secrets by environment rather than in the config file, so
+      # configuration.yml stays a document you can read and share.
+      - AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET=${AUTHELIA_JWT_SECRET:-}
+      - AUTHELIA_SESSION_SECRET=${AUTHELIA_SESSION_SECRET:-}
+      - AUTHELIA_STORAGE_ENCRYPTION_KEY=${AUTHELIA_STORAGE_KEY:-}
+    ports:
+      - "9091:9091"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/authelia/config/authelia:/config
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.00'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

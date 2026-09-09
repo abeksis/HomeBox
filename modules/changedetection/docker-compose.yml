@@ -1,0 +1,108 @@
+# ==========================================
+# HOMEBOX - Change Detection Module
+# Watch a page, get told when it moves.
+# ==========================================
+
+x-homebox:
+  id: changedetection
+  added_at: "2026-09-09"
+  title: "Change Detection"
+  tagline: "Tell me when that page changes"
+  description: "Watches any web page and notifies you when the part you care about changes — a price, a stock line, a council notice, an exam timetable. Point it at a page, select the region visually, choose how often, and it does the checking that would otherwise be you refreshing a tab."
+  icon: "changedetection.svg"
+  category: "productivity"
+  required: false
+  default: false
+  ram: "~600MB"
+  theme:
+    emoji: "🔍"
+    color: "#e91e63"
+    bg: "rgba(233,30,99,0.12)"
+  tips:
+    - "The browser sidecar is what makes it work on modern sites — anything rendered by JavaScript is invisible to a plain fetch"
+    - "Select the exact element with the visual picker rather than watching the whole page, or you get an alert every time an ad rotates"
+    - "It can notify through Gotify, so a price drop can reach your phone without email"
+  env_vars:
+    CHANGEDETECTION_URL:
+      label: "Public URL"
+      type: "text"
+  services:
+    changedetection:
+      friendly_name: "Change Detection"
+      color: "#e91e63"
+      description: "Website change monitoring"
+      icon: "changedetection.svg"
+      port_map: 5000
+      url_scheme: "http"
+      first_login: "No account by default. Set a password under Settings if this box is not only yours."
+    changedetection-browser:
+      friendly_name: "Detection Browser"
+      description: "Headless Chrome for JavaScript pages"
+      internal: true
+
+services:
+  changedetection:
+    image: ghcr.io/dgtlmoon/changedetection.io:0.55.8
+    container_name: changedetection
+    environment:
+      - TZ=${TZ:-UTC}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - PLAYWRIGHT_DRIVER_URL=ws://changedetection-browser:3000
+      - BASE_URL=${CHANGEDETECTION_URL:-http://${HB_HOST_ADDRESS:-localhost}:5000}
+    ports:
+      - "5000:5000"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/changedetection/config/datastore:/datastore
+    depends_on:
+      - changedetection-browser
+    networks:
+      - homebox_proxy
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  changedetection-browser:
+    # Digest-pinned upstream because this image publishes no version tags.
+    # A digest is the only thing here that actually names a build.
+    image: dgtlmoon/sockpuppetbrowser:latest@sha256:7116c61ef9cfce3d48a7efd9355d2fbe19f593ea3cfb52a5ded40ecbcb0a3f9d
+    container_name: changedetection-browser
+    environment:
+      - TZ=${TZ:-UTC}
+      - SCREEN_WIDTH=1920
+      - SCREEN_HEIGHT=1024
+      - SCREEN_DEPTH=16
+      - MAX_CONCURRENT_CHROME_PROCESSES=2
+    # Chrome needs more than the default 64MB of shared memory or tabs crash
+    # in ways that look like the site blocking you.
+    shm_size: 2gb
+    cap_add:
+      - SYS_ADMIN
+    networks:
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true
+  homebox_internal:
+    external: true

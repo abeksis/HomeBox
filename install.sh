@@ -298,40 +298,10 @@ set_env WG_HOST ""
 # admin password.
 #
 # So sweep the modules for everything declared `type: secret` and fill in what
-# is missing. `set_env` never overwrites, so the explicit lines above still win
-# and an existing secret is never regenerated. A new module now brings its own
-# password into being with no edit here — the same rule the CLI and dashboard
-# already follow by reading metadata rather than keeping a catalog.
+# is missing. A new module brings its own password into being with no edit
+# here — the same rule the CLI and dashboard follow, because it is literally
+# the same code now; see the call below.
 # ---------------------------------------------------------------------------
-declared_secrets() {
-  [ -f "$HB_ROOT/dashboard/lib/yaml.js" ] || return 0
-  command -v node >/dev/null 2>&1 || return 0
-  node -e '
-    const fs = require("fs"), path = require("path");
-    const root = process.argv[1];
-    const yaml = require(path.join(root, "dashboard/lib/yaml.js"));
-    const dir = path.join(root, "modules");
-    for (const name of fs.readdirSync(dir)) {
-      const file = path.join(dir, name, "docker-compose.yml");
-      if (!fs.existsSync(file)) continue;
-      let meta;
-      try { meta = yaml.extractTopLevel(fs.readFileSync(file, "utf8"), "x-homebox"); } catch { continue; }
-      const vars = (meta && meta.env_vars) || {};
-      for (const [key, spec] of Object.entries(vars)) {
-        if (!spec || spec.type !== "secret") continue;
-        // `generated: false` means the value comes from somewhere else — a
-        // Cloudflare tunnel token, a third-party API key. Filling those with
-        // 24 random bytes does not produce a working install, it produces a
-        // container that fails to authenticate against a real service and a
-        // user with no way to tell a placeholder from something they set.
-        // Leave the key absent so the Settings field reads empty.
-        if (spec.generated === false) continue;
-        if (/^[A-Z][A-Z0-9_]*$/.test(key)) console.log(key);
-      }
-    }
-  ' "$HB_ROOT" 2>/dev/null || true
-}
-
 # The non-secret settings a module declares a `default:` for, as KEY=VALUE.
 #
 # A secret gets generated; a default has to be WRITTEN, or the key is simply
@@ -364,20 +334,38 @@ declared_defaults() {
   ' "$HB_ROOT" 2>/dev/null || true
 }
 
-added=0
-while IFS= read -r secret; do
-  [ -n "$secret" ] || continue
-  if ! grep -q "^${secret}=" "$ENV_FILE" 2>/dev/null; then
-    set_env "$secret" "$(rand 24)"
+# Delegated to dashboard/lib/secrets.js rather than generated here.
+#
+# There are three callers — this installer, `homebox install`, and the
+# dashboard — and a second copy of the rule in bash drifted the moment a
+# module needed a key that was not 24 url-safe bytes. Laravel's APP_KEY has to
+# be standard base64 of exactly 32; base64url is the wrong alphabet and PHP
+# decodes it to something else instead of refusing. Two generators that
+# disagree give you a box where an app works or does not depending on which
+# path installed it, which is a very quiet bug.
+added="$(HOMEBOX_ROOT="$HB_ROOT" node -e '
+  const fs = require("fs"), path = require("path");
+  const root = process.argv[1];
+  const secrets = require(path.join(root, "dashboard/lib/secrets.js"));
+  const dir = path.join(root, "modules");
+  (async () => {
+    const made = [];
+    for (const name of fs.readdirSync(dir).sort()) {
+      if (!fs.existsSync(path.join(dir, name, "docker-compose.yml"))) continue;
+      made.push(...await secrets.ensureFor(name));
+    }
+    if (made.length) console.log(made.join(" "));
+  })();
+' "$HB_ROOT" 2>/dev/null || true)"
+
+# An `if`, not `[ ... ] && printf`: the latter returns 1 whenever the test is
+# false, and under the `set -e` at the top of this file that aborts the whole
+# install on the ordinary case of having nothing to generate.
+if [ -n "$added" ]; then
+  for secret in $added; do
     printf '  %s %sgenerated for a module that declares it%s\n' "$secret" "$DIM" "$RESET"
-    added=$((added + 1))
-  fi
-done <<EOF
-$(declared_secrets | sort -u)
-EOF
-# `[ ... ] && printf` would return 1 whenever the test is false, and under
-# `set -e` at the top of this file that aborts the install. Same trap as rand().
-if [ "$added" -eq 0 ]; then
+  done
+else
   printf '  %severy module secret already present%s\n' "$DIM" "$RESET"
 fi
 

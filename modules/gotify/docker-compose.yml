@@ -1,0 +1,72 @@
+# ==========================================
+# HOMEBOX - Gotify Module
+# Push notifications to your own phone, from your own server.
+# ==========================================
+
+x-homebox:
+  id: gotify
+  added_at: "2026-09-09"
+  title: "Gotify"
+  tagline: "Your own push notifications"
+  description: "A notification server with an Android app. Anything that can make an HTTP request can send you a push — a backup script, a cron job, Uptime Kuma, a doorbell. No Firebase, no third party, and nothing about what your house is doing leaves the network."
+  icon: "gotify.png"
+  category: "system"
+  required: false
+  default: false
+  ram: "~40MB"
+  theme:
+    emoji: "🔔"
+    color: "#43a047"
+    bg: "rgba(67,160,71,0.12)"
+  tips:
+    - "Create an application in the UI to get a token, then post to /message?token=... from anything. One line of curl is a working notification"
+    - "Uptime Kuma has Gotify as a built-in notification type — point it at this server and paste the token"
+    - "The Android app polls over websocket and needs to reach this address, so from outside the house it wants the VPN or a tunnel"
+  env_vars:
+    GOTIFY_ADMIN_PASSWORD:
+      label: "Admin password"
+      type: "secret"
+      config_editable: false
+  services:
+    gotify:
+      friendly_name: "Gotify"
+      color: "#43a047"
+      description: "Push notification server"
+      icon: "gotify.png"
+      port_map: 8880
+      container_port: 80
+      url_scheme: "http"
+      first_login: "Signs in as admin with the password HomeBox generated at install."
+
+services:
+  gotify:
+    image: gotify/server:2.9.1
+    container_name: gotify
+    environment:
+      - TZ=${TZ:-UTC}
+      - GOTIFY_DEFAULTUSER_NAME=admin
+      - GOTIFY_DEFAULTUSER_PASS=${GOTIFY_ADMIN_PASSWORD:-admin}
+      - GOTIFY_PASSSTRENGTH=10
+    ports:
+      - "8880:80"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/gotify/config/gotify:/app/data
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.50'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true
