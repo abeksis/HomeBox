@@ -264,4 +264,41 @@ async function unmount({ mountpoint }) {
   return { mountpoint: target, removed: true };
 }
 
-module.exports = { list, probe, mount, unmount, StorageError };
+/**
+ * The same trip to the host, but detached — for work that OUTLIVES this
+ * process rather than reporting back to it.
+ *
+ * onHost() above waits for its command, which is right for mounting a share:
+ * the answer is wanted in the response. It is exactly wrong for a platform
+ * update, because that update rebuilds the dashboard. Awaiting it would mean
+ * awaiting the thing that kills you, and `--rm` on a container whose parent
+ * died mid-run takes the update down with it.
+ *
+ * So: detached, named so it can be found afterwards, and it reports through a
+ * file in state/ instead of through a return value. Nothing else about the
+ * namespace entry changes — the reasoning in this file's header still applies.
+ */
+async function onHostDetached(argv, { name = null, env = {} } = {}) {
+  const image = await ownImage();
+  const run = ['run', '--detach', '--privileged', '--pid=host', '--network=host'];
+  if (name) {
+    if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/.test(name)) {
+      throw new StorageError(`refusing a suspicious container name: ${name}`);
+    }
+    run.push('--name', name);
+  }
+  for (const [k, v] of Object.entries(env)) run.push('-e', `${k}=${v}`);
+  run.push(
+    '-v', `${state.ROOT}:${state.ROOT}`,
+    '-v', '/var/run/docker.sock:/var/run/docker.sock',
+    '--entrypoint', 'nsenter',
+    image,
+    '-t', '1', '-m', '-u', '-i', '-n', '-p', '--',
+  );
+  // Deliberately NOT --rm: a detached helper that removes itself leaves no
+  // way to read why it failed. scripts/self-update.sh cleans up its own
+  // predecessors by name on the next run.
+  return composeLib.run('docker', run.concat(argv), { timeout: 60000 });
+}
+
+module.exports = { list, probe, mount, unmount, onHostDetached, StorageError };

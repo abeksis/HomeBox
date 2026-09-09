@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "channels": {
+    "stable": "0.1.0"
+  },
+  "freeze": false,
+  "freeze_reason": null,
+  "min_from_version": "0.1.0",
+  "frontend_only": false
+}
