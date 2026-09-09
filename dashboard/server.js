@@ -1139,6 +1139,16 @@ function scheduleUpdateChecks() {
       // A registry being unreachable is normal and not worth a stack trace in
       // the log of a box that is otherwise fine.
       .catch((err) => console.log(`[homebox] update check skipped: ${err.message}`));
+
+    // HomeBox itself, on the same timer rather than a second one. One outbound
+    // request to a static JSON file, and it is what puts the dot in the nav
+    // without anybody opening the Updates tab to go looking for it.
+    platform.check()
+      .then((r) => {
+        if (r.frozen) console.log(`[homebox] platform updates paused: ${r.reason}`);
+        else if (r.updateAvailable) console.log(`[homebox] HomeBox ${r.latest} is available (on ${r.current})`);
+      })
+      .catch((err) => console.log(`[homebox] platform check skipped: ${err.message}`));
   };
   setTimeout(run, FIRST_CHECK_MS).unref();
   setInterval(run, CHECK_EVERY_MS).unref();

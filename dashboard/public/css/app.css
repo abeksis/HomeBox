@@ -2472,6 +2472,24 @@ code.mono {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
+/* A new release of HomeBox itself, which is different news from a handful of
+   optional image rebuilds — so a different colour, and it pulses once every
+   few seconds rather than sitting there. Red is the ask and red is right: this
+   is the only dot in the interface that means "the thing you are looking at
+   has a newer version". */
+.tab-badge.is-platform {
+  background: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.24);
+  animation: tab-badge-pulse 2.4s ease-in-out infinite;
+}
+@keyframes tab-badge-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.24); }
+  50%      { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tab-badge.is-platform { animation: none; }
+}
+
 .updates-intro-row {
   display: flex;
   align-items: flex-start;

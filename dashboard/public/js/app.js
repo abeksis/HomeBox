@@ -3083,9 +3083,41 @@ document.addEventListener('visibilitychange', () => {
  */
 let updatesState = { available: [], lastCheck: null, applying: false };
 
-function updateBadge(count) {
+/**
+ * The nav dot, refreshed in the background.
+ *
+ * The server checks every six hours on its own and caches the answer, so this
+ * only reads what is already there — no registry traffic, no waiting. Called
+ * on boot and then on a timer, because an update you have to go and look for
+ * is an update that does not get found.
+ *
+ * Two kinds, and they are not the same news:
+ *   app images  — optional rebuilds, accent dot
+ *   HomeBox     — a new release of the thing itself, RED
+ */
+async function refreshUpdateBadge() {
+  try {
+    const [apps, self] = await Promise.all([
+      fetch('api/updates').then((r) => r.json()).catch(() => ({})),
+      fetch('api/platform').then((r) => r.json()).catch(() => ({})),
+    ]);
+    updateBadge((apps.available || []).length, self.updateAvailable ? self.latest : null);
+  } catch { /* leave the dot as it was */ }
+}
+
+function updateBadge(count, platformVersion = null) {
   const badge = $('#updates-badge');
   if (!badge) return;
+
+  // A HomeBox release outranks any number of image rebuilds, and says so in a
+  // different colour. Rebuilds are housekeeping; this is a new version of the
+  // thing the box IS.
+  badge.classList.toggle('is-platform', !!platformVersion);
+  if (platformVersion) {
+    badge.hidden = false;
+    badge.title = `HomeBox ${platformVersion} is available`;
+    return;
+  }
   // A dot, not a number. These are optional rebuilds, and a red "12" reads
   // like twelve things are broken — the source made the same call.
   //
@@ -4198,12 +4230,14 @@ async function init() {
   fetch('api/activity?limit=25').then((r) => r.json()).then((d) => renderActivity(d.entries)).catch(() => {});
   // The nav dot, from the cached answer only. Boot must never wait on a
   // dozen registry round-trips, and it must never set them off either.
-  fetch('api/updates').then((r) => r.json())
-    .then((d) => updateBadge((d.available || []).length)).catch(() => {});
+  refreshUpdateBadge();
   loadInsights();
   scheduleInsights();
   connect();
   setInterval(() => loadModules(true), 20000);
+  // Every five minutes, from the cached answer only. The server does the
+  // actual checking on its own schedule; this just notices that it did.
+  setInterval(refreshUpdateBadge, 300000);
 }
 
 boot();
