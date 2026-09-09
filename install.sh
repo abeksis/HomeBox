@@ -221,6 +221,26 @@ set_env() {
   printf '%s=%s\n' "$key" "$value" >> "$ENV_FILE"
 }
 
+# The deliberate exception to the rule above: a value HomeBox OWNS, which has
+# to track the code rather than whatever it was on the day this box was built.
+#
+# There is exactly one so far — HB_VERSION — and the bar for adding another is
+# high, because every key here is a key a user cannot keep. Anything a person
+# might reasonably have customised must go through set_env and stay theirs.
+#
+# Rewrites in place rather than appending. Compose takes the last occurrence,
+# so appending would work and would also leave a .env that accumulates
+# duplicates for whoever opens it at one in the morning.
+env_force() {
+  local key="$1" value="$2"
+  if grep -q "^${key}=" "$ENV_FILE" 2>/dev/null; then
+    local tmp="$ENV_FILE.tmp-$$"
+    sed "s|^${key}=.*|${key}=${value}|" "$ENV_FILE" > "$tmp" && cat "$tmp" > "$ENV_FILE" && rm -f "$tmp"
+  else
+    printf '%s=%s\n' "$key" "$value" >> "$ENV_FILE"
+  fi
+}
+
 step "Generating $ENV_FILE"
 if [ ! -f "$ENV_FILE" ]; then
   : > "$ENV_FILE"
@@ -287,6 +307,18 @@ set_env WG_ADMIN_PASSWORD "$(rand 20)"
 # Blank on purpose: only you know the address clients reach this box at
 # from outside, and a guess here hands out VPN configs that point nowhere.
 set_env WG_HOST ""
+
+# Which release this box is on, tracking VERSION rather than the day it was
+# built — hence env_force.
+#
+# modules/dashboard/docker-compose.yml has always said
+# `homebox-dashboard:${HB_VERSION:-local}`, and nothing ever set it, so every
+# build overwrote the same `:local` tag. That means the build for a NEW release
+# destroys the image the OLD one was running — the one a rollback needs. With
+# this set, 0.2.0 builds `:0.2.0`, 0.1.0's image stays on disk, and going back
+# is a retag rather than a rebuild that has to succeed on a box where a build
+# just failed.
+env_force HB_VERSION "$(cat "$HB_ROOT/VERSION" 2>/dev/null || echo 0.0.0)"
 
 # ---------------------------------------------------------------------------
 # Anything else a module declares.
@@ -386,6 +418,38 @@ EOF
 $SUDO chown "$HB_USER:$HB_USER" "$ENV_FILE"
 chmod 600 "$ENV_FILE"
 printf '  %s secrets, mode 600\n' "$(grep -c '=' "$ENV_FILE")"
+
+# ---------------------------------------------------------------------------
+# Migrations: baseline a NEW box, never replay history on it.
+#
+# A migration carries an existing box forward — it changes an .env value that
+# set_env cannot touch, moves a config file a new release expects elsewhere.
+# On a box that is being created right now, at this version, there is nothing
+# to carry forward: the tree is already in its final shape.
+#
+# So a fresh install marks every migration present in the tree as DONE without
+# running any of them. Get this wrong and a friend installing at 0.9.0 runs
+# thirty historical migrations against a tree that was born correct, which is
+# the classic way a migration system destroys a working install on day one.
+#
+# `$FRESH` is decided at the top of this script by whether .env existed before
+# it ran, which is the same signal the preflight banner uses.
+# ---------------------------------------------------------------------------
+if [ -d "$HB_ROOT/migrations" ]; then
+  MIGRATIONS_STATE="$HB_ROOT/state/migrations-done.json"
+  if [ ! -f "$MIGRATIONS_STATE" ] && [ "$PF_MODE" = "fresh install" ]; then
+    node -e '
+      const fs = require("fs"), path = require("path");
+      const root = process.argv[1];
+      const dir = path.join(root, "migrations");
+      const names = fs.readdirSync(dir).filter((n) => fs.existsSync(path.join(dir, n, "up.sh")));
+      fs.writeFileSync(path.join(root, "state", "migrations-done.json"), JSON.stringify(names.sort(), null, 2) + "\n");
+      if (names.length) console.log(names.length);
+    ' "$HB_ROOT" 2>/dev/null | while read -r n; do
+      printf '  %s%s migrations marked done — a new box has nothing to carry forward%s\n' "$DIM" "$n" "$RESET"
+    done
+  fi
+fi
 
 # -------------------------------------------------------------- 6. networks
 
