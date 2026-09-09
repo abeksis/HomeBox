@@ -1,0 +1,117 @@
+# ==========================================
+# HOMEBOX - Ghost Module
+# A publishing platform, not a CMS with a blog bolted on.
+# ==========================================
+
+x-homebox:
+  id: ghost
+  added_at: "2026-09-09"
+  title: "Ghost"
+  tagline: "Writing, published properly"
+  description: "A focused publishing platform: a genuinely good editor, fast pages, memberships and email newsletters built in. Where WordPress is a general-purpose CMS you shape into a site, Ghost is a site for writing and already is one."
+  icon: "ghost.png"
+  category: "productivity"
+  required: false
+  default: false
+  ram: "~700MB"
+  theme:
+    emoji: "👻"
+    color: "#15171a"
+    bg: "rgba(255,255,255,0.10)"
+  tips:
+    - "Create the owner account at /ghost on the first visit, before anyone else reaches it"
+    - "The public URL must be right before you publish anything: Ghost writes it into every post's links and into newsletter emails, and changing it later means rewriting content"
+    - "Newsletters need a Mailgun account. Without one the members feature works and the sending half quietly does not"
+  env_vars:
+    GHOST_URL:
+      label: "Public URL"
+      type: "text"
+    GHOST_DB_PASSWORD:
+      label: "Database password"
+      type: "secret"
+      config_editable: false
+      dangerous: true
+  services:
+    ghost:
+      friendly_name: "Ghost"
+      color: "#738a94"
+      description: "Publishing platform"
+      icon: "ghost.png"
+      port_map: 2368
+      url_scheme: "http"
+      first_login: "Create the owner account at /ghost on the first visit."
+    ghost-db:
+      friendly_name: "Ghost Database"
+      description: "MySQL holding the posts"
+      internal: true
+
+services:
+  ghost:
+    image: ghost:6.57.1-alpine
+    container_name: ghost
+    environment:
+      - NODE_ENV=production
+      - database__client=mysql
+      - database__connection__host=ghost-db
+      - database__connection__user=ghost
+      - database__connection__password=${GHOST_DB_PASSWORD:-ghost}
+      - database__connection__database=ghost
+      # Baked into every link Ghost generates, including in sent email.
+      # Getting it right before the first post is much easier than after.
+      - url=${GHOST_URL:-http://${HB_HOST_ADDRESS:-localhost}:2368}
+    ports:
+      - "2368:2368"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/ghost/config/content:/var/lib/ghost/content
+    depends_on:
+      - ghost-db
+    networks:
+      - homebox_proxy
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  ghost-db:
+    image: mysql:8.4.11
+    container_name: ghost-db
+    environment:
+      - TZ=${TZ:-UTC}
+      - MYSQL_ROOT_PASSWORD=${GHOST_DB_PASSWORD:-ghost}
+      - MYSQL_DATABASE=ghost
+      - MYSQL_USER=ghost
+      - MYSQL_PASSWORD=${GHOST_DB_PASSWORD:-ghost}
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/ghost/config/mysql:/var/lib/mysql
+    networks:
+      - homebox_internal
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true
+  homebox_internal:
+    external: true

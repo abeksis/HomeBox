@@ -1,0 +1,66 @@
+# ==========================================
+# HOMEBOX - Web App Module
+# Somewhere to put a folder of HTML and have it be a site.
+# ==========================================
+
+x-homebox:
+  id: webapp
+  added_at: "2026-09-09"
+  title: "Static Site"
+  tagline: "Drop files in, get a website"
+  description: "An nginx serving one folder on the shared pool. Put HTML, a built React app, a set of photos or a PDF in there and it is reachable on the network — no build step, no CMS, no database. Useful for the small things that do not deserve WordPress."
+  icon: "nginx.svg"
+  category: "productivity"
+  required: false
+  default: false
+  ram: "~20MB"
+  theme:
+    emoji: "🌍"
+    color: "#009639"
+    bg: "rgba(0,150,57,0.12)"
+  tips:
+    - "The folder is www/ on the pool — File Browser is the easy way to put things in it without SSH"
+    - "index.html is the page you get at the root. Without one, nginx returns 403 rather than listing the directory"
+    - "It serves whatever is there to anyone who can reach the port, with no login. Do not use it for anything you would not put on a noticeboard"
+  services:
+    webapp:
+      friendly_name: "Static Site"
+      color: "#009639"
+      description: "Static file server"
+      icon: "nginx.svg"
+      port_map: 8095
+      container_port: 80
+      url_scheme: "http"
+      first_login: "No account of any kind — it serves files and nothing else."
+
+services:
+  webapp:
+    image: nginx:1.30-alpine
+    container_name: webapp
+    environment:
+      - TZ=${TZ:-UTC}
+    ports:
+      - "8095:80"
+    volumes:
+      # Read-only: a web server that can write to what it serves is how a
+      # static site stops being static.
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}/${HB_WEBAPP_DIR:-www}:/usr/share/nginx/html:ro
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.50'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

@@ -1,0 +1,164 @@
+# ==========================================
+# HOMEBOX - Paperless Module
+# Scan it once, find it forever.
+# ==========================================
+
+x-homebox:
+  id: paperless
+  added_at: "2026-09-09"
+  title: "Paperless-ngx"
+  tagline: "The filing cabinet, searchable"
+  description: "Drop a scan into a folder and it comes out OCR'd, tagged, dated and full-text searchable. It learns which correspondent and document type to apply from what you have already filed, so after fifty documents it is usually right without being told. Bills, contracts, warranties and letters stop being a box in a cupboard."
+  icon: "paperless-ngx.svg"
+  category: "productivity"
+  required: false
+  default: false
+  ram: "~1GB"
+  theme:
+    emoji: "🗄️"
+    color: "#17541f"
+    bg: "rgba(23,84,31,0.12)"
+  tips:
+    - "Anything dropped in the consume folder is imported and then DELETED from it — that is by design, the original now lives in the archive"
+    - "Set the OCR language in Settings if your documents are not English; it defaults to English and gets Hebrew badly wrong"
+    - "The admin account is created on the first start from the credentials HomeBox generated — `homebox secrets paperless` prints them"
+  env_vars:
+    PAPERLESS_ADMIN_PASSWORD:
+      label: "Admin password"
+      type: "secret"
+      config_editable: false
+    PAPERLESS_SECRET_KEY:
+      label: "Session signing key"
+      type: "secret"
+      config_editable: false
+      dangerous: true
+    PAPERLESS_DB_PASSWORD:
+      label: "Database password"
+      type: "secret"
+      config_editable: false
+      dangerous: true
+  services:
+    paperless:
+      friendly_name: "Paperless-ngx"
+      color: "#17541f"
+      description: "Document archive with OCR"
+      icon: "paperless-ngx.svg"
+      port_map: 8010
+      container_port: 8000
+      url_scheme: "http"
+      first_login: "Signs in with the admin account HomeBox generated at install."
+    paperless-db:
+      friendly_name: "Paperless Database"
+      description: "Postgres holding the index"
+      icon: "postgres.svg"
+      internal: true
+    paperless-redis:
+      friendly_name: "Paperless Queue"
+      description: "Redis for the OCR job queue"
+      internal: true
+
+services:
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:3.1.1
+    container_name: paperless
+    environment:
+      - TZ=${TZ:-UTC}
+      - USERMAP_UID=${PUID:-1000}
+      - USERMAP_GID=${PGID:-1000}
+      - PAPERLESS_REDIS=redis://paperless-redis:6379
+      - PAPERLESS_DBHOST=paperless-db
+      - PAPERLESS_DBNAME=paperless
+      - PAPERLESS_DBUSER=paperless
+      - PAPERLESS_DBPASS=${PAPERLESS_DB_PASSWORD:-paperless}
+      - PAPERLESS_SECRET_KEY=${PAPERLESS_SECRET_KEY:-}
+      - PAPERLESS_ADMIN_USER=${PAPERLESS_ADMIN_USER:-admin}
+      - PAPERLESS_ADMIN_PASSWORD=${PAPERLESS_ADMIN_PASSWORD:-}
+      - PAPERLESS_TIME_ZONE=${TZ:-UTC}
+      - PAPERLESS_URL=${PAPERLESS_URL:-}
+    ports:
+      - "8010:8000"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/paperless/config/data:/usr/src/paperless/data
+      # The archive itself — original plus the OCR'd copy of every document.
+      # This is the half that matters in a backup.
+      - ${HB_ROOT:-/opt/homebox}/modules/paperless/config/media:/usr/src/paperless/media
+      - ${HB_ROOT:-/opt/homebox}/modules/paperless/config/export:/usr/src/paperless/export
+      # Watched folder. A file dropped here is imported and removed.
+      - ${HB_ROOT:-/opt/homebox}/modules/paperless/config/consume:/usr/src/paperless/consume
+    depends_on:
+      - paperless-db
+      - paperless-redis
+    networks:
+      - homebox_proxy
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+          cpus: '4.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  paperless-db:
+    image: postgres:16-alpine
+    container_name: paperless-db
+    environment:
+      - TZ=${TZ:-UTC}
+      - POSTGRES_USER=paperless
+      - POSTGRES_PASSWORD=${PAPERLESS_DB_PASSWORD:-paperless}
+      - POSTGRES_DB=paperless
+      - POSTGRES_INITDB_ARGS=--data-checksums
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/paperless/config/postgres:/var/lib/postgresql/data
+    shm_size: 128mb
+    networks:
+      - homebox_internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paperless -d paperless"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  paperless-redis:
+    image: redis:7.4.11-alpine
+    container_name: paperless-redis
+    environment:
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/paperless/config/redis:/data
+    networks:
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.50'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true
+  homebox_internal:
+    external: true

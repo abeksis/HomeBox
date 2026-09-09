@@ -1,0 +1,117 @@
+# ==========================================
+# HOMEBOX - BookStack Module
+# A wiki organised the way a shelf is.
+# ==========================================
+
+x-homebox:
+  id: bookstack
+  added_at: "2026-09-09"
+  title: "BookStack"
+  tagline: "Documentation you will actually find again"
+  description: "A wiki with real structure — shelves hold books, books hold chapters, chapters hold pages — instead of a flat pile of documents and a search box. Good for how the house works: which breaker is which, what the router password scheme is, how to restore this box."
+  icon: "bookstack.svg"
+  category: "productivity"
+  required: false
+  default: false
+  ram: "~500MB"
+  theme:
+    emoji: "📗"
+    color: "#0288d1"
+    bg: "rgba(2,136,209,0.12)"
+  tips:
+    - "Ships with admin@admin.com / password. Change both on the first visit — it is a fixed default, not something generated for you"
+    - "APP_URL has to match the address you actually use, or the login form posts to the wrong host and silently fails"
+    - "Write the recovery notes for THIS box somewhere else too. Documentation that only exists on the machine it describes is no help the day that machine is down"
+  env_vars:
+    BOOKSTACK_URL:
+      label: "Public URL"
+      type: "text"
+    BOOKSTACK_DB_PASSWORD:
+      label: "Database password"
+      type: "secret"
+      config_editable: false
+      dangerous: true
+  services:
+    bookstack:
+      friendly_name: "BookStack"
+      color: "#0288d1"
+      description: "Wiki and documentation"
+      icon: "bookstack.svg"
+      port_map: 6875
+      container_port: 80
+      url_scheme: "http"
+      first_login: "Fixed default of admin@admin.com / password. Change it immediately."
+    bookstack-db:
+      friendly_name: "BookStack Database"
+      description: "MariaDB holding the pages"
+      internal: true
+
+services:
+  bookstack:
+    image: linuxserver/bookstack:26.05.20260608
+    container_name: bookstack
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      # Must match how the site is reached. A mismatch breaks login and image
+      # uploads in ways that look like anything except a URL problem.
+      - APP_URL=${BOOKSTACK_URL:-http://${HB_HOST_ADDRESS:-localhost}:6875}
+      - DB_HOST=bookstack-db
+      - DB_PORT=3306
+      - DB_DATABASE=bookstack
+      - DB_USERNAME=bookstack
+      - DB_PASSWORD=${BOOKSTACK_DB_PASSWORD:-bookstack}
+    ports:
+      - "6875:80"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/bookstack/config/bookstack:/config
+    depends_on:
+      - bookstack-db
+    networks:
+      - homebox_proxy
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  bookstack-db:
+    image: linuxserver/mariadb:10.11.8
+    container_name: bookstack-db
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      - MYSQL_ROOT_PASSWORD=${BOOKSTACK_DB_PASSWORD:-bookstack}
+      - MYSQL_DATABASE=bookstack
+      - MYSQL_USER=bookstack
+      - MYSQL_PASSWORD=${BOOKSTACK_DB_PASSWORD:-bookstack}
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/bookstack/config/mariadb:/config
+    networks:
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true
+  homebox_internal:
+    external: true

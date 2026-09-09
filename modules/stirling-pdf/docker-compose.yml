@@ -1,0 +1,69 @@
+# ==========================================
+# HOMEBOX - Stirling PDF Module
+# Every "free online PDF tool", without uploading anything.
+# ==========================================
+
+x-homebox:
+  id: stirling-pdf
+  added_at: "2026-09-09"
+  title: "Stirling PDF"
+  tagline: "PDF tools that never leave the house"
+  description: "Merge, split, rotate, compress, sign, OCR, convert to and from Office formats, remove passwords, redact. The same set of things every free PDF site offers — except the document stays on this box instead of being uploaded to a stranger, which for a contract or a payslip is the whole point."
+  icon: "stirling-pdf.svg"
+  category: "productivity"
+  required: false
+  default: false
+  ram: "~800MB"
+  theme:
+    emoji: "📄"
+    color: "#b71c1c"
+    bg: "rgba(183,28,28,0.12)"
+  tips:
+    - "No login by default — anything that reaches the page can process files. Turn on security in Settings if this box is not only yours"
+    - "OCR and Office conversion pull extra language and LibreOffice packs the first time you use them, so the first run of those is slow"
+    - "Files are processed and handed back, not stored. There is no library to go and find something in later"
+  services:
+    stirling-pdf:
+      friendly_name: "Stirling PDF"
+      color: "#b71c1c"
+      description: "PDF toolbox"
+      icon: "stirling-pdf.svg"
+      port_map: 8084
+      container_port: 8080
+      url_scheme: "http"
+      first_login: "No account by default — it opens straight into the tool list."
+
+services:
+  stirling-pdf:
+    image: stirlingtools/stirling-pdf:2.14.3
+    container_name: stirling-pdf
+    environment:
+      - TZ=${TZ:-UTC}
+      - DOCKER_ENABLE_SECURITY=false
+      - LANGS=en_GB,he_IL
+    ports:
+      - "8084:8080"
+    volumes:
+      # OCR language data, which is what makes the first OCR run slow and
+      # every one after it fast.
+      - ${HB_ROOT:-/opt/homebox}/modules/stirling-pdf/config/training:/usr/share/tessdata
+      - ${HB_ROOT:-/opt/homebox}/modules/stirling-pdf/config/configs:/configs
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.00'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

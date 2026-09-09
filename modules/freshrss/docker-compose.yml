@@ -1,0 +1,68 @@
+# ==========================================
+# HOMEBOX - FreshRSS Module
+# The feeds, without the algorithm.
+# ==========================================
+
+x-homebox:
+  id: freshrss
+  added_at: "2026-09-09"
+  title: "FreshRSS"
+  tagline: "Read what you chose to read"
+  description: "An RSS reader that fetches on a schedule and keeps everything, so a site you follow is a list of articles in the order they were published rather than whatever a feed ranked highest today. Speaks the Google Reader API, so most mobile RSS apps connect to it directly."
+  icon: "freshrss.svg"
+  category: "productivity"
+  required: false
+  default: false
+  ram: "~150MB"
+  theme:
+    emoji: "📰"
+    color: "#ff6600"
+    bg: "rgba(255,102,0,0.12)"
+  tips:
+    - "The setup wizard on the first visit creates the admin account and picks the database — SQLite is the right answer for one person"
+    - "Turn on the API under Settings then Authentication to use Reeder, FeedMe or NetNewsWire against it"
+    - "It refreshes on a cron inside the container; a feed that looks stuck is usually the site's feed, not FreshRSS"
+  services:
+    freshrss:
+      friendly_name: "FreshRSS"
+      color: "#ff6600"
+      description: "RSS and Atom reader"
+      icon: "freshrss.svg"
+      port_map: 8070
+      container_port: 80
+      url_scheme: "http"
+      first_login: "A setup wizard on the first visit creates the admin account."
+
+services:
+  freshrss:
+    image: freshrss/freshrss:1.29.1
+    container_name: freshrss
+    environment:
+      - TZ=${TZ:-UTC}
+      # Two odd minutes past the hour rather than on the hour: every feed
+      # reader in the world fetches at :00, and some publishers rate-limit it.
+      - CRON_MIN=13,43
+    ports:
+      - "8070:80"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/freshrss/config/data:/var/www/FreshRSS/data
+      - ${HB_ROOT:-/opt/homebox}/modules/freshrss/config/extensions:/var/www/FreshRSS/extensions
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.00'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

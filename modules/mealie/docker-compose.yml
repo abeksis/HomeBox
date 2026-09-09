@@ -1,0 +1,75 @@
+# ==========================================
+# HOMEBOX - Mealie Module
+# Recipes, meal plans, and a shopping list that builds itself.
+# ==========================================
+
+x-homebox:
+  id: mealie
+  added_at: "2026-09-09"
+  title: "Mealie"
+  tagline: "Recipes without the life story"
+  description: "Paste a recipe URL and it imports the ingredients and method, leaving behind the four paragraphs about somebody's childhood summers. Plan a week from what you have saved and it produces the shopping list, grouped the way a supermarket is laid out."
+  icon: "mealie.svg"
+  category: "productivity"
+  required: false
+  default: false
+  ram: "~400MB"
+  theme:
+    emoji: "🍲"
+    color: "#e58325"
+    bg: "rgba(229,131,37,0.12)"
+  tips:
+    - "The first account you create on the first visit becomes the admin"
+    - "Import by URL works on most recipe sites; when it does not, the manual editor takes a paste of the ingredient list and splits it for you"
+    - "BASE_URL has to match the address you use, or the share links it generates point somewhere unreachable"
+  env_vars:
+    MEALIE_URL:
+      label: "Public URL"
+      type: "text"
+  services:
+    mealie:
+      friendly_name: "Mealie"
+      color: "#e58325"
+      description: "Recipe manager and meal planner"
+      icon: "mealie.svg"
+      port_map: 9925
+      container_port: 9000
+      url_scheme: "http"
+      first_login: "The first account you create becomes the admin."
+
+services:
+  mealie:
+    image: ghcr.io/mealie-recipes/mealie:v3.20.1
+    container_name: mealie
+    environment:
+      - TZ=${TZ:-UTC}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - ALLOW_SIGNUP=false
+      - BASE_URL=${MEALIE_URL:-http://${HB_HOST_ADDRESS:-localhost}:9925}
+      # SQLite by default, which is the right call for a household: one file
+      # to back up, and nothing here is write-heavy enough to need Postgres.
+      - DB_ENGINE=sqlite
+    ports:
+      - "9925:9000"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/mealie/config/mealie:/app/data
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2.00'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

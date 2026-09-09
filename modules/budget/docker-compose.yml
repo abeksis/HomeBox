@@ -1,0 +1,64 @@
+# ==========================================
+# HOMEBOX - Budget Module
+# Actual: envelope budgeting, with the ledger on your own disk.
+# ==========================================
+
+x-homebox:
+  id: budget
+  added_at: "2026-09-09"
+  title: "Actual Budget"
+  tagline: "Every shekel given a job"
+  description: "Zero-based envelope budgeting — you assign every unit of income to a category until nothing is unallocated, which is what makes it work where a spending tracker does not. Fast, local-first, and syncs to the phone and desktop apps through this server. Your financial history never reaches anyone else's cloud."
+  icon: "actual-budget.webp"
+  category: "productivity"
+  required: false
+  default: false
+  ram: "~200MB"
+  theme:
+    emoji: "💰"
+    color: "#6b46c1"
+    bg: "rgba(107,70,193,0.12)"
+  tips:
+    - "The first visit sets the server password. The budget file itself is encrypted with a separate passphrase you choose — lose that one and the file is unreadable, including to you"
+    - "Bank sync goes through GoCardless or SimpleFIN and needs an account with them; without it, import a QFX or CSV from the bank"
+    - "This holds your complete financial history. It is the module where a tested restore matters, not just a backup"
+  services:
+    budget:
+      friendly_name: "Actual Budget"
+      color: "#6b46c1"
+      description: "Envelope budgeting"
+      icon: "actual-budget.webp"
+      port_map: 5006
+      url_scheme: "http"
+      first_login: "The first visit asks you to set the server password."
+
+services:
+  budget:
+    image: actualbudget/actual-server:26.7.0
+    container_name: budget
+    environment:
+      - TZ=${TZ:-UTC}
+      - ACTUAL_UPLOAD_FILE_SIZE_LIMIT_MB=100
+    ports:
+      - "5006:5006"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/budget/config/actual:/data
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.00'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

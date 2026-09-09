@@ -1,0 +1,110 @@
+# ==========================================
+# HOMEBOX - WordPress Module
+# The CMS that runs a third of the web, on your own box.
+# ==========================================
+
+x-homebox:
+  id: wordpress
+  added_at: "2026-09-09"
+  title: "WordPress"
+  tagline: "A site you can shape into anything"
+  description: "The general-purpose CMS, with an enormous library of themes and plugins for whatever the site needs to be — a shop, a portfolio, a club's noticeboard. More to configure than Ghost, and correspondingly more that it can become."
+  icon: "wordpress.svg"
+  category: "productivity"
+  required: false
+  default: false
+  ram: "~800MB"
+  theme:
+    emoji: "🌐"
+    color: "#21759b"
+    bg: "rgba(33,117,155,0.12)"
+  tips:
+    - "The installer on the first visit creates the admin account — reach it before anything else on the network does"
+    - "A WordPress facing the internet needs updating like nothing else here. If you publish it through a tunnel, keep automatic updates on"
+    - "Plugins are the usual way a WordPress gets compromised. Install few, from the official directory, and remove what you stop using rather than deactivating it"
+  env_vars:
+    WORDPRESS_DB_PASSWORD:
+      label: "Database password"
+      type: "secret"
+      config_editable: false
+      dangerous: true
+  services:
+    wordpress:
+      friendly_name: "WordPress"
+      color: "#21759b"
+      description: "Content management system"
+      icon: "wordpress.svg"
+      port_map: 8081
+      container_port: 80
+      url_scheme: "http"
+      first_login: "The installer on the first visit creates the admin account."
+    wordpress-db:
+      friendly_name: "WordPress Database"
+      description: "MariaDB holding the site"
+      internal: true
+
+services:
+  wordpress:
+    image: wordpress:6.9.4
+    container_name: wordpress
+    environment:
+      - WORDPRESS_DB_HOST=wordpress-db
+      - WORDPRESS_DB_USER=wordpress
+      - WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD:-wordpress}
+      - WORDPRESS_DB_NAME=wordpress
+    ports:
+      - "8081:80"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/wordpress/config/html:/var/www/html
+    depends_on:
+      - wordpress-db
+    networks:
+      - homebox_proxy
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  wordpress-db:
+    image: mariadb:11.8.9
+    container_name: wordpress-db
+    environment:
+      - TZ=${TZ:-UTC}
+      - MARIADB_ROOT_PASSWORD=${WORDPRESS_DB_PASSWORD:-wordpress}
+      - MARIADB_DATABASE=wordpress
+      - MARIADB_USER=wordpress
+      - MARIADB_PASSWORD=${WORDPRESS_DB_PASSWORD:-wordpress}
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/wordpress/config/mariadb:/var/lib/mysql
+    networks:
+      - homebox_internal
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true
+  homebox_internal:
+    external: true
