@@ -20,7 +20,8 @@ x-homebox:
     bg: "rgba(48,80,255,0.12)"
   tips:
     - "Add it to Firefox or Chrome as a search engine with the URL http://<this box>:8088/search?q=%s"
-    - "Google rate-limits an instance that queries it too often and quietly stops returning results. If Google results vanish, that is why — turn it off in Preferences and lean on the other engines"
+    - "A brand new instance often gets NO RESULTS at first, and that is the engines, not this. DuckDuckGo and Brave answer an unfamiliar instance with a CAPTCHA — seen on a fresh install here — and SearXNG reports it honestly rather than pretending. It settles as the instance is used; meanwhile turn the sulking engines off in Preferences and lean on the ones that answer"
+    - "Check which engine failed and why under Preferences then Engines, or in the log: homebox logs searxng"
     - "The secret key is generated at install and signs the preference cookies; it is not a login"
     - "There is no account and no history. Settings are a cookie in your own browser, so they do not follow you to another device"
   env_vars:
