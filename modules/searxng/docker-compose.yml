@@ -61,11 +61,19 @@ services:
     cap_drop:
       - ALL
     cap_add:
-      # It drops to an unprivileged user after binding, which is the only
-      # reason it needs these two back.
+      # The entrypoint runs as root, chowns /etc/searxng to the searxng user,
+      # then writes settings.yml into it from a template — still as root.
+      #
+      # DAC_OVERRIDE is what makes that last step possible, and leaving it out
+      # is not a small hardening win, it is a crash loop: root that has given
+      # away a directory cannot write to it again without this. The failure
+      # reads "cp: can't create '/etc/searxng/settings.yml': Permission
+      # denied" from a process that is uid 0, which is a confusing sentence
+      # until you remember capabilities exist.
       - CHOWN
       - SETGID
       - SETUID
+      - DAC_OVERRIDE
     networks:
       - homebox_proxy
     deploy:
