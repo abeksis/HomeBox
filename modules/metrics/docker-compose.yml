@@ -1,0 +1,107 @@
+# ==========================================
+# HOMEBOX - Metrics Module
+# Beszel: what every machine is actually doing, on one page.
+# ==========================================
+
+x-homebox:
+  id: metrics
+  added_at: "2026-09-09"
+  title: "Beszel"
+  tagline: "Every box, one page"
+  description: "CPU, memory, disk, network and temperatures for this box and any other machine you point an agent at, with history and alerts. Uptime Kuma tells you a service stopped answering; Beszel tells you the disk filled up an hour before it did."
+  icon: "beszel.svg"
+  category: "system"
+  required: false
+  default: false
+  ram: "~90MB"
+  theme:
+    emoji: "📈"
+    color: "#5b8def"
+    bg: "rgba(91,141,239,0.12)"
+  tips:
+    - "The hub creates its admin account on the first visit, like Uptime Kuma — nothing is generated for you here"
+    - "The agent on this box is added in the hub as HOST:45876, using the box's LAN address rather than localhost: the hub is in a container and localhost there means the container"
+    - "The agent needs the hub's public key, which the hub only creates on its first start. Install, open the hub, copy the key it shows when adding a system, and HomeBox picks it up from Settings"
+    - "The whole hub is one directory — config/beszel — so moving a Beszel from another machine is a file copy, not an export"
+  env_vars:
+    BESZEL_AGENT_KEY:
+      label: "Hub public key for the agent"
+      type: "secret"
+      # The hub issues this on its first start. Generating 24 random bytes
+      # here would just be an agent that cannot authenticate.
+      generated: false
+  services:
+    beszel:
+      friendly_name: "Beszel"
+      color: "#5b8def"
+      description: "Metrics hub"
+      icon: "beszel.svg"
+      port_map: 8090
+      url_scheme: "http"
+      first_login: "Beszel creates its admin account on the first visit — pick an email and password there."
+    beszel-agent:
+      friendly_name: "Beszel Agent"
+      description: "Reports this box's metrics"
+      icon: "beszel.svg"
+      # Listens on the host at 45876 for the hub, and has no page of its own.
+      internal: true
+
+services:
+  beszel:
+    image: henrygd/beszel:0.19.0
+    container_name: beszel
+    ports:
+      - "8090:8090"
+    environment:
+      - TZ=${TZ:-UTC}
+    volumes:
+      # PocketBase underneath, so this one directory IS the hub: systems,
+      # history, alerts and the SSH key it authenticates agents with.
+      - ${HB_ROOT:-/opt/homebox}/modules/metrics/config/beszel:/beszel_data
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.00'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  beszel-agent:
+    image: henrygd/beszel-agent:0.19.0
+    container_name: beszel-agent
+    # Host networking is the point of an agent: from inside a bridge network
+    # it would report the container's CPU and the container's filesystem,
+    # which is not what anyone installs this to see.
+    network_mode: host
+    environment:
+      - TZ=${TZ:-UTC}
+      - LISTEN=45876
+      - KEY=${BESZEL_AGENT_KEY:-}
+    volumes:
+      # Read-only, and only so the agent can name the containers it reports.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.50'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true
