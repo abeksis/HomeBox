@@ -188,7 +188,14 @@ command -v git >/dev/null 2>&1 || fail "git is not installed on this host"
 
 # A friend who hand-edited a module should be told, not silently overwritten.
 # --force on checkout would discard their work without a word.
-dirty="$(git -C "$HB_ROOT" status --porcelain 2>/dev/null | head -20)"
+#
+# core.fileMode=false, because a mode change is not somebody's edit. bootstrap.sh
+# runs `chmod +x homebox install.sh scripts/*.sh` on every install, so any script
+# whose recorded mode is 0644 shows up as modified on EVERY box — and the first
+# update anyone tried was refused because of exactly that, on a file nobody had
+# touched. The permission bit is the installer's business; the content is the
+# user's, and only the content is worth stopping for.
+dirty="$(git -C "$HB_ROOT" -c core.fileMode=false status --porcelain 2>/dev/null | head -20)"
 if [ -n "$dirty" ]; then
   fail "the working tree has local changes, so an update would discard them: $(printf '%s' "$dirty" | awk '{print $2}' | tr '\n' ' ')"
 fi
