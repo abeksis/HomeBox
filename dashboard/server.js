@@ -1143,7 +1143,18 @@ function scheduleUpdateChecks() {
     // HomeBox itself, on the same timer rather than a second one. One outbound
     // request to a static JSON file, and it is what puts the dot in the nav
     // without anybody opening the Updates tab to go looking for it.
-    platform.check()
+    // force: this IS the thing that refreshes the cache.
+    //
+    // check() skips the network when the cached answer is younger than
+    // STALE_AFTER_MS, which is right for the UI — a page load should not fire
+    // a request — and exactly wrong here. STALE_AFTER_MS and CHECK_EVERY_MS
+    // are both six hours, so the scheduled run woke up to find a cache aged
+    // precisely at the threshold and usually returned it untouched. The
+    // scheduler was guarded against doing its only job, and a release could
+    // sit unnoticed indefinitely: anything that refreshed the cache — opening
+    // the tab, `self-update --check` — pushed the next real fetch out by
+    // another six hours.
+    platform.check({ force: true })
       .then((r) => {
         if (r.frozen) console.log(`[homebox] platform updates paused: ${r.reason}`);
         else if (r.updateAvailable) console.log(`[homebox] HomeBox ${r.latest} is available (on ${r.current})`);
