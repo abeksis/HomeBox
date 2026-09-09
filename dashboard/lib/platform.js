@@ -266,6 +266,17 @@ async function status() {
     readProgress(),
     readHistory(),
   ]);
+
+  // Never checked, so there is nothing to report and nothing to report it.
+  //
+  // This is not theoretical: the check was not on any schedule before 0.2.7,
+  // so a box could sit for weeks with an update waiting and a card that never
+  // appeared, because the card renders the CACHED answer and the cache was
+  // never written. Kick one off in the background — this call still returns
+  // immediately with what it has, and the next one has something to say.
+  if (!cached) {
+    check().catch(() => {});
+  }
   return {
     ...(cached || { current: localVersion(), updateAvailable: false }),
     running: !!(progress && progress.phase && !['done', 'failed'].includes(progress.phase)),
