@@ -136,9 +136,17 @@ if [ -f "$LOCK" ]; then
 fi
 echo $$ > "$LOCK"
 
-# Clean up the container a previous run left behind. It is deliberately not
-# --rm, so that a failure can still be read afterwards; this is where it goes.
-docker rm -f homebox-self-update >/dev/null 2>&1 || true
+# Cleaning up old helper containers is deliberately NOT done here.
+#
+# It used to be, and it was a self-inflicted kill: when the dashboard launches
+# this, the script is running INSIDE the container it was removing. `docker rm
+# -f` on your own container ends you three lines in, before a single phase is
+# written — so the button produced ok:true, a progress file frozen at
+# "starting", no container, and no error anywhere. From the CLI it worked
+# perfectly, because there is no container in that path at all.
+#
+# lib/platform.js prunes old helpers before launching a new one, which is the
+# one place that is never inside them.
 
 finish_ok() {
   phase done "Now on $TARGET"

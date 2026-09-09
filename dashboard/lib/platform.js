@@ -41,6 +41,10 @@ const PROGRESS_FILE = path.join(state.STATE_DIR, 'platform-progress.json');
 const HISTORY_FILE = path.join(state.STATE_DIR, 'platform-history.json');
 const LOCK_FILE = path.join(state.STATE_DIR, 'platform-update.lock');
 
+// The detached helper that does the update. Named so it can be found and read
+// after a failure, and pruned before the next run.
+const HELPER_NAME = 'homebox-self-update';
+
 const REPO = process.env.HB_REPO || 'abeksis/HomeBox';
 const MANIFEST_URL = process.env.HB_MANIFEST_URL
   || `https://raw.githubusercontent.com/${REPO}/main/releases/manifest.json`;
@@ -338,11 +342,21 @@ async function upgrade({ to = null } = {}) {
     lines: [],
   });
 
+  // Clear the previous helper out of the way, from here — the one place that
+  // is not inside it. The script used to do this itself and was removing the
+  // container it was running in.
+  //
+  // The helper is not --rm on purpose: a failed run has to stay readable.
+  // That means somebody must remove it, and it has to be somebody else.
+  try {
+    await storage.removeHelper(HELPER_NAME);
+  } catch { /* nothing to clear */ }
+
   // On the HOST, not in here: git is not installed in this image, and the
   // script's whole job is to replace the code this process is running.
   // Detached, because that includes rebuilding this container.
   await storage.onHostDetached(['bash', `${ROOT}/scripts/self-update.sh`, target], {
-    name: 'homebox-self-update',
+    name: HELPER_NAME,
   });
 
   return { ok: true, from: current.current, to: target };

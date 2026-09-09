@@ -295,10 +295,27 @@ async function onHostDetached(argv, { name = null, env = {} } = {}) {
     image,
     '-t', '1', '-m', '-u', '-i', '-n', '-p', '--',
   );
-  // Deliberately NOT --rm: a detached helper that removes itself leaves no
-  // way to read why it failed. scripts/self-update.sh cleans up its own
-  // predecessors by name on the next run.
+  // Deliberately NOT --rm: a helper that removes itself leaves no
+  // way to read why it failed. lib/platform.js clears the
+  // predecessor with removeHelper() before launching a new one — which it can
+  // do safely, being the one place that is never inside the container.
   return composeLib.run('docker', run.concat(argv), { timeout: 60000 });
 }
 
-module.exports = { list, probe, mount, unmount, onHostDetached, StorageError };
+/**
+ * Remove a helper container by name, if it is there.
+ *
+ * Exists because the helpers are deliberately not --rm — a failed run has to
+ * stay readable — so something has to clear the previous one, and that
+ * something must not be the helper itself. See lib/platform.js.
+ */
+async function removeHelper(name) {
+  if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/.test(String(name || ''))) {
+    throw new StorageError(`refusing a suspicious container name: ${name}`);
+  }
+  try {
+    await composeLib.run('docker', ['rm', '-f', name], { timeout: 30000 });
+  } catch { /* not there, which is the normal case */ }
+}
+
+module.exports = { list, probe, mount, unmount, onHostDetached, removeHelper, StorageError };
