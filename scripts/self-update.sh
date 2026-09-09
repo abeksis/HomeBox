@@ -203,6 +203,29 @@ phase checking "Looking at the working tree"
 command -v git >/dev/null 2>&1 || fail "git is not installed on this host"
 [ -d "$HB_ROOT/.git" ] || fail "$HB_ROOT is not a git checkout — this box was installed from a tarball and cannot self-update"
 
+# Tell git this repository is safe to use, for THIS process only.
+#
+# The tree belongs to the box's own user; this runs as root. git refuses that
+# combination with "detected dubious ownership" unless SUDO_UID happens to be
+# set and to match — which is exactly why the CLI worked and the button did
+# not. `sudo homebox self-update` carries SUDO_UID; a helper that entered the
+# host through nsenter carries nothing, so git refused every git command it
+# ran.
+#
+# GIT_CONFIG_* rather than `git config --global`: this is a per-process fact,
+# and writing it into root's gitconfig would be an unrequested change to the
+# machine that outlives the update.
+export GIT_CONFIG_COUNT=1
+export GIT_CONFIG_KEY_0=safe.directory
+export GIT_CONFIG_VALUE_0="$HB_ROOT"
+
+# Prove git can actually speak to the repository before trusting anything it
+# says. Without this the check below reads a FAILED `git status` as an empty
+# one — that is, as "the tree is clean" — and the update walks on past a git
+# that is refusing every command.
+git -C "$HB_ROOT" rev-parse --git-dir >/dev/null 2>&1 \
+  || fail "git will not open $HB_ROOT — $(git -C "$HB_ROOT" rev-parse --git-dir 2>&1 | head -2 | tr '\n' ' ')"
+
 # A friend who hand-edited a module should be told, not silently overwritten.
 # --force on checkout would discard their work without a word.
 #
