@@ -318,7 +318,15 @@ declared_secrets() {
       try { meta = yaml.extractTopLevel(fs.readFileSync(file, "utf8"), "x-homebox"); } catch { continue; }
       const vars = (meta && meta.env_vars) || {};
       for (const [key, spec] of Object.entries(vars)) {
-        if (spec && spec.type === "secret" && /^[A-Z][A-Z0-9_]*$/.test(key)) console.log(key);
+        if (!spec || spec.type !== "secret") continue;
+        // `generated: false` means the value comes from somewhere else — a
+        // Cloudflare tunnel token, a third-party API key. Filling those with
+        // 24 random bytes does not produce a working install, it produces a
+        // container that fails to authenticate against a real service and a
+        // user with no way to tell a placeholder from something they set.
+        // Leave the key absent so the Settings field reads empty.
+        if (spec.generated === false) continue;
+        if (/^[A-Z][A-Z0-9_]*$/.test(key)) console.log(key);
       }
     }
   ' "$HB_ROOT" 2>/dev/null || true

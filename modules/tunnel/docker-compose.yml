@@ -1,0 +1,72 @@
+# ==========================================
+# HOMEBOX - Tunnel Module
+# cloudflared: reach an app from outside without opening a port.
+# ==========================================
+
+x-homebox:
+  id: tunnel
+  added_at: "2026-09-09"
+  title: "Cloudflare Tunnel"
+  tagline: "A way in, without a way in"
+  description: "Holds an outbound connection to Cloudflare and serves your apps over it. Nothing is forwarded on your router and no port is opened — the tunnel dials out, so the box stays invisible from the internet. You pick which hostname maps to which app in the Cloudflare dashboard."
+  icon: "cloudflare.svg"
+  category: "system"
+  required: false
+  default: false
+  ram: "~40MB"
+  theme:
+    emoji: "☁️"
+    color: "#f6821f"
+    bg: "rgba(246,130,31,0.12)"
+  tips:
+    - "Create the tunnel at one.dash.cloudflare.com → Networks → Tunnels, then paste its token into Settings. The token IS the credential — anyone holding it can publish through your tunnel"
+    - "Point a public hostname at the container name, not the LAN IP: http://vaultwarden:80, http://linkding:9090. cloudflared shares a docker network with them, so it resolves those by name"
+    - "Anything you publish this way is reachable by the whole internet. Put Cloudflare Access in front of any app whose own login you would not want brute-forced"
+    - "This is what makes Vaultwarden usable: its vault needs HTTPS to decrypt in the browser, and the tunnel gives it a real certificate at the edge"
+  env_vars:
+    CLOUDFLARE_TUNNEL_TOKEN:
+      label: "Tunnel token"
+      type: "secret"
+      # Cloudflare issues this one. See the note in install.sh: a generated
+      # placeholder here would just be a container that cannot authenticate.
+      generated: false
+      dangerous: true
+  services:
+    cloudflared:
+      friendly_name: "Cloudflare Tunnel"
+      color: "#f6821f"
+      description: "Outbound tunnel to Cloudflare"
+      icon: "cloudflare.svg"
+      # No page of its own, and deliberately no published port: the whole
+      # point is that this container only ever dials out.
+      internal: true
+
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:2026.8.3
+    container_name: cloudflared
+    command: tunnel --no-autoupdate run
+    environment:
+      - TZ=${TZ:-UTC}
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
+    # On homebox_proxy so a public hostname can point at http://<container>:<port>
+    # and reach the app directly, without going back out to the LAN address.
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.50'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

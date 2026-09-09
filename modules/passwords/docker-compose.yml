@@ -24,6 +24,13 @@ x-homebox:
     - "The official mobile apps refuse a self-signed certificate. For phone use this needs a real hostname with real TLS, not an IP"
     - "This is the one app where a tested restore matters more than a backup — the config directory IS the vault"
   env_vars:
+    VAULTWARDEN_DOMAIN:
+      label: "Public URL"
+      # Declared so it is an editable field in Settings rather than a line
+      # somebody has to know to add to .env by hand. No default: a wrong value
+      # here is worse than an empty one, because Vaultwarden builds invite and
+      # reset links from it and scopes WebAuthn to it.
+      type: "text"
     VAULTWARDEN_ADMIN_TOKEN:
       label: "Admin panel token"
       type: "secret"
