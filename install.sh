@@ -188,7 +188,20 @@ $SUDO mkdir -p \
   "$HB_ROOT"/data/{media/movies,media/tv,music,books,photos,downloads} \
   "$HB_ROOT"/modules/core/config/{npm/data,npm/letsencrypt,portainer}
 
-$SUDO chown -R "$HB_USER:$HB_USER" "$HB_ROOT"
+# Same exclusion as the pass at the end of this file, and for the same reason
+# its comment already gives: modules/*/config belongs to the APPS, several of
+# which run as their own uid.
+#
+# This was a plain `chown -R` for a long time and did not visibly hurt, because
+# install.sh ran rarely. Once every platform update began running it, it started
+# reassigning Immich's Postgres data — which runs as uid 999 — to the HomeBox
+# user on every single update. Postgres then refuses to open its own catalog:
+#
+#   FATAL: could not open file "global/pg_filenode.map": Permission denied
+#
+# and the container reports unhealthy while still accepting connections, which
+# is about the most confusing shape that failure could take.
+$SUDO find "$HB_ROOT" -path "$HB_ROOT/modules/*/config" -prune -o -exec chown "$HB_USER:$HB_USER" {} + 2>/dev/null || true
 printf '  %s\n' "$HB_ROOT"
 
 # ------------------------------------------------------------------ 5. env
