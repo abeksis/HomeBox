@@ -44,9 +44,19 @@ default_ref() {
   if [ -n "$tag" ]; then printf '%s' "$tag"; else printf 'main'; fi
 }
 HB_REF="${HB_REF:-$(default_ref)}"
-# refs/heads for a branch, refs/tags for a release. This used to be hardcoded
-# to refs/heads, which was correct while HB_REF defaulted to `main` and became
-# a 404 the moment it defaulted to a tag.
+# Did the caller ASK for a tarball? Recorded as a flag, before the default is
+# filled in.
+#
+# This used to be inferred further down by comparing HB_TARBALL against a
+# hand-written copy of the default URL — and that broke the moment the default
+# stopped being one fixed string. HB_REF now defaults to a tag, the URL is
+# built with refs/tags, the comparison string still said refs/heads, so the
+# two never matched and EVERY fresh install silently took the tarball path.
+# The result was a box with no .git: working, and permanently unable to update
+# itself. A flag cannot drift from the thing it describes.
+if [ -n "${HB_TARBALL:-}" ]; then HB_TARBALL_ASKED=1; else HB_TARBALL_ASKED=0; fi
+
+# refs/heads for a branch, refs/tags for a release.
 case "$HB_REF" in
   v[0-9]*) HB_REF_NS="refs/tags" ;;
   *)       HB_REF_NS="refs/heads" ;;
@@ -121,7 +131,7 @@ fi
 #
 # HB_TARBALL is still honoured for a network with no route to GitHub; that
 # path has no .git, and says so at the end.
-if [ -n "${HB_TARBALL_OVERRIDE:-}" ] || [ "${HB_TARBALL}" != "https://codeload.github.com/${HB_REPO}/tar.gz/refs/heads/${HB_REF}" ]; then
+if [ "$HB_TARBALL_ASKED" -eq 1 ]; then
   step "Downloading HomeBox"
   printf '  %s\n' "$HB_TARBALL"
   TMP="$(mktemp -d)"
@@ -156,7 +166,16 @@ chown -R "$HB_USER:$HB_USER" "$HB_ROOT"
 printf '  %s v%s\n' "$HB_ROOT" "$(cat "$HB_ROOT/VERSION" 2>/dev/null || echo '?')"
 if [ "${FROM_TARBALL:-0}" -eq 1 ]; then
   warn "installed from a tarball, so there is no git checkout here."
-  warn "\`git pull\` will not work — update by re-running this into a clean directory."
+  warn "This box CANNOT update itself — no Updates button, no \`homebox self-update\`."
+  warn "Update by re-running this into a clean directory."
+elif [ ! -d "$HB_ROOT/.git" ]; then
+  # Belt and braces. A clone that leaves no .git is not a working install, it
+  # is a box that will look fine for weeks and then quietly never update — the
+  # exact failure a wrong tarball/clone decision produced once already, on a
+  # string comparison nobody thought of as load-bearing.
+  die "the clone left no .git in $HB_ROOT.
+This box would install correctly and then never be able to update itself,
+so nothing is being installed. Please report this."
 fi
 
 # ------------------------------------------------------------- 4. install
