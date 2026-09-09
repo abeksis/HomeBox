@@ -3323,7 +3323,12 @@ function renderUpdates(data) {
     $('#updates-status').textContent =
       `Last checked ${new Date(data.lastCheck).toLocaleString()} · `
       + `${data.checked} of ${data.containers} containers compared`
-      + (skipped ? ` · ${skipped} could not be reached` : '');
+      + (skipped ? ` · ${skipped} could not be reached` : '')
+      // Say that it is automatic. Without this the page shows a timestamp
+      // and a button, which reads as "press this to find out" — and somebody
+      // reasonably concluded exactly that. Check now is for impatience, not
+      // for operation.
+      + ' · Checks again on its own every 6 hours';
   }
 
   // Only worth offering when there is more than one thing to do — with a
