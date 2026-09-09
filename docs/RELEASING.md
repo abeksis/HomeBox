@@ -45,6 +45,25 @@ other people. This is the checklist.
 7. **Take it yourself first.** Update your own box through the button. If it is not good
    enough for your box, it is not good enough for theirs.
 
+## A broken updater cannot ship its own fix
+
+Not hypothetical — it happened on the first real release, twice.
+
+`scripts/self-update.sh` runs from the tree the box is **on**, not the one it is moving
+to. So a release that fixes the updater is delivered by the broken updater, and does not
+arrive. Both times the box refused or rolled back and stayed exactly where it was, which
+is the right failure — but it stayed.
+
+When a release changes `scripts/self-update.sh` in a way that matters, say so in the
+notes and expect boxes to need one hop by hand:
+
+```bash
+cd /opt/homebox && sudo git fetch --tags && sudo git checkout v0.2.3 && sudo bash install.sh
+```
+
+Then raise `min_from_version` past the broken release, so a box below it is told to do
+that rather than handed a button that cannot work.
+
 ## Stopping a release
 
 One line in `releases/manifest.json`:
