@@ -203,7 +203,12 @@ async function purge(id, { onLine = null } = {}) {
   // Recompute the path through moduleFile() so a bad id cannot reach rm.
   const dir = path.join(path.dirname(moduleFile(id)), 'config');
   await fsp.rm(dir, { recursive: true, force: true });
-  const trail = [result.stdout, "removed " + dir, ""].join(String.fromCharCode(10));
+  // The keys that protected what was just deleted. Leaving them behind is a
+  // wipe with the locks still on the wall, and it makes a reinstall reuse a
+  // secret whose data is gone.
+  const forgotten = await secrets.forgetFor(id);
+  const noted = forgotten.length ? 'forgot ' + forgotten.join(', ') : '';
+  const trail = [result.stdout, "removed " + dir, noted, ""].filter(Boolean).join(String.fromCharCode(10));
   return { stdout: trail, stderr: result.stderr };
 }
 

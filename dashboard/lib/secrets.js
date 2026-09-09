@@ -125,4 +125,62 @@ async function ensureFor(id) {
   return added;
 }
 
-module.exports = { ensureFor, declaredBy };
+/**
+ * Drop a module's declared secrets from .env. For a purge only.
+ *
+ * A purge deletes the config directory; leaving the keys that protected it
+ * behind is not a wipe, it is a wipe with the locks still hanging on the
+ * wall. It also means a reinstall silently reuses a secret whose data is
+ * gone, because ensureFor() will not overwrite an existing value.
+ *
+ * Every key here belongs to exactly one module — config.js enforces that when
+ * it builds the Settings groups — so this cannot take a key another app is
+ * still using. `generated: false` keys go too: on a purge, a token the user
+ * pasted is config, and config is what a purge removes.
+ */
+async function forgetFor(id) {
+  const file = path.join(MODULES_DIR, id, 'docker-compose.yml');
+  if (!fs.existsSync(file)) return [];
+  let meta;
+  try {
+    meta = yaml.extractTopLevel(fs.readFileSync(file, 'utf8'), 'x-homebox');
+  } catch {
+    return [];
+  }
+  const vars = (meta && meta.env_vars) || {};
+  const keys = Object.entries(vars)
+    .filter(([key, spec]) => spec && spec.type === 'secret' && /^[A-Z][A-Z0-9_]*$/.test(key))
+    .map(([key]) => key);
+  if (!keys.length) return [];
+
+  let lines;
+  try {
+    lines = (await fsp.readFile(ENV_FILE, 'utf8')).split(/\r?\n/);
+  } catch {
+    return [];
+  }
+
+  const dropped = [];
+  const kept = lines.filter((line) => {
+    const t = line.trim();
+    if (t.startsWith('#')) return true;
+    const hit = keys.find((k) => t.startsWith(`${k}=`));
+    if (!hit) return true;
+    dropped.push(hit);
+    return false;
+  });
+  if (!dropped.length) return [];
+
+  const tmp = `${ENV_FILE}.tmp-${process.pid}`;
+  await fsp.writeFile(tmp, `${kept.join('\n').replace(/\n+$/, '')}\n`, { mode: 0o600 });
+  await fsp.rename(tmp, ENV_FILE);
+  try {
+    const st = await fsp.stat(MODULES_DIR);
+    await fsp.chown(ENV_FILE, st.uid, st.gid);
+  } catch { /* best effort */ }
+  await fsp.chmod(ENV_FILE, 0o600);
+
+  return dropped;
+}
+
+module.exports = { ensureFor, forgetFor, declaredBy };

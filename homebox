@@ -386,6 +386,18 @@ cmd_remove() {
     # own flag on top of --yes rather than riding along with the removal.
     step "Deleting $MODULES_DIR/$id/config"
     rm -rf "${MODULES_DIR:?}/$id/config"
+
+    # And the keys that protected it. Leaving them is a wipe with the locks
+    # still on the wall, and a later reinstall would silently reuse a secret
+    # whose data is gone — ensureFor() never overwrites.
+    local forgot
+    forgot="$(node_root -e '
+      require(process.argv[1] + "/dashboard/lib/secrets.js")
+        .forgetFor(process.argv[2])
+        .then((keys) => { if (keys.length) console.log(keys.join(", ")); })
+        .catch(() => {});
+    ' "$HB_ROOT" "$id" 2>/dev/null || true)"
+    if [ -n "$forgot" ]; then step "Forgetting $forgot"; fi
   fi
   info "removed $id"
 }
