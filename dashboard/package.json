@@ -1,6 +1,6 @@
 {
   "name": "homebox-dashboard",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "private": true,
   "description": "HomeBox dashboard - reads the module tree and the Docker socket, serves one page",
   "main": "server.js",
@@ -11,5 +11,6 @@
   "engines": {
     "node": ">=20"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "_versionNote": "Not the HomeBox version. The VERSION file at the repo root is the single source of truth — install.sh reads it, the CLI reads it, server.js reads it. Two numbers that must agree eventually will not."
 }
