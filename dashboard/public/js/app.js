@@ -3483,6 +3483,22 @@ async function runUpdateCheck({ quiet = false } = {}) {
   const btn = $('#updates-check');
   if (btn) { btn.disabled = true; btn.textContent = 'Checking…'; }
   if (!quiet) $('#updates-status').textContent = 'Asking each registry for the newest build…';
+
+  // HomeBox itself, alongside the images.
+  //
+  // "Check now" used to ask the registries and nothing else, so a box whose
+  // cached platform answer was stale had no way to refresh it from the
+  // interface at all — the button was right there, said "Check now", and did
+  // not check the one thing the user was looking at. The only route was
+  // `homebox self-update --check` over SSH, which is what this whole feature
+  // exists to remove.
+  //
+  // Deliberately not awaited into the same try: one static JSON file failing
+  // should not make the registry check look like it failed too.
+  fetch('api/platform/check', { method: 'POST' })
+    .then(() => loadPlatform())
+    .catch(() => {});
+
   try {
     const res = await fetch('api/updates/check', { method: 'POST' });
     const data = await res.json();
