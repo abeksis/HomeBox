@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "channels": {
-    "stable": "0.2.1"
+    "stable": "0.2.2"
   },
   "freeze": false,
   "freeze_reason": null,
