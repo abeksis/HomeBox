@@ -20,7 +20,7 @@ x-homebox:
     bg: "rgba(23,93,220,0.12)"
   tips:
     - "This app CANNOT be used over http://<ip>:8222 — the vault encrypts in the browser via crypto.subtle, which browsers only expose over HTTPS or on localhost. Put it behind Proxy Manager with a certificate, or reach it through an SSH tunnel to localhost"
-    - "Register your account first, then set SIGNUPS_ALLOWED=false and restart — otherwise anyone who reaches the page can create one"
+    - "Register your account, then set Allow new signups to false in Settings — otherwise anyone who reaches the page can create one"
     - "The official mobile apps refuse a self-signed certificate. For phone use this needs a real hostname with real TLS, not an IP"
     - "This is the one app where a tested restore matters more than a backup — the config directory IS the vault"
   env_vars:
@@ -31,6 +31,10 @@ x-homebox:
       # here is worse than an empty one, because Vaultwarden builds invite and
       # reset links from it and scopes WebAuthn to it.
       type: "text"
+    VAULTWARDEN_SIGNUPS:
+      label: "Allow new signups"
+      type: "text"
+      default: "true"
     VAULTWARDEN_ADMIN_TOKEN:
       label: "Admin panel token"
       type: "secret"
@@ -53,7 +57,10 @@ services:
     container_name: vaultwarden
     environment:
       - TZ=${TZ:-UTC}
-      - SIGNUPS_ALLOWED=true
+      # Open for the first account, then closed from Settings. It was hardcoded
+      # true while the tip below told people to turn it off — which no amount
+      # of reading the tip could accomplish.
+      - SIGNUPS_ALLOWED=${VAULTWARDEN_SIGNUPS:-true}
       - ADMIN_TOKEN=${VAULTWARDEN_ADMIN_TOKEN:-}
       # Set this once the vault is behind a proxy with a certificate, e.g.
       # https://vault.example.com. Vaultwarden builds invite and reset links
