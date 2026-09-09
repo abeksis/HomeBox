@@ -9,7 +9,7 @@ x-homebox:
   title: "ErsatzTV"
   tagline: "Programme your own channels"
   description: "Schedules your library into live channels and serves them as an IPTV tuner with a full XMLTV guide, so Jellyfin, Plex or a TV app treats them as ordinary channels. Where Tunarr aims at simplicity, this gives you block scheduling, filler between programmes and per-channel logos."
-  icon: "ersatztv.svg"
+  icon: "ersatztv.png"
   category: "media"
   required: false
   default: false
@@ -27,7 +27,7 @@ x-homebox:
       friendly_name: "ErsatzTV"
       color: "#2596be"
       description: "Channel scheduling and IPTV"
-      icon: "ersatztv.svg"
+      icon: "ersatztv.png"
       port_map: 8409
       url_scheme: "http"
       first_login: "No account — it opens straight into the channel list."

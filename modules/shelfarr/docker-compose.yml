@@ -9,7 +9,6 @@ x-homebox:
   title: "Shelfarr"
   tagline: "Radarr, but for books"
   description: "Wanted lists, indexer searches and automatic grabs for ebooks and audiobooks, in the shape the *arr apps taught everyone. It hands finished files to Audiobookshelf or Calibre-Web the same way Sonarr hands episodes to Jellyfin."
-  icon: "shelfarr.svg"
   category: "media"
   required: false
   default: false
@@ -34,7 +33,6 @@ x-homebox:
       friendly_name: "Shelfarr"
       color: "#7c5cff"
       description: "Book and audiobook automation"
-      icon: "shelfarr.svg"
       port_map: 5056
       container_port: 80
       url_scheme: "http"

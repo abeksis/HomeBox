@@ -56,5 +56,25 @@ for name in "$@"; do
 done
 echo
 echo "$ok fetched, $bad not in the upstream set"
-# A missing icon is cosmetic: the UI falls back to a coloured monogram.
+
+# Then check what the modules actually ASK for.
+#
+# Fetching is by name; a module declares a full filename. Those came apart
+# once: a module said ersatztv.svg, upstream had only a PNG, the fetch
+# reported "ok ersatztv.png" and the card still showed a monogram. A success
+# line about a file nobody references is worse than a failure, so verify the
+# declared names resolve rather than trusting the download count.
+echo
+echo "icons declared by a module with no matching file:"
+unresolved=0
+while IFS= read -r f; do
+  [ -f "$DEST/$f" ] && continue
+  printf '  %s\n' "$f"
+  unresolved=$((unresolved + 1))
+done < <(grep -rhoE '^\s+icon: "[^"]+"' "$REPO_ROOT"/modules/*/docker-compose.yml | sed -E 's/.*"([^"]+)".*/\1/' | sort -u)
+[ "$unresolved" -eq 0 ] && echo "  none — every declared icon resolves"
+
+# A missing icon is cosmetic: the UI falls back to a coloured monogram. Drop
+# the `icon:` line entirely when there is no artwork, rather than pointing at
+# a file that will never exist.
 exit 0
