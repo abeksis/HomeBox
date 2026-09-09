@@ -3156,8 +3156,14 @@ function renderPlatform(data) {
     return;
   }
 
-  const notes = data.notes && data.notes.body
-    ? `<div class="platform-notes">${escapeHtml(data.notes.body).slice(0, 1200)}</div>`
+  // Truncate BEFORE escaping. Slicing escaped markup can cut an entity in
+  // half and leave `&am` on the page.
+  const clip = (s, n) => (s.length > n ? `${s.slice(0, n)}…` : s);
+  const notesText = data.notes
+    ? [data.notes.name, data.notes.body].filter(Boolean).join('\n\n')
+    : '';
+  const notes = notesText
+    ? `<div class="platform-notes">${escapeHtml(clip(notesText, 1200))}</div>`
     : '';
   const link = data.notes && data.notes.url
     ? `<a class="platform-notes-link" href="${escapeHtml(data.notes.url)}" target="_blank" rel="noopener noreferrer">Full release notes</a>`

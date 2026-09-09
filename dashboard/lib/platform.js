@@ -206,11 +206,53 @@ async function check({ force = false } = {}) {
  * that only asks when there is something new spends four a day.
  */
 async function releaseNotes(version) {
+  const tag = `v${version}`;
+
+  // A published GitHub Release, if there is one. Richer, and the place a
+  // person would naturally write for an audience.
   try {
-    const res = await get(`https://api.github.com/repos/${REPO}/releases/tags/v${version}`);
+    const res = await get(`https://api.github.com/repos/${REPO}/releases/tags/${tag}`);
+    if (res.status === 200) {
+      const body = JSON.parse(res.body);
+      if (body.body) {
+        return { name: body.name || null, body: body.body, url: body.html_url || null };
+      }
+    }
+  } catch { /* fall through to the tag */ }
+
+  // Otherwise the ANNOTATED TAG'S OWN MESSAGE.
+  //
+  // Cutting a release already requires writing one — `git tag -a` will not let
+  // you skip it — so the text exists before anyone thinks about release notes.
+  // Publishing a Release object on top is a separate step through a web form,
+  // and a separate step is a step that gets forgotten on the release where it
+  // mattered. This makes the card say something useful by default, and a
+  // proper Release still wins when there is one.
+  //
+  // Two calls: the ref names the tag object, the tag object carries the
+  // message. A lightweight tag points straight at a commit and has no message
+  // at all, which is one more reason releases here are annotated.
+  try {
+    const ref = await get(`https://api.github.com/repos/${REPO}/git/ref/tags/${tag}`);
+    if (ref.status !== 200) return null;
+    const obj = JSON.parse(ref.body).object || {};
+    if (obj.type !== 'tag' || !obj.sha) return null;
+
+    const res = await get(`https://api.github.com/repos/${REPO}/git/tags/${obj.sha}`);
     if (res.status !== 200) return null;
     const body = JSON.parse(res.body);
-    return { name: body.name || null, body: body.body || null, url: body.html_url || null };
+    const message = String(body.message || '').trim();
+    if (!message) return null;
+
+    // First line is the headline the way a commit subject is; the rest is the
+    // detail. Strip the headline from the body so the card does not say it
+    // twice.
+    const [first, ...rest] = message.split('\n');
+    return {
+      name: first,
+      body: rest.join('\n').trim() || null,
+      url: `https://github.com/${REPO}/releases/tag/${tag}`,
+    };
   } catch {
     return null;
   }
