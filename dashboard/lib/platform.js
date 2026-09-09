@@ -277,8 +277,29 @@ async function status() {
   if (!cached) {
     check().catch(() => {});
   }
+  // What this box is on, read NOW rather than taken from the cache.
+  //
+  // The cached answer records the version at the time of the check, and an
+  // update changes that version without invalidating the cache. So a box that
+  // had just updated to 0.2.8 kept offering 0.2.8 and describing itself as
+  // 0.2.4 — for up to six hours, until the next check happened to run. The
+  // card was reporting a true fact about the past.
+  //
+  // latest still comes from the cache, because that genuinely is the last
+  // thing the manifest said. Only "where am I" is re-read, and the
+  // availability is recomputed from the two.
+  const current = localVersion();
+  const base = cached || { latest: null, frozen: false, reason: null, notes: null };
+  const available = !base.frozen
+    && !base.reason
+    && isVersion(base.latest)
+    && isVersion(current)
+    && compare(base.latest, current) > 0;
+
   return {
-    ...(cached || { current: localVersion(), updateAvailable: false }),
+    ...base,
+    current,
+    updateAvailable: available,
     running: !!(progress && progress.phase && !['done', 'failed'].includes(progress.phase)),
     progress,
     history: history.slice(0, HISTORY_LIMIT),
