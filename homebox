@@ -288,6 +288,23 @@ cmd_install() {
   local id="$1"
   step "Installing $(meta "$id" 'm.title')"
 
+  # Declared secrets first, because setup.sh reads .env. install.sh sweeps
+  # these when the BOX is built; a module that arrived in a later `git pull`
+  # was never swept and would start on whatever default its compose file
+  # names — a literal password, or an empty string that crash-loops the
+  # container. Same call the dashboard makes; see dashboard/lib/secrets.js.
+  local made
+  made="$(node_root -e '
+    require(process.argv[1] + "/dashboard/lib/secrets.js")
+      .ensureFor(process.argv[2])
+      .then((keys) => { if (keys.length) console.log(keys.join(", ")); })
+      .catch(() => {});
+  ' "$HB_ROOT" "$id" 2>/dev/null || true)"
+  # `[ -n "$x" ] && step ...` returns 1 when the test is false, and under the
+  # `set -e` at the top of this file that aborts the install on the ordinary
+  # case of having nothing to generate. install.sh documents the same trap.
+  if [ -n "$made" ]; then step "Generated $made"; fi
+
   local setup="$MODULES_DIR/$id/setup.sh"
   if [ -f "$setup" ]; then
     step "Running setup for $id"

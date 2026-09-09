@@ -18,6 +18,8 @@ const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
 
+const secrets = require('./secrets');
+
 const ROOT = process.env.HOMEBOX_ROOT || '/opt/homebox';
 const MODULES_DIR = path.join(ROOT, 'modules');
 const ENV_FILE = path.join(ROOT, '.env');
@@ -151,6 +153,14 @@ async function runSetup(id, { onLine = null } = {}) {
 async function install(id, { onLine = null } = {}) {
   const log = [];
   if (onLine) onLine(`==> Preparing ${id}`, false);
+
+  // Before setup.sh, because a setup script reads .env: install.sh only
+  // sweeps declared secrets when the BOX is built, so a module that arrived
+  // in a later `git pull` would otherwise start on whatever default its
+  // compose file names. See lib/secrets.js.
+  const made = await secrets.ensureFor(id);
+  if (made.length && onLine) onLine(`==> Generated ${made.join(', ')}`, false);
+
   const setup = await runSetup(id, { onLine });
   if (setup) log.push(`# setup.sh\n${setup.stdout}${setup.stderr}`);
 
