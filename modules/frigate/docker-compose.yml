@@ -19,7 +19,7 @@ x-homebox:
     color: "#1f2937"
     bg: "rgba(107,114,128,0.14)"
   tips:
-    - "It will not start without cameras in config.yml — HomeBox writes a valid empty config, and you add each camera's RTSP URL to it"
+    - "Until you add a camera it runs in SAFE MODE: the page opens and reports healthy, but it is running on defaults, because `cameras` is a required field. Use the config editor in the UI to add one, then restart the app"
     - "Detection on the CPU is expensive: roughly one core per camera. A Coral TPU on USB turns that into almost nothing, and is the single upgrade that matters here"
     - "Recordings go to the media pool under frigate/, so they land on the NAS rather than filling the system disk"
     - "Use each camera's SUB stream for detection and the main stream for recording. Running detection on 4K is how people conclude Frigate is slow"

@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
-# Give Frigate a config it can start with.
+# Give Frigate a config to start from.
 #
-# Frigate refuses to boot without /config/config.yml, and the error it prints
-# is a schema validation dump rather than "there is no config file" — so a
-# fresh install looks broken rather than unconfigured. Write a valid minimal
-# one instead, with the camera block commented out and ready to fill in.
+# Frigate will not boot without /config/config.yml, and prints a schema
+# validation dump rather than "there is no config file" — so a fresh install
+# looks broken rather than unconfigured.
+#
+# What this CANNOT do is produce a fully valid config, and that is worth being
+# straight about: `cameras` is a required field in 0.17, so a camera-less
+# config fails validation no matter how it is written. Frigate then starts in
+# SAFE MODE — it serves the UI, answers 200 and reports healthy, while running
+# on defaults. Tested here: the settings below were silently ignored and the
+# API reported Frigate's own.
+#
+# That is the right outcome anyway. Safe mode exists so you can reach the
+# built-in config editor and add a camera, which is the one thing nothing on
+# this box can do for you: only you know the RTSP URL. The file below is
+# therefore a starting point to edit, not a working configuration.
 #
 # Never overwrites: once you have configured cameras, this file is yours.
 set -euo pipefail
@@ -47,8 +58,9 @@ detectors:
 record:
   enabled: true
   retain:
+    # 0.17 removed retain.mode here — it is days only, and an extra key
+    # fails validation rather than being ignored.
     days: 7
-    mode: motion
   alerts:
     retain:
       days: 30
@@ -93,4 +105,10 @@ YAML
 
 chown -R "${PUID:-1000}:${PGID:-1000}" "$CONFIG_DIR" 2>/dev/null || true
 
-echo "frigate: wrote a starting config.yml — add cameras to it, then restart"
+cat <<'MSG'
+frigate: wrote a starting config.yml.
+frigate: it declares no cameras, and `cameras` is a required field — so
+frigate: Frigate starts in SAFE MODE and runs on its own defaults until you
+frigate: add one. That is expected, not a failure: safe mode serves the UI so
+frigate: you can use its config editor. Add a camera there and restart the app.
+MSG
