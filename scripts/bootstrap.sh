@@ -25,8 +25,33 @@ set -euo pipefail
 # network with no route to GitHub — a tarball you host yourself:
 #   HB_TARBALL=http://192.0.2.20/homebox.tar.gz sudo -E bash hb.sh
 HB_REPO="${HB_REPO:-abeksis/HomeBox}"
-HB_REF="${HB_REF:-main}"
-HB_TARBALL="${HB_TARBALL:-https://codeload.github.com/${HB_REPO}/tar.gz/refs/heads/${HB_REF}}"
+
+# The newest RELEASE, not the development branch.
+#
+# This used to default to `main`, which meant every new install got whatever
+# had been pushed most recently — including the twenty minutes between
+# committing something broken and noticing. That is an acceptable way to run
+# your own box and not a way to give one to somebody else.
+#
+# `git ls-remote --sort=-v:refname` asks GitHub for the tags in version order
+# and takes the first. If that fails — no tags yet, or no network — it falls
+# back to main, because an install that refuses to start is worse than one
+# that starts on the dev branch and says so.
+default_ref() {
+  local tag
+  tag="$(git ls-remote --tags --refs --sort=-v:refname "https://github.com/${HB_REPO}.git" 2>/dev/null \
+    | head -1 | sed 's|.*refs/tags/||')"
+  if [ -n "$tag" ]; then printf '%s' "$tag"; else printf 'main'; fi
+}
+HB_REF="${HB_REF:-$(default_ref)}"
+# refs/heads for a branch, refs/tags for a release. This used to be hardcoded
+# to refs/heads, which was correct while HB_REF defaulted to `main` and became
+# a 404 the moment it defaulted to a tag.
+case "$HB_REF" in
+  v[0-9]*) HB_REF_NS="refs/tags" ;;
+  *)       HB_REF_NS="refs/heads" ;;
+esac
+HB_TARBALL="${HB_TARBALL:-https://codeload.github.com/${HB_REPO}/tar.gz/${HB_REF_NS}/${HB_REF}}"
 HB_ROOT="${HB_ROOT:-/opt/homebox}"
 HB_USER="${HB_USER:-${SUDO_USER:-$(id -un)}}"
 

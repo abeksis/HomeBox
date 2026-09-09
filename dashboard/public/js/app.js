@@ -229,7 +229,7 @@ function show(page) {
   });
   if (target !== 'home') loadModules();
   if (target === 'home') loadInsights();
-  if (target === 'updates') loadUpdates();
+  if (target === 'updates') { loadUpdates(); loadPlatform(); }
   if (target === 'settings') { loadBackups(); loadConfig(); loadCatalog(); loadStorage(); loadResets(); }
   if (target === 'settings' || target === 'home') loadBookmarks();
   window.scrollTo({ top: 0, behavior: 'instant' });
@@ -3096,6 +3096,161 @@ function updateBadge(count) {
   badge.title = count
     ? `${count} container${count === 1 ? ' has' : 's have'} a newer image available`
     : '';
+}
+
+/* ---------------------------------------------------- HomeBox itself ---- */
+
+let platformPoll = null;
+
+/**
+ * The card for updating HomeBox, as opposed to the apps it runs.
+ *
+ * Four states, and only one of them has a button: an update is available; the
+ * maintainer has paused updates; this box is too old to jump automatically; an
+ * update is running or was interrupted.
+ */
+function renderPlatform(data) {
+  const card = $('#platform-card');
+  if (!card) return;
+
+  const p = data.progress;
+  const running = data.running;
+  const interrupted = p && !running && !['done', 'failed'].includes(p.phase);
+
+  if (!data.updateAvailable && !data.frozen && !data.reason && !running && !interrupted) {
+    card.hidden = true;
+    return;
+  }
+  card.hidden = false;
+
+  const head = (title, sub) => `
+    <div class="updates-card-head">
+      <div><h2>${escapeHtml(title)}</h2><small>${escapeHtml(sub)}</small></div>
+    </div>`;
+
+  if (running || interrupted) {
+    const phase = (p && p.phase) || 'starting';
+    const msg = (p && p.message) || '';
+    card.innerHTML = `${head(
+      interrupted ? 'An update was interrupted' : `Updating to ${p ? p.to : ''}`,
+      interrupted
+        ? `It stopped while ${phase}. This box is still usable — check the History below.`
+        : 'The dashboard will restart partway through. This page will pick up where it left off.',
+    )}
+      <div class="platform-progress">
+        <span class="platform-phase mono">${escapeHtml(phase)}</span>
+        <span class="platform-message">${escapeHtml(msg)}</span>
+      </div>`;
+    return;
+  }
+
+  if (data.frozen) {
+    card.innerHTML = `${head('Updates are paused', 'The maintainer has stopped this release from being installed.')}
+      <p class="platform-reason">${escapeHtml(data.reason || '')}</p>`;
+    return;
+  }
+
+  if (data.reason) {
+    card.innerHTML = `${head(`HomeBox ${data.latest || ''} is available`, 'It cannot be installed from here.')}
+      <p class="platform-reason">${escapeHtml(data.reason)}</p>`;
+    return;
+  }
+
+  const notes = data.notes && data.notes.body
+    ? `<div class="platform-notes">${escapeHtml(data.notes.body).slice(0, 1200)}</div>`
+    : '';
+  const link = data.notes && data.notes.url
+    ? `<a class="platform-notes-link" href="${escapeHtml(data.notes.url)}" target="_blank" rel="noopener noreferrer">Full release notes</a>`
+    : '';
+
+  card.innerHTML = `
+    <div class="updates-card-head">
+      <div>
+        <h2>HomeBox ${escapeHtml(data.latest)} is available</h2>
+        <small>This box is on ${escapeHtml(data.current)}. Your apps and their data are not touched.</small>
+      </div>
+      <button type="button" class="btn-pill primary" id="platform-go">Update HomeBox</button>
+    </div>
+    ${notes}${link}`;
+
+  $('#platform-go').addEventListener('click', () => startPlatformUpgrade(data));
+}
+
+async function startPlatformUpgrade(data) {
+  const ok = await confirmDialog({
+    title: `Update HomeBox to ${data.latest}?`,
+    body: 'The dashboard restarts partway through and is unreachable for about a minute. '
+      + 'Your apps keep running, and nothing in their data is changed. '
+      + 'If the new version fails to start, this box puts itself back on '
+      + `${data.current} on its own.`,
+    confirmLabel: 'Update HomeBox',
+  });
+  if (!ok) return;
+
+  try {
+    const res = await fetch('api/platform/upgrade', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ to: data.latest }),
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error || `the server answered ${res.status}`);
+    pollPlatform();
+  } catch (err) {
+    toast(`Could not start the update: ${err.message}`, 'error', 8000);
+  }
+}
+
+/**
+ * Poll while an update runs — and keep polling THROUGH the restart.
+ *
+ * The dashboard is rebuilt partway through, so these requests will fail for
+ * roughly a minute. That is the expected middle of a successful update, not an
+ * error, and reporting it as one would tell the user their update broke at the
+ * exact moment it is working. Failures are counted, not shown, and only a long
+ * silence gives up.
+ */
+function pollPlatform() {
+  if (platformPoll) clearInterval(platformPoll);
+  let missed = 0;
+  const started = Date.now();
+
+  platformPoll = setInterval(async () => {
+    try {
+      const data = await (await fetch('api/platform')).json();
+      missed = 0;
+      renderPlatform(data);
+      if (!data.running) {
+        clearInterval(platformPoll);
+        platformPoll = null;
+        const last = (data.history || [])[0];
+        if (last && last.kind === 'platform') {
+          // The version changed underneath this page, so its CSS and JS are
+          // now the previous release's. Reload rather than leave a mixed page.
+          if (last.ok) { location.reload(); return; }
+          toast(`The update did not finish: ${last.detail}`, 'error', 12000);
+        }
+        loadUpdates();
+      }
+    } catch {
+      missed += 1;
+      // Five minutes of silence is a real problem. A minute of it is the
+      // dashboard being rebuilt by the very update being watched.
+      if (Date.now() - started > 300000 && missed > 3) {
+        clearInterval(platformPoll);
+        platformPoll = null;
+        toast('Lost contact with the box while updating. Refresh in a moment.', 'error', 12000);
+      }
+    }
+  }, 2000);
+}
+
+async function loadPlatform() {
+  try {
+    const data = await (await fetch('api/platform')).json();
+    renderPlatform(data);
+    if (data.running) pollPlatform();
+  } catch { /* the card simply stays hidden */ }
 }
 
 async function loadUpdates({ force = false } = {}) {

@@ -617,6 +617,54 @@ cmd_validate() {
   printf '\n%sall modules parse and compose accepts them%s\n' "$GREEN" "$RESET"
 }
 
+# Update HomeBox itself — the same script the dashboard button runs.
+#
+# One code path on purpose. Two would drift, and the SSH one is the path that
+# has to work on the day the dashboard is the thing that broke.
+cmd_self_update() {
+  local target="" check_only=0
+  for arg in "$@"; do
+    case "$arg" in
+      --check) check_only=1 ;;
+      --to=*) target="${arg#--to=}" ;;
+      *) die "unknown option: $arg" ;;
+    esac
+  done
+
+  if [ "$check_only" -eq 1 ]; then
+    node_root -e '
+      const p = require(process.argv[1] + "/dashboard/lib/platform.js");
+      p.check({ force: true }).then((r) => {
+        if (r.error) { console.log("could not check: " + r.error); return; }
+        if (r.frozen) { console.log("updates are paused: " + r.reason); return; }
+        if (r.reason) { console.log(r.reason); return; }
+        if (r.updateAvailable) console.log(`HomeBox ${r.latest} is available (this box is on ${r.current})`);
+        else console.log(`up to date on ${r.current}`);
+      }).catch((e) => { console.error(e.message); process.exit(1); });
+    ' "$HB_ROOT"
+    return
+  fi
+
+  if [ -z "$target" ]; then
+    target="$(node_root -e '
+      const p = require(process.argv[1] + "/dashboard/lib/platform.js");
+      p.check({ force: true }).then((r) => {
+        if (r.frozen) { console.error("updates are paused: " + r.reason); process.exit(1); }
+        if (r.reason) { console.error(r.reason); process.exit(1); }
+        if (!r.updateAvailable) { console.error("already on " + r.current); process.exit(1); }
+        console.log(r.latest);
+      }).catch((e) => { console.error(e.message); process.exit(1); });
+    ' "$HB_ROOT")" || return 1
+  fi
+
+  [ -n "$target" ] || die "nothing to update to"
+  step "Updating HomeBox to $target"
+  # Runs in the foreground here, unlike the dashboard's detached launch: an
+  # SSH session is not about to be restarted by its own request, so the
+  # operator may as well watch it happen.
+  HB_ROOT="$HB_ROOT" bash "$HB_ROOT/scripts/self-update.sh" "$target"
+}
+
 cmd_doctor() {
   printf '%sHomeBox v%s%s\n' "$BOLD" "$VERSION" "$RESET"
   printf 'root        %s\n' "$HB_ROOT"
@@ -650,6 +698,7 @@ ${BOLD}homebox${RESET} v$VERSION - apps live in $MODULES_DIR
   ${BOLD}install${RESET} <module>        seed, pull, start, mark enabled - the whole thing
   ${BOLD}remove${RESET} <module> --yes   stop and delete containers (--purge drops config too)
   ${BOLD}update${RESET} <module>         pull newer images and recreate
+  ${BOLD}self-update${RESET} [--check]   update HomeBox itself to the latest release
 
   ${BOLD}up${RESET} <module> --yes       start without the install steps
   ${BOLD}down${RESET} <module> --yes     stop, keep everything defined
@@ -690,6 +739,15 @@ case "$cmd" in
   validate|check) cmd_validate "$@" ;;
   doctor) cmd_doctor "$@" ;;
   help|-h|--help) usage ;;
-  version|--version) echo "$VERSION" ;;
+  self-update) cmd_self_update "$@" ;;
+  version|--version)
+    # The tag as well as the file, because a box mid-update or checked out by
+    # hand can have a VERSION that no longer matches where git actually is,
+    # and that discrepancy is the first thing worth seeing.
+    echo "$VERSION"
+    if [ -d "$HB_ROOT/.git" ]; then
+      printf 'git: %s\n' "$(git -C "$HB_ROOT" describe --tags --always 2>/dev/null || echo unknown)"
+    fi
+    ;;
   *) usage; exit 1 ;;
 esac

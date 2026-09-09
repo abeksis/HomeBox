@@ -33,6 +33,7 @@ const icons = require('./lib/icons');
 const bookmarks = require('./lib/bookmarks');
 const auth = require('./lib/auth');
 const updates = require('./lib/updates');
+const platform = require('./lib/platform');
 const insights = require('./lib/insights');
 const storage = require('./lib/storage');
 const reset = require('./lib/reset');
@@ -831,6 +832,41 @@ const server = http.createServer(async (req, res) => {
       } catch (err) {
         return sendJson(res, 500, { error: err.message });
       }
+    }
+
+    // --- HomeBox itself ---
+    //
+    // GET  /api/platform          cached answer + progress + history
+    // POST /api/platform/check    ask the release manifest now
+    // POST /api/platform/upgrade  {to?} — starts it and returns immediately
+    //
+    // Deliberately NOT an NDJSON stream, which is what every other long
+    // operation here uses. This one rebuilds the dashboard, so the connection
+    // carrying the stream is killed by the work it is reporting on. The
+    // progress goes to a file instead and the page polls it — the only
+    // channel that survives the thing it is watching.
+    if (route.startsWith('/api/platform')) {
+      const tail = route.slice('/api/platform'.length).replace(/^\//, '');
+      try {
+        if (!tail && req.method === 'GET') return sendJson(res, 200, await platform.status());
+
+        if (tail === 'check' && req.method === 'POST') {
+          return sendJson(res, 200, { ok: true, ...(await platform.check({ force: true })) });
+        }
+
+        if (tail === 'upgrade' && req.method === 'POST') {
+          const body = await readBody(req);
+          const to = body.to ? String(body.to).trim() : null;
+          const started = await platform.upgrade({ to });
+          // 202: accepted and running elsewhere. The caller polls GET
+          // /api/platform, and must expect this server to stop answering
+          // partway through.
+          return sendJson(res, 202, started);
+        }
+      } catch (err) {
+        return sendJson(res, 400, { error: err.message });
+      }
+      return sendJson(res, 404, { error: 'no such platform route' });
     }
 
     // --- Updates ---

@@ -2495,6 +2495,55 @@ code.mono {
   background: var(--tile-bg);
   box-shadow: 0 0 0 1px var(--tile-ring);
 }
+
+/* Updating HomeBox itself, which is a bigger thing than updating an app it
+   runs — hence the accent ring rather than the plain one every other card
+   here gets. It is only ever on screen when there is something to decide. */
+#platform-card {
+  box-shadow: 0 0 0 1px var(--accent, #8b5cf6);
+}
+.platform-notes {
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-1);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.55;
+  /* Release notes are somebody's markdown and can be any length. Scroll them
+     rather than letting one long release push the button off the screen. */
+  max-height: 11rem;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+.platform-notes-link {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--accent, #8b5cf6);
+}
+.platform-reason {
+  margin: 0.6rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+.platform-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 0.7rem;
+}
+.platform-phase {
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--bg-2);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.platform-message { color: var(--text-secondary); font-size: 0.85rem; }
 .updates-card-head {
   display: flex;
   align-items: flex-start;
