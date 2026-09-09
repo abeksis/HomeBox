@@ -18,6 +18,27 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 HB_ROOT="${HB_ROOT:-/opt/homebox}"
+# Who this box belongs to.
+#
+# On an EXISTING install the answer is already on disk: whoever owns the tree.
+# Ask that first, because the environment lies in the case that matters.
+#
+# `${SUDO_USER:-$(id -un)}` is right for a person typing `sudo bash install.sh`
+# and wrong for the platform updater, which reaches the host through nsenter
+# and therefore has no SUDO_USER at all. `id -un` then returns **root**, and
+# install.sh hands the entire tree — including .git — to root. The box keeps
+# working, and its owner can no longer run git in their own install:
+#
+#   fatal: detected dubious ownership in repository at '/opt/homebox'
+#
+# Every update through the button did this. The CLI never did, because sudo
+# sets SUDO_USER, which is exactly the kind of difference between two paths
+# that only shows up when somebody runs the one nobody had run.
+if [ -z "${HB_USER:-}" ] && [ -d "$HB_ROOT" ]; then
+  HB_USER="$(stat -c '%U' "$HB_ROOT" 2>/dev/null || true)"
+  # A tree already owned by root tells us nothing, so fall through.
+  [ "$HB_USER" = "root" ] && HB_USER=""
+fi
 HB_USER="${HB_USER:-${SUDO_USER:-$(id -un)}}"
 ENV_FILE="$HB_ROOT/.env"
 
