@@ -3201,17 +3201,44 @@ function renderPlatform(data) {
     ? `<a class="platform-notes-link" href="${escapeHtml(data.notes.url)}" target="_blank" rel="noopener noreferrer">Full release notes</a>`
     : '';
 
+  // Version-to-version on one line, rather than a sentence.
+  //
+  // "HomeBox 0.3.5 is available / This box is on 0.3.4" makes you read two
+  // lines and hold both numbers to work out the direction. `0.3.4 → 0.3.5`
+  // is the same fact in one glance, and it is what every updater worth
+  // copying does.
   card.innerHTML = `
     <div class="updates-card-head">
       <div>
-        <h2>HomeBox ${escapeHtml(data.latest)} is available</h2>
-        <small>This box is on ${escapeHtml(data.current)}. Your apps and their data are not touched.</small>
+        <h2>HomeBox</h2>
+        <small class="platform-versions">
+          Current version <b>${escapeHtml(data.current)}</b>
+          <span class="platform-arrow">→</span>
+          <b class="platform-next">${escapeHtml(data.latest)}</b> available
+        </small>
       </div>
-      <button type="button" class="btn-pill primary" id="platform-go">Update HomeBox</button>
+      <div class="platform-actions">
+        <button type="button" class="btn-soft" id="platform-check">Check</button>
+        <button type="button" class="btn-pill primary" id="platform-go">Update HomeBox</button>
+      </div>
     </div>
-    ${notes}${link}`;
+    <p class="platform-reassure">Your apps keep running and their data is not touched. If the new version does not start, this box puts ${escapeHtml(data.current)} back on its own.</p>
+    ${notes ? `<div class="platform-whatsnew">
+      <span class="platform-whatsnew-label">What's new in ${escapeHtml(data.latest)}</span>
+      ${notes}${link}
+    </div>` : ''}`;
 
   $('#platform-go').addEventListener('click', () => startPlatformUpgrade(data));
+  $('#platform-check').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true; btn.textContent = 'Checking…';
+    try {
+      await fetch('api/platform/check', { method: 'POST' });
+      await loadPlatform();
+    } finally {
+      if (document.body.contains(btn)) { btn.disabled = false; btn.textContent = 'Check'; }
+    }
+  });
 }
 
 async function startPlatformUpgrade(data) {

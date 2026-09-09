@@ -2473,22 +2473,68 @@ code.mono {
 }
 
 /* A new release of HomeBox itself, which is different news from a handful of
-   optional image rebuilds — so a different colour, and it pulses once every
-   few seconds rather than sitting there. Red is the ask and red is right: this
-   is the only dot in the interface that means "the thing you are looking at
-   has a newer version". */
+   optional image rebuilds — so a different colour, and bigger.
+   The 7px dot above is right for "some images have rebuilds"; it was too
+   quiet for "there is a new version of the thing you are using", which went
+   unnoticed on a real box. This is the one badge in the interface that should
+   catch your eye from across the tab strip. */
 .tab-badge.is-platform {
+  width: 10px;
+  height: 10px;
   background: #ef4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.24);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.28);
   animation: tab-badge-pulse 2.4s ease-in-out infinite;
 }
 @keyframes tab-badge-pulse {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.24); }
-  50%      { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.08); }
+  0%, 100% { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.28); }
+  50%      { box-shadow: 0 0 0 7px rgba(239, 68, 68, 0.06); }
 }
 @media (prefers-reduced-motion: reduce) {
   .tab-badge.is-platform { animation: none; }
 }
+
+/* --- the HomeBox update card ------------------------------------------- */
+
+.platform-versions {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  color: var(--text-secondary);
+}
+.platform-versions b { color: var(--text); font-weight: 650; }
+.platform-arrow { color: var(--text-muted); }
+/* The number you are going TO is the one being decided about. */
+.platform-next { color: var(--accent) !important; }
+
+.platform-actions { display: flex; align-items: center; gap: 0.5rem; }
+
+.platform-reassure {
+  margin: 0.7rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+/* "What's new" as its own block rather than loose text under the buttons:
+   it is a different kind of content — somebody's prose, of unknown length —
+   and giving it a frame stops it competing with the decision above it. */
+.platform-whatsnew {
+  margin-top: 0.9rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-1);
+  box-shadow: 0 0 0 1px var(--tile-ring);
+}
+.platform-whatsnew-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.platform-whatsnew .platform-notes { margin-top: 0; padding: 0; background: none; }
 
 .updates-intro-row {
   display: flex;
