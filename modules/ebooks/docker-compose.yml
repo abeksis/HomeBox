@@ -1,0 +1,100 @@
+# ==========================================
+# HOMEBOX - Ebooks Module
+# Calibre-Web and Kavita: two readers, because they are good at
+# different things.
+# ==========================================
+
+x-homebox:
+  id: ebooks
+  added_at: "2026-09-09"
+  title: "Ebooks"
+  tagline: "A library and a reader for it"
+  description: "Calibre-Web puts a browsable, searchable front end on a Calibre library and sends books straight to a Kindle by email. Kavita is the better reader — a genuinely good in-browser one — and handles comics and manga, which Calibre never did well. They read the same folders, so running both costs very little."
+  icon: "calibre-web.svg"
+  category: "media"
+  required: false
+  default: false
+  ram: "~400MB"
+  theme:
+    emoji: "📕"
+    color: "#4b8bf4"
+    bg: "rgba(75,139,244,0.12)"
+  tips:
+    - "Calibre-Web needs an existing Calibre metadata.db in the books folder — it reads a Calibre library, it does not create one. Kavita just reads folders"
+    - "Calibre-Web's default login is admin / admin123. Change it on the first visit, before anything else"
+    - "Send-to-Kindle needs an SMTP server filled in under Calibre-Web's admin settings; without it the button is there and silently does nothing"
+  services:
+    calibre-web:
+      friendly_name: "Calibre-Web"
+      color: "#4b8bf4"
+      description: "Calibre library front end"
+      icon: "calibre-web.svg"
+      port_map: 8083
+      url_scheme: "http"
+      first_login: "Ships with admin / admin123 built in. Change it immediately — this is a default, not a generated password."
+    kavita:
+      friendly_name: "Kavita"
+      color: "#4ac694"
+      description: "Ebook, comic and manga reader"
+      icon: "kavita.svg"
+      port_map: 5002
+      container_port: 5000
+      url_scheme: "http"
+      first_login: "The first account you create on the first visit becomes the admin."
+
+services:
+  calibre-web:
+    image: linuxserver/calibre-web:0.6.27
+    container_name: calibre-web
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    ports:
+      - "8083:8083"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/ebooks/config/calibre-web:/config
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}/${HB_MEDIA_BOOKS:-books}:/books
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  kavita:
+    image: jvmilazz0/kavita:0.9.1
+    container_name: kavita
+    environment:
+      - TZ=${TZ:-UTC}
+    ports:
+      # 5000 inside; 5002 outside because 5000 is a common default and worth
+      # leaving free.
+      - "5002:5000"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/ebooks/config/kavita:/kavita/config
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}/${HB_MEDIA_BOOKS:-books}:/books
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

@@ -1,0 +1,76 @@
+# ==========================================
+# HOMEBOX - Kiwix Module
+# Wikipedia, offline, on a disk you own.
+# ==========================================
+
+x-homebox:
+  id: kiwix
+  added_at: "2026-09-09"
+  title: "Kiwix"
+  tagline: "The internet's reference shelf, offline"
+  description: "Serves ZIM archives — the whole of Wikipedia, Stack Overflow, Project Gutenberg, medical and educational libraries — from local files, searchable, with no connection at all. The full English Wikipedia with images is about 100GB; the text-only version is a tenth of that."
+  icon: "kiwix.svg"
+  category: "files"
+  required: false
+  default: false
+  ram: "~150MB"
+  theme:
+    emoji: "📚"
+    color: "#3366cc"
+    bg: "rgba(51,102,204,0.12)"
+  tips:
+    - "It serves what you give it and downloads nothing: put .zim files in the pool under a kiwix/ folder, from download.kiwix.org"
+    - "The page is empty until at least one .zim is there — the server expands the glob at start, so add files then restart"
+    - "No authentication whatsoever, which is why it binds to this box only by default. Change Listen address in Settings to share it on the LAN"
+  env_vars:
+    KIWIX_BIND_IP:
+      label: "Listen address"
+      type: "text"
+      # 127.0.0.1 keeps an app with no login off the LAN until that is a
+      # decision somebody made. 0.0.0.0 opens it to the network.
+      default: "127.0.0.1"
+  services:
+    kiwix:
+      friendly_name: "Kiwix"
+      color: "#3366cc"
+      description: "Offline Wikipedia and ZIM reader"
+      icon: "kiwix.svg"
+      port_map: 8087
+      container_port: 8080
+      url_scheme: "http"
+      first_login: "No account and no login — everything served is readable by anyone who reaches the page."
+
+services:
+  kiwix:
+    image: ghcr.io/kiwix/kiwix-serve:3.8.2
+    container_name: kiwix
+    user: "${PUID:-1000}:${PGID:-1000}"
+    environment:
+      - TZ=${TZ:-UTC}
+    ports:
+      - "${KIWIX_BIND_IP:-127.0.0.1}:8087:8080"
+    volumes:
+      # Read-only: the library is yours to curate, and the server only reads.
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}/${HB_MEDIA_KIWIX:-kiwix}:/data:ro
+    # The upstream entrypoint expands this glob at start, which is why a
+    # newly added archive needs a restart rather than just a page refresh.
+    command: ["/data/*.zim"]
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '2.00'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

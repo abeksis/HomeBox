@@ -1,0 +1,65 @@
+# ==========================================
+# HOMEBOX - ErsatzTV Module
+# Build television channels from your own files, with a real guide.
+# ==========================================
+
+x-homebox:
+  id: ersatztv
+  added_at: "2026-09-09"
+  title: "ErsatzTV"
+  tagline: "Programme your own channels"
+  description: "Schedules your library into live channels and serves them as an IPTV tuner with a full XMLTV guide, so Jellyfin, Plex or a TV app treats them as ordinary channels. Where Tunarr aims at simplicity, this gives you block scheduling, filler between programmes and per-channel logos."
+  icon: "ersatztv.svg"
+  category: "media"
+  required: false
+  default: false
+  ram: "~400MB"
+  theme:
+    emoji: "📻"
+    color: "#2596be"
+    bg: "rgba(37,150,190,0.12)"
+  tips:
+    - "Add the library as a local folder at /data, then build a collection before you build a channel — a channel with nothing scheduled shows a test pattern"
+    - "The tuner is at /iptv/channels.m3u and the guide at /iptv/xmltv.xml on this port"
+    - "Transcoding is per viewer and CPU-bound without a GPU, so three people on three channels is three transcodes"
+  services:
+    ersatztv:
+      friendly_name: "ErsatzTV"
+      color: "#2596be"
+      description: "Channel scheduling and IPTV"
+      icon: "ersatztv.svg"
+      port_map: 8409
+      url_scheme: "http"
+      first_login: "No account — it opens straight into the channel list."
+
+services:
+  ersatztv:
+    image: jasongdove/ersatztv:v26.3.0
+    container_name: ersatztv
+    environment:
+      - TZ=${TZ:-UTC}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+    ports:
+      - "8409:8409"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/ersatztv/config/ersatztv:/root/.local/share/ersatztv
+      # Read-only: it schedules the library and never writes to it.
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/data:ro
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '4.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

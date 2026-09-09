@@ -1,0 +1,77 @@
+# ==========================================
+# HOMEBOX - Shelfarr Module
+# The *arr pattern, pointed at books instead of films.
+# ==========================================
+
+x-homebox:
+  id: shelfarr
+  added_at: "2026-09-09"
+  title: "Shelfarr"
+  tagline: "Radarr, but for books"
+  description: "Wanted lists, indexer searches and automatic grabs for ebooks and audiobooks, in the shape the *arr apps taught everyone. It hands finished files to Audiobookshelf or Calibre-Web the same way Sonarr hands episodes to Jellyfin."
+  icon: "shelfarr.svg"
+  category: "media"
+  required: false
+  default: false
+  ram: "~250MB"
+  theme:
+    emoji: "📖"
+    color: "#7c5cff"
+    bg: "rgba(124,92,255,0.12)"
+  tips:
+    - "The first account you register becomes the admin, so register it before anyone else can reach the page"
+    - "It searches through Prowlarr — add Shelfarr there as an application so the indexers sync across"
+    - "No authentication until that first account exists, which is why it binds to this box only by default"
+  env_vars:
+    SHELFARR_BIND_IP:
+      label: "Listen address"
+      type: "text"
+      # There is a window between first start and first registration where
+      # anyone reaching the page becomes the admin. 0.0.0.0 shares it.
+      default: "127.0.0.1"
+  services:
+    shelfarr:
+      friendly_name: "Shelfarr"
+      color: "#7c5cff"
+      description: "Book and audiobook automation"
+      icon: "shelfarr.svg"
+      port_map: 5056
+      container_port: 80
+      url_scheme: "http"
+      first_login: "No default account — whoever registers first becomes the admin. Do that immediately after install."
+
+services:
+  shelfarr:
+    image: ghcr.io/pedro-revez-silva/shelfarr:2026.08.31.1
+    container_name: shelfarr
+    environment:
+      - TZ=${TZ:-UTC}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      # Fixes ownership of the mounted folders at start, which is why this
+      # module needs no separate init container to chown them.
+      - CHOWN_ON_START=true
+      - SOLID_QUEUE_IN_PUMA=1
+    ports:
+      - "${SHELFARR_BIND_IP:-127.0.0.1}:5056:80"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/shelfarr/config/shelfarr:/config
+      # One mount over the pool, so a grab lands where the readers look.
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/data
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

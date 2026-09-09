@@ -1,0 +1,85 @@
+# ==========================================
+# HOMEBOX - Unpackerr Module
+# Extract the archives the *arr apps cannot, then clean up after them.
+# ==========================================
+
+x-homebox:
+  id: unpackerr
+  added_at: "2026-09-09"
+  title: "Unpackerr"
+  tagline: "Unpacks what the *arr apps leave sitting"
+  description: "Watches Radarr, Sonarr and the rest for downloads that arrived as RAR or multi-part archives, extracts them so the import can proceed, and deletes the extracted copy once the app has taken the file. Without it those downloads sit in the queue as 'Completed' forever."
+  icon: "unpackerr.png"
+  category: "media"
+  required: false
+  default: false
+  ram: "~80MB"
+  theme:
+    emoji: "📦"
+    color: "#f05a28"
+    bg: "rgba(240,90,40,0.12)"
+  tips:
+    - "It needs an API key per app — Radarr and Sonarr both show theirs under Settings → General"
+    - "Use the container names for the URLs: http://radarr:7878, http://sonarr:8989. localhost here is this container"
+    - "It only touches archives. If an import is stuck on something that is already a video file, the problem is elsewhere — usually permissions or a path the app cannot see"
+  env_vars:
+    UNPACKERR_RADARR_API_KEY:
+      label: "Radarr API key"
+      type: "secret"
+      generated: false
+    UNPACKERR_SONARR_API_KEY:
+      label: "Sonarr API key"
+      type: "secret"
+      generated: false
+  services:
+    unpackerr:
+      friendly_name: "Unpackerr"
+      color: "#f05a28"
+      description: "Archive extraction for the *arr apps"
+      icon: "unpackerr.png"
+      port_map: 5656
+      url_scheme: "http"
+      first_login: "No account. The page is a status view; everything is configured from Settings here."
+
+services:
+  unpackerr:
+    image: golift/unpackerr:0.16.1
+    container_name: unpackerr
+    user: "${PUID:-1000}:${PGID:-1000}"
+    environment:
+      - TZ=${TZ:-UTC}
+      - UN_WEBSERVER_METRICS=true
+      - UN_WEBSERVER_LISTEN_ADDR=0.0.0.0:5656
+      # Blank keys simply leave that app unconfigured — the container starts
+      # either way and says so in its log.
+      - UN_SONARR_0_URL=http://sonarr:8989
+      - UN_SONARR_0_API_KEY=${UNPACKERR_SONARR_API_KEY:-}
+      - UN_SONARR_0_PATHS_0=/data/${HB_DOWNLOADS:-torrents}
+      - UN_RADARR_0_URL=http://radarr:7878
+      - UN_RADARR_0_API_KEY=${UNPACKERR_RADARR_API_KEY:-}
+      - UN_RADARR_0_PATHS_0=/data/${HB_DOWNLOADS:-torrents}
+    ports:
+      - "5656:5656"
+    volumes:
+      # Read-write, and this is the one module here that needs it: extracting
+      # is writing, and deleting the extracted copy afterwards is the point.
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/data
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '2.00'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true
