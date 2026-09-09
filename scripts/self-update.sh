@@ -54,7 +54,16 @@ HISTORY="$STATE_DIR/platform-history.json"
 LOCK="$STATE_DIR/platform-update.lock"
 BACKUP_DIR="$STATE_DIR/platform-backups"
 KEEP_BACKUPS=5
-HEALTH_URL="http://127.0.0.1:${HB_DASHBOARD_PORT:-8443}/api/summary"
+# /healthz, not /api/summary.
+#
+# Every route on the dashboard is behind a session by default; /healthz is on
+# the short public list precisely because the container's own healthcheck runs
+# before anybody has signed in. /api/summary answers 401 to an unauthenticated
+# curl, `curl -fsS` calls that a failure, and the health gate could therefore
+# never pass — every update on every box would have rolled itself back.
+#
+# server.js already carries a comment about making this exact mistake once.
+HEALTH_URL="http://127.0.0.1:${HB_DASHBOARD_PORT:-8443}/healthz"
 HEALTH_TIMEOUT=180
 
 TARGET="${1:-}"
