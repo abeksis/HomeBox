@@ -31,6 +31,7 @@ x-homebox:
       port_map: 8096
       url_scheme: "http"
       first_login: "The first visit runs a setup wizard where you create the admin account and add libraries."
+      reset_login: "jellyfin"
 
 services:
   jellyfin:

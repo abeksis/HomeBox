@@ -79,6 +79,43 @@ function clearUsers(file) {
   }
 }
 
+/**
+ * Jellyfin's user database, which is NOT where the path suggests.
+ *
+ * The container mounts /config, and inside it the file is at
+ * data/data/jellyfin.db — a doubled segment, because the image's own config
+ * root is already .../data. Guessing data/jellyfin.db finds nothing, so both
+ * are tried rather than assumed.
+ */
+function jellyfinDb(moduleId, service) {
+  for (const rel of ['data/data/jellyfin.db', 'data/jellyfin.db']) {
+    const file = configPath(moduleId, service, rel);
+    if (fs.existsSync(file)) return file;
+  }
+  return null;
+}
+
+function jellyfinUsers(file) {
+  const db = openDb(file);
+  try {
+    return db.prepare('select Username as name, (Password is null) as blank from Users').all();
+  } finally {
+    db.close();
+  }
+}
+
+/** Clears every account's password. Returns the names it opened. */
+function jellyfinClear(file) {
+  const db = openDb(file);
+  try {
+    const names = db.prepare('select Username as name from Users').all().map((r) => r.name);
+    db.prepare('update Users set Password = NULL, InvalidLoginAttemptCount = 0').run();
+    return names;
+  } finally {
+    db.close();
+  }
+}
+
 /* ---------------------------------------------------------- strategies */
 
 const STRATEGIES = {
@@ -203,6 +240,80 @@ const STRATEGIES = {
       await composeLib.upService(moduleId, service, { onLine });
 
       return { next: 'Sign in with the credentials under Settings → Passwords (module: media).' };
+    },
+  },
+
+  /**
+   * Jellyfin, which does have a reset — and it is the reason this exists.
+   *
+   * Its "forgot password" writes a PIN to a file INSIDE the container, at
+   * /config/data/passwordreset<hash>.json, and shows you the path. Which is
+   * fine advice for someone with a shell and useless from a browser. Worse,
+   * every press of the button overwrites that file with a new PIN and voids
+   * the previous one, so reading the path a minute late gets you a code that
+   * no longer works.
+   *
+   * The account lives in the Users table of jellyfin.db. Clearing the
+   * Password column makes Jellyfin accept an empty one for that user, which
+   * is its own documented recovery: the stored value is a PBKDF2 hash that
+   * cannot be reversed, and a new one cannot be written from outside because
+   * Jellyfin derives it with parameters only it applies.
+   *
+   * InvalidLoginAttemptCount goes with it. Jellyfin locks an account after
+   * repeated failures, and someone resetting a password has usually just
+   * failed repeatedly — leaving the counter would open the door and keep the
+   * lock on. Observed at 11 on the install this was written for.
+   */
+  jellyfin: {
+    label: 'Clear the password so you can sign in with an empty one and set a new one',
+    async detail(moduleId, service) {
+      const db = jellyfinDb(moduleId, service);
+      if (!db) return { available: false, why: 'it has not built its database yet — start it once first' };
+      try {
+        const users = jellyfinUsers(db);
+        if (!users.length) return { available: false, why: 'it has no accounts yet' };
+        const open = users.filter((u) => u.blank).length;
+        return {
+          available: true,
+          state: users.length === 1 ? `1 account${open ? ', already open' : ''}` : `${users.length} accounts`,
+        };
+      } catch (err) {
+        return { available: false, why: `could not read its database (${err.message})` };
+      }
+    },
+    async run(moduleId, service, { onLine }) {
+      const db = jellyfinDb(moduleId, service);
+      if (!db) throw new ResetError(`${service} has not built its database yet`);
+      const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '');
+
+      onLine(`==> Stopping ${service} — copying a live SQLite file is how you get a broken one`);
+      await composeLib.stopService(moduleId, service, { onLine });
+
+      await fsp.copyFile(db, `${db}.bak-reset-${stamp}`);
+      onLine(`==> Backed up ${path.basename(db)}`);
+
+      const cleared = jellyfinClear(db);
+      for (const name of cleared) onLine(`==> Cleared the password for "${name}"`);
+
+      // Jellyfin never removes these, so an expired PIN file sits in the
+      // config directory indefinitely.
+      const dataDir = path.dirname(path.dirname(db));
+      try {
+        for (const f of await fsp.readdir(dataDir)) {
+          if (!f.startsWith('passwordreset')) continue;
+          await fsp.rm(path.join(dataDir, f), { force: true });
+          onLine(`==> Removed the stale PIN file ${f}`);
+        }
+      } catch { /* nothing to clean up */ }
+
+      onLine(`==> Starting ${service}`);
+      await composeLib.upService(moduleId, service, { onLine });
+
+      return {
+        next: `Open ${service} and sign in as ${cleared[0] || 'your user'} with the password field EMPTY, `
+          + 'then set a new one immediately under Profile → Password. '
+          + 'Your libraries, users and watch history are untouched.',
+      };
     },
   },
 };
