@@ -1974,7 +1974,39 @@ code.mono {
 
 /* =================================== LAUNCHER / APP STORE CONTENT EDITORS */
 
-.editor-list { display: flex; flex-direction: column; gap: 0.5rem; margin: 1rem 0; }
+/* Scrolls once it outgrows the screen.
+   These lists have one row per app, and the catalog went from 17 apps to 62 —
+   at which point the card is several screens tall, the form underneath it is
+   unreachable without scrolling past everything, and the tab strip is long
+   gone. max-height only engages when there is more than fits, so a short
+   Quick access list is unchanged.
+   The right padding is for the scrollbar: without it, it sits on top of the
+   Edit buttons. */
+.editor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  max-height: min(58vh, 620px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.4rem;
+}
+
+/* A row's ring is drawn with box-shadow, which a scroll container clips at
+   its edges. One pixel of inset keeps the first and last row whole. */
+.editor-list > * { flex-shrink: 0; margin: 1px 1px 1px 0; }
+
+.editor-list::-webkit-scrollbar { width: 10px; }
+.editor-list::-webkit-scrollbar-track { background: transparent; }
+.editor-list::-webkit-scrollbar-thumb {
+  background: var(--card-border);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+.editor-list::-webkit-scrollbar-thumb:hover { background: var(--text-muted); background-clip: padding-box; }
+.editor-list { scrollbar-width: thin; scrollbar-color: var(--card-border) transparent; }
 
 .editor-row {
   display: flex;
