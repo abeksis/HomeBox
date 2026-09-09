@@ -1,0 +1,77 @@
+# ==========================================
+# HOMEBOX - Frigate Module
+# Cameras that tell you a person arrived, not that leaves moved.
+# ==========================================
+
+x-homebox:
+  id: frigate
+  added_at: "2026-09-09"
+  title: "Frigate"
+  tagline: "Cameras that know what they are looking at"
+  description: "Network video recorder with real object detection: it tells you a person, a car or a dog appeared, rather than alerting on every shadow and every branch. Everything is processed and stored here, so no camera footage of your front door is uploaded to anyone."
+  icon: "frigate.svg"
+  category: "security"
+  required: false
+  default: false
+  ram: "~2GB"
+  theme:
+    emoji: "📹"
+    color: "#1f2937"
+    bg: "rgba(107,114,128,0.14)"
+  tips:
+    - "It will not start without cameras in config.yml — HomeBox writes a valid empty config, and you add each camera's RTSP URL to it"
+    - "Detection on the CPU is expensive: roughly one core per camera. A Coral TPU on USB turns that into almost nothing, and is the single upgrade that matters here"
+    - "Recordings go to the media pool under frigate/, so they land on the NAS rather than filling the system disk"
+    - "Use each camera's SUB stream for detection and the main stream for recording. Running detection on 4K is how people conclude Frigate is slow"
+  services:
+    frigate:
+      friendly_name: "Frigate"
+      color: "#6b7280"
+      description: "Camera NVR with object detection"
+      icon: "frigate.svg"
+      port_map: 5001
+      container_port: 5000
+      url_scheme: "http"
+      first_login: "No account by default. Set one in config.yml before this is reachable from anywhere but your LAN."
+
+services:
+  frigate:
+    image: ghcr.io/blakeblackshear/frigate:0.17.2
+    container_name: frigate
+    environment:
+      - TZ=${TZ:-UTC}
+    ports:
+      - "5001:5000"
+      # RTSP restream: lets Home Assistant and other viewers pull one stream
+      # from Frigate instead of each opening its own connection to the camera,
+      # which is what makes cheap cameras drop out.
+      - "8554:8554"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/frigate/config/frigate:/config
+      # Recordings on the pool, not the system disk. Continuous recording from
+      # four cameras is a terabyte a month.
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}/${HB_FRIGATE_DIR:-frigate}:/media/frigate
+      - /etc/localtime:/etc/localtime:ro
+    # Frigate keeps decoded frames in shared memory. The 64MB docker default
+    # is not enough for even one camera, and the failure looks like the
+    # camera dropping rather than a memory limit.
+    shm_size: 256mb
+    tmpfs:
+      - /tmp/cache:size=1000000000
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '4.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

@@ -1,0 +1,63 @@
+# ==========================================
+# HOMEBOX - CoolerControl Module
+# Fan curves for a machine you can hear from the next room.
+# ==========================================
+
+x-homebox:
+  id: coolercontrol
+  added_at: "2026-09-09"
+  title: "CoolerControl"
+  tagline: "Make the box stop shouting"
+  description: "Reads every temperature sensor and fan on the machine and lets you write curves for them — quiet under load you do not care about, loud only when something is genuinely hot. For a server in a cupboard the difference between stock fan behaviour and a sensible curve is the difference between hearing it and not."
+  icon: "cooler-control.svg"
+  category: "system"
+  required: false
+  default: false
+  ram: "~150MB"
+  theme:
+    emoji: "🌡️"
+    color: "#00bcd4"
+    bg: "rgba(0,188,212,0.12)"
+  tips:
+    - "This needs REAL hardware. In a virtual machine there are no fan controllers to talk to, and it will start and show you nothing"
+    - "It runs privileged with the host's /sys and /dev: setting a fan speed means writing to a kernel hwmon device, which is not something a normal container may do"
+    - "A fan curve that is too aggressive is worse than the default. Leave headroom, and check temperatures under real load rather than at idle"
+  services:
+    coolercontrol:
+      friendly_name: "CoolerControl"
+      color: "#00bcd4"
+      description: "Fan and temperature control"
+      icon: "cooler-control.svg"
+      port_map: 11987
+      url_scheme: "http"
+      first_login: "No account — it opens on the device list. Empty means it found no controllable hardware."
+
+services:
+  coolercontrol:
+    # Upstream publishes no version tags on this image, so a digest is the
+    # only thing that actually names a build.
+    image: coolercontrol/coolercontrold:latest@sha256:a67707b8ec9c222349af1971d055c53571d0d30db2fe98c0b9e00a9d5e96b4f1
+    container_name: coolercontrol
+    # Writing a fan speed is writing to a kernel hwmon device. There is no
+    # capability that grants just that, so this is the one module here that
+    # genuinely needs the host's hardware and privileges.
+    privileged: true
+    network_mode: host
+    environment:
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/coolercontrol/config/coolercontrol:/etc/coolercontrol
+      - /sys:/sys
+      - /run/udev:/run/udev:ro
+      - /etc/localtime:/etc/localtime:ro
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always

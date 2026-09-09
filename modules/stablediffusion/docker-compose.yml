@@ -1,0 +1,68 @@
+# ==========================================
+# HOMEBOX - Stable Diffusion Module
+# Image generation that stays on this machine.
+# ==========================================
+
+x-homebox:
+  id: stablediffusion
+  added_at: "2026-09-09"
+  title: "Stable Diffusion"
+  tagline: "Images, generated here"
+  description: "The AUTOMATIC1111 web interface for Stable Diffusion — text to image, image to image, inpainting, upscaling — running on your own hardware. No subscription, no queue, no content filter deciding what you may ask for, and nothing you generate is uploaded anywhere."
+  icon: "open-webui.svg"
+  category: "productivity"
+  required: false
+  default: false
+  ram: "~8GB"
+  theme:
+    emoji: "🎨"
+    color: "#ec4899"
+    bg: "rgba(236,72,153,0.12)"
+  tips:
+    - "This wants an NVIDIA GPU. On a CPU a single image takes several minutes instead of several seconds, which is the difference between a tool and a demonstration"
+    - "A GPU needs the NVIDIA Container Toolkit on the host and a deploy.resources.reservations.devices block here — deliberately not added, because on a box without one it stops the container from starting at all"
+    - "Models are 2-7GB each and are not included. Put .safetensors files in the module's models directory and restart"
+    - "The first start downloads several gigabytes of Python dependencies before the page appears. Give it time before deciding it is broken"
+  services:
+    stablediffusion:
+      friendly_name: "Stable Diffusion"
+      color: "#ec4899"
+      description: "Image generation"
+      port_map: 7860
+      url_scheme: "http"
+      first_login: "No account by default. Anything that reaches the page can generate on your hardware."
+
+services:
+  stablediffusion:
+    # No version tags upstream, so the digest is the only real identifier.
+    image: ghcr.io/ashleykleynhans/stable-diffusion-webui:latest@sha256:ceb9e7b93144a9264271f1812c84dbfdb9b9510ec4ca29918763951968c0adc4
+    container_name: stablediffusion
+    environment:
+      - TZ=${TZ:-UTC}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - CLI_ARGS=${STABLEDIFFUSION_ARGS:---listen --skip-torch-cuda-test --no-half}
+    ports:
+      - "7860:7860"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/stablediffusion/config/data:/data
+      # Generated images land on the pool rather than the system disk, which
+      # a few hundred outputs would otherwise fill.
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}/${HB_SD_OUTPUT_DIR:-ai-images}:/output
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+          cpus: '8.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

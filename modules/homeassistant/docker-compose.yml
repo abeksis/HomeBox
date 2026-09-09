@@ -1,0 +1,65 @@
+# ==========================================
+# HOMEBOX - Home Assistant Module
+# The house, controlled from the house.
+# ==========================================
+
+x-homebox:
+  id: homeassistant
+  added_at: "2026-09-09"
+  title: "Home Assistant"
+  tagline: "Your house, answering to you"
+  description: "Ties every smart device you own — lights, locks, sensors, vacuums, thermostats, cameras — into one system with automations, and does it locally. Devices that would otherwise each need their own app and their own cloud account keep working when the internet does not."
+  icon: "home-assistant.svg"
+  category: "system"
+  required: false
+  default: false
+  ram: "~1GB"
+  theme:
+    emoji: "🏠"
+    color: "#41bdf5"
+    bg: "rgba(65,189,245,0.12)"
+  tips:
+    - "It runs on the host network on purpose: discovery of most devices is mDNS and SSDP broadcast, which does not cross a bridge network. Inside one, half your devices simply never appear"
+    - "This is Home Assistant Container, not Home Assistant OS — Add-ons are an OS feature and are not available here. HACS, integrations and everything else are"
+    - "Create the owner account on the first visit. It is the only account until you make more, and there is no recovery if you lose it"
+    - "Zigbee or Z-Wave needs the USB stick passed through, which this module does not do. Add a devices: entry for /dev/serial/by-id/... if you have one"
+  services:
+    homeassistant:
+      friendly_name: "Home Assistant"
+      color: "#41bdf5"
+      description: "Home automation hub"
+      icon: "home-assistant.svg"
+      port_map: 8123
+      url_scheme: "http"
+      first_login: "Creates the owner account on the first visit — pick the name and password there."
+
+services:
+  homeassistant:
+    # The source pins 2024.12.5. Home Assistant ships monthly and moves fast;
+    # an install nearly two years behind starts by asking to be updated.
+    image: homeassistant/home-assistant:2026.9.1
+    container_name: homeassistant
+    # Not a shortcut. Discovery is broadcast — mDNS and SSDP — and broadcast
+    # does not cross a docker bridge. On a bridge network Home Assistant comes
+    # up perfectly and finds almost nothing, which reads as "my devices are
+    # not supported" rather than "the network is wrong".
+    network_mode: host
+    privileged: true
+    environment:
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/homeassistant/config/homeassistant:/config
+      - /etc/localtime:/etc/localtime:ro
+      # Bluetooth, for the integrations that use it.
+      - /run/dbus:/run/dbus:ro
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always

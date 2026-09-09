@@ -1,0 +1,105 @@
+# ==========================================
+# HOMEBOX - Local AI Module
+# Ollama and Open WebUI: a chat assistant that answers from this box.
+# ==========================================
+
+x-homebox:
+  id: localai
+  added_at: "2026-09-09"
+  title: "Local AI"
+  tagline: "A model that runs in your house"
+  description: "Ollama runs open-weight language models on this machine and Open WebUI puts a chat interface on them. Nothing you type is sent anywhere — which is the point for anything you would not paste into a website. Small models are usable on a CPU; anything large wants a GPU."
+  icon: "open-webui.svg"
+  category: "productivity"
+  required: false
+  default: false
+  ram: "~2GB"
+  theme:
+    emoji: "🤖"
+    color: "#7c3aed"
+    bg: "rgba(124,58,237,0.12)"
+  tips:
+    - "On 8181, not the 8090 the source uses — Beszel answers there. Two apps cannot share a port"
+    - "Start with a 3B or 7B model. On CPU those reply at reading speed; a 70B on CPU produces about a word every few seconds"
+    - "Models are large — a few gigabytes each — and live in the module's config directory on the system disk. Check you have room before pulling three"
+    - "The first account you create in Open WebUI becomes the admin, so make it before anything else on the network reaches the page"
+  services:
+    localai:
+      friendly_name: "Open WebUI"
+      color: "#7c3aed"
+      description: "Chat interface for local models"
+      icon: "open-webui.svg"
+      port_map: 8181
+      container_port: 8080
+      url_scheme: "http"
+      first_login: "The first account you create becomes the admin."
+    ollama:
+      friendly_name: "Ollama"
+      description: "Runs the models"
+      icon: "ollama.svg"
+      internal: true
+
+services:
+  localai:
+    image: ghcr.io/open-webui/open-webui:v0.10.2
+    container_name: open-webui
+    environment:
+      - TZ=${TZ:-UTC}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      # Off by default: this is a chat UI, not a telemetry endpoint.
+      - ANONYMIZED_TELEMETRY=false
+      - DO_NOT_TRACK=true
+      - SCARF_NO_ANALYTICS=true
+    ports:
+      # 8090 in the source, which is Beszel's port here.
+      - "8181:8080"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/localai/config/open-webui:/app/backend/data
+    depends_on:
+      - ollama
+    networks:
+      - homebox_proxy
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  ollama:
+    image: ollama/ollama:0.33.3
+    container_name: ollama
+    environment:
+      - TZ=${TZ:-UTC}
+      - OLLAMA_KEEP_ALIVE=5m
+    volumes:
+      # Where downloaded models live. Gigabytes each, on the system disk.
+      - ${HB_ROOT:-/opt/homebox}/modules/localai/config/ollama:/root/.ollama
+    # No published port: the only thing that needs to reach Ollama is the UI
+    # beside it, and an open inference endpoint on the LAN is a way to hand
+    # someone else your CPU.
+    networks:
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 12G
+          cpus: '6.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true
+  homebox_internal:
+    external: true
