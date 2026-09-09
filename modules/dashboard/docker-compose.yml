@@ -55,18 +55,23 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       # The host root, for a real disk figure rather than the image layer's.
       - /:/host/root:ro
-      # Icons live over the copy baked into the image at build time.
+      # The whole front end, over the copy baked into the image at build time.
       #
-      # Without this, adding a module also means rebuilding the dashboard, or
-      # its card renders a monogram while the file sits on disk two
-      # directories away. That failed silently once already: a `git pull`
-      # brought 35 new icons the container could not see, and nothing in the
-      # UI said so — a missing icon is a fallback, not an error.
+      # This started as an icons-only mount after a `git pull` brought 35 new
+      # icons the container could not see. That was the right diagnosis and
+      # too narrow a fix: the next `git pull` changed app.css and landed in
+      # exactly the same place, because everything under public/ is copied in
+      # at build time, not just the icons.
+      #
+      # So mount the directory, not one folder inside it. A front-end change
+      # now needs a `git pull` and a page refresh rather than an image
+      # rebuild. Read-only, because nothing in the dashboard writes here —
+      # user-uploaded icons go to state/icons and are served from /user-icons.
       #
       # The image still ships its own copy, so a container started without
       # this mount is not broken. HB_ROOT always holds the source here; the
       # dashboard is built from it.
-      - ${HB_ROOT:-/opt/homebox}/dashboard/public/icons:/app/public/icons:ro
+      - ${HB_ROOT:-/opt/homebox}/dashboard/public:/app/public:ro
     networks:
       - homebox_proxy
     deploy:
