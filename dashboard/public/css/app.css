@@ -1374,7 +1374,35 @@ code.mono {
 
 /* ======================================================= RUNNING SERVICES */
 
-.running-list { display: flex; flex-direction: column; gap: 7px; }
+/* One row per container, so this card grows with the box rather than with the
+   design. Twenty apps is an ordinary HomeBox and already taller than a screen,
+   which pushes Network, Connectivity and Backups below the fold — the three
+   things somebody opening "Network & Maintenance" came to look at.
+   Scroll the list instead of the page. Same treatment as .editor-list, and
+   max-height only engages past what fits, so a box with four apps is
+   unchanged. */
+.running-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-height: min(52vh, 560px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.4rem;
+}
+/* A row's ring is a box-shadow, which a scroll container clips at its edges. */
+.running-list > * { flex-shrink: 0; margin: 1px 1px 1px 0; }
+
+.running-list::-webkit-scrollbar { width: 10px; }
+.running-list::-webkit-scrollbar-track { background: transparent; }
+.running-list::-webkit-scrollbar-thumb {
+  background: var(--card-border);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+.running-list::-webkit-scrollbar-thumb:hover { background: var(--text-muted); background-clip: padding-box; }
+.running-list { scrollbar-width: thin; scrollbar-color: var(--card-border) transparent; }
 .running-row {
   display: flex;
   align-items: center;
