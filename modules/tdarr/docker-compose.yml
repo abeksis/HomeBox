@@ -1,0 +1,78 @@
+# ==========================================
+# HOMEBOX - Tdarr Module
+# Re-encode a library in the background, on a schedule you set.
+# ==========================================
+
+x-homebox:
+  id: tdarr
+  added_at: "2026-09-09"
+  title: "Tdarr"
+  tagline: "Shrink the library while you sleep"
+  description: "Walks your library and re-encodes what matches rules you write — H.264 to H.265, drop the audio tracks in languages nobody here speaks, remux into MKV. A 500GB library often comes out half the size with no visible difference. It replaces files in place, so it is worth aiming at a copy first."
+  icon: "tdarr.svg"
+  category: "media"
+  required: false
+  default: false
+  ram: "~1GB"
+  theme:
+    emoji: "🗜️"
+    color: "#f79c34"
+    bg: "rgba(247,156,52,0.12)"
+  tips:
+    - "It REPLACES the original file when a job succeeds. Run one library through with a small test folder before pointing it at everything"
+    - "Two ports on purpose: 8265 is the page you use, 8266 is the server the workers talk to. Both are published because a worker on another box needs 8266"
+    - "The transcode cache is separate from the library and gets large — it is under the module's config directory, on the system disk"
+    - "Without a GPU passed in, every transcode is CPU, and a 4K file will occupy every core for a long time"
+  services:
+    tdarr:
+      friendly_name: "Tdarr"
+      color: "#f79c34"
+      description: "Automated transcoding"
+      icon: "tdarr.svg"
+      port_map: 8265
+      url_scheme: "http"
+      first_login: "No login at all by default — anyone who reaches the page can change the rules that rewrite your library."
+
+services:
+  tdarr:
+    image: ghcr.io/haveagitgat/tdarr:2.47.01
+    container_name: tdarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      - UMASK_SET=002
+      - serverIP=0.0.0.0
+      - serverPort=8266
+      - webUIPort=8265
+      - internalNode=true
+      - inContainer=true
+      - nodeName=HomeBox
+    ports:
+      - "8265:8265"
+      - "8266:8266"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/tdarr/config/server:/app/server
+      - ${HB_ROOT:-/opt/homebox}/modules/tdarr/config/configs:/app/configs
+      - ${HB_ROOT:-/opt/homebox}/modules/tdarr/config/logs:/app/logs
+      # Scratch space for a transcode in progress. On the system disk rather
+      # than the pool, so a run in flight does not churn the NAS.
+      - ${HB_ROOT:-/opt/homebox}/modules/tdarr/config/transcode:/temp
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/media
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '4.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

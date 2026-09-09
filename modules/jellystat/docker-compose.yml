@@ -1,0 +1,122 @@
+# ==========================================
+# HOMEBOX - Jellystat Module
+# What actually gets watched on Jellyfin, kept past Jellyfin's own memory.
+# ==========================================
+
+x-homebox:
+  id: jellystat
+  added_at: "2026-09-09"
+  title: "Jellystat"
+  tagline: "What your Jellyfin actually plays"
+  description: "Statistics for a Jellyfin server: who watched what, how often, which files never get touched, and how much was streamed versus transcoded. It keeps its own history in Postgres, so the record survives a Jellyfin database reset and goes back further than Jellyfin's own activity log."
+  icon: "jellystat.svg"
+  category: "media"
+  required: false
+  default: false
+  ram: "~250MB"
+  theme:
+    emoji: "📊"
+    color: "#9d5cff"
+    bg: "rgba(157,92,255,0.12)"
+  tips:
+    - "Needs a Jellyfin API key: Jellyfin → Dashboard → API Keys, then paste it in the Jellystat setup page along with http://jellyfin:8096"
+    - "Use the container name, not localhost — localhost inside this container is this container"
+    - "It backfills history from Jellyfin on the first sync, then keeps its own; the first run takes a few minutes on a busy server"
+  env_vars:
+    JELLYSTAT_DB_PASSWORD:
+      label: "Database password"
+      type: "secret"
+      config_editable: false
+      dangerous: true
+    JELLYSTAT_JWT_SECRET:
+      label: "Session signing key"
+      type: "secret"
+      config_editable: false
+      dangerous: true
+  services:
+    jellystat:
+      friendly_name: "Jellystat"
+      color: "#9d5cff"
+      description: "Jellyfin statistics"
+      icon: "jellystat.svg"
+      port_map: 3110
+      container_port: 3000
+      url_scheme: "http"
+      first_login: "Creates its admin account on the first visit, then asks for your Jellyfin server URL and API key."
+    jellystat-db:
+      friendly_name: "Jellystat Database"
+      description: "Postgres holding the history"
+      icon: "postgres.svg"
+      internal: true
+
+services:
+  jellystat:
+    image: cyfershepard/jellystat:1.1.11
+    container_name: jellystat
+    environment:
+      - TZ=${TZ:-UTC}
+      - POSTGRES_USER=jellystat
+      - POSTGRES_PASSWORD=${JELLYSTAT_DB_PASSWORD:-jellystat}
+      - POSTGRES_IP=jellystat-db
+      - POSTGRES_PORT=5432
+      - JWT_SECRET=${JELLYSTAT_JWT_SECRET:-}
+    ports:
+      - "3110:3000"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/jellystat/config/backup:/app/backend/backup-data
+    depends_on:
+      - jellystat-db
+    networks:
+      - homebox_proxy
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.00'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  jellystat-db:
+    image: postgres:16-alpine
+    container_name: jellystat-db
+    environment:
+      - TZ=${TZ:-UTC}
+      - POSTGRES_USER=jellystat
+      - POSTGRES_PASSWORD=${JELLYSTAT_DB_PASSWORD:-jellystat}
+      - POSTGRES_DB=jfstat
+      - POSTGRES_INITDB_ARGS=--data-checksums
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/jellystat/config/postgres:/var/lib/postgresql/data
+    shm_size: 128mb
+    # No published port: nothing outside this module needs the history.
+    networks:
+      - homebox_internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jellystat -d jfstat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true
+  homebox_internal:
+    external: true

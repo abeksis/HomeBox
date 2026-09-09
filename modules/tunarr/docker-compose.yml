@@ -1,0 +1,67 @@
+# ==========================================
+# HOMEBOX - Tunarr Module
+# Turn the library into television channels that are simply on.
+# ==========================================
+
+x-homebox:
+  id: tunarr
+  added_at: "2026-09-09"
+  title: "Tunarr"
+  tagline: "Channels, not a menu"
+  description: "Builds live TV channels out of your own library and serves them as an IPTV tuner, so Jellyfin, Plex or any m3u player sees them as ordinary channels. Something is always already playing, which is the part of television that on-demand took away."
+  icon: "tunarr.svg"
+  category: "media"
+  required: false
+  default: false
+  ram: "~300MB"
+  theme:
+    emoji: "📡"
+    color: "#a855f7"
+    bg: "rgba(168,85,247,0.12)"
+  tips:
+    - "It builds channels from a Plex or Jellyfin library rather than raw folders, so install one of those first and point Tunarr at it"
+    - "Add the channels to a player as an HDHomeRun tuner or as the m3u and xmltv URLs it shows on the channel page"
+    - "A channel is a schedule, not a stream: the guide is generated ahead of time, so a long channel takes a moment to save"
+  services:
+    tunarr:
+      friendly_name: "Tunarr"
+      color: "#a855f7"
+      description: "Live TV channels from your library"
+      icon: "tunarr.svg"
+      port_map: 8000
+      url_scheme: "http"
+      first_login: "No account — it opens straight into the channel editor."
+
+services:
+  tunarr:
+    image: chrisbenincasa/tunarr:1.3.13
+    container_name: tunarr
+    environment:
+      - TZ=${TZ:-UTC}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/tunarr/config/tunarr:/config/tunarr
+      # Read-only: Tunarr schedules the library, it never writes to it.
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/data:ro
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.00'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

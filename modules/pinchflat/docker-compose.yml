@@ -1,0 +1,66 @@
+# ==========================================
+# HOMEBOX - Pinchflat Module
+# Keep the YouTube channels you care about, before they go.
+# ==========================================
+
+x-homebox:
+  id: pinchflat
+  added_at: "2026-09-09"
+  title: "Pinchflat"
+  tagline: "Subscribe, and actually keep it"
+  description: "Watches YouTube channels and playlists and downloads new videos as they appear, naming them so Jellyfin or Plex files them as a series. Built on yt-dlp, with rules for quality, format and how far back to go. A channel that gets deleted next year is still on your disk."
+  icon: "pinchflat.png"
+  category: "media"
+  required: false
+  default: false
+  ram: "~200MB"
+  theme:
+    emoji: "⬇️"
+    color: "#ff5252"
+    bg: "rgba(255,82,82,0.12)"
+  tips:
+    - "Downloads land in /downloads, which is the pool — set a media profile that writes somewhere your media server already scans"
+    - "Start with 'download the last 3 videos' rather than a whole channel: a large back catalogue is hundreds of gigabytes and YouTube notices"
+    - "It has no login of its own, so anything that can reach the page can queue downloads"
+  services:
+    pinchflat:
+      friendly_name: "Pinchflat"
+      color: "#ff5252"
+      description: "YouTube channel archiver"
+      icon: "pinchflat.png"
+      port_map: 8945
+      url_scheme: "http"
+      first_login: "No account — it opens straight into the sources list."
+
+services:
+  pinchflat:
+    image: ghcr.io/kieraneglin/pinchflat:v2025.6.6
+    container_name: pinchflat
+    environment:
+      - TZ=${TZ:-UTC}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+    ports:
+      - "8945:8945"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/pinchflat/config/pinchflat:/config
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/downloads
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2.00'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

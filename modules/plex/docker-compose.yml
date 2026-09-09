@@ -1,0 +1,74 @@
+# ==========================================
+# HOMEBOX - Plex Module
+# Plex Media Server: the polished client on every screen you own.
+# ==========================================
+
+x-homebox:
+  id: plex
+  added_at: "2026-09-09"
+  title: "Plex"
+  tagline: "Your library, on every screen"
+  description: "The most widely supported media server there is — apps on televisions, consoles, phones and streaming sticks that Jellyfin has not reached. It reads the same library folders as everything else here, so running it alongside Jellyfin costs disk space for metadata and nothing else."
+  icon: "plex.png"
+  category: "media"
+  required: false
+  default: false
+  ram: "~500MB"
+  theme:
+    emoji: "🎬"
+    color: "#e5a00d"
+    bg: "rgba(229,160,13,0.12)"
+  tips:
+    - "Claim the server within four minutes of first start or it stays unclaimed: put a token from plex.tv/claim into Settings and restart"
+    - "Add the library as /data/movies and /data/tv — those are the paths inside the container, not the host paths"
+    - "Hardware transcoding needs the box's GPU passed through, which this module does not do; without it a 4K transcode will use every core you have"
+  env_vars:
+    PLEX_CLAIM:
+      label: "Claim token from plex.tv/claim"
+      type: "secret"
+      # Issued by Plex, valid for four minutes, and useless afterwards.
+      generated: false
+  services:
+    plex:
+      friendly_name: "Plex"
+      color: "#e5a00d"
+      description: "Media server"
+      icon: "plex.png"
+      port_map: 32400
+      url_scheme: "http"
+      first_login: "Plex signs in with a plex.tv account rather than a local one. Claim the server on first visit."
+
+services:
+  plex:
+    image: lscr.io/linuxserver/plex:1.43.3
+    container_name: plex
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      - VERSION=docker
+      - PLEX_CLAIM=${PLEX_CLAIM:-}
+    ports:
+      - "32400:32400"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/plex/config/plex:/config
+      # One mount over the whole pool, the same shape the *arr apps use, so a
+      # file imported there is the same inode here.
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/data
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '4.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

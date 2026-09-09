@@ -1,0 +1,67 @@
+# ==========================================
+# HOMEBOX - Emby Module
+# Emby Server: the middle ground between Jellyfin and Plex.
+# ==========================================
+
+x-homebox:
+  id: emby
+  added_at: "2026-09-09"
+  title: "Emby"
+  tagline: "The other media server"
+  description: "Jellyfin forked from Emby years ago, so the interface will feel familiar. Emby keeps a wider set of client apps and a paid tier for hardware transcoding and mobile sync, while the server itself is free. Reads the same library folders as everything else here."
+  icon: "emby.svg"
+  category: "media"
+  required: false
+  default: false
+  ram: "~400MB"
+  theme:
+    emoji: "📺"
+    color: "#52b54b"
+    bg: "rgba(82,181,75,0.12)"
+  tips:
+    - "On 8092, not Emby's usual 8096 — Jellyfin already answers there and two servers cannot share a port"
+    - "Point the libraries at /data/movies and /data/tv, the paths inside the container"
+    - "Hardware transcoding is an Emby Premiere feature and also needs the GPU passed in, which this module does not do"
+  services:
+    emby:
+      friendly_name: "Emby"
+      color: "#52b54b"
+      description: "Media server"
+      icon: "emby.svg"
+      port_map: 8092
+      container_port: 8096
+      url_scheme: "http"
+      first_login: "Emby walks you through creating the first user on the first visit."
+
+services:
+  emby:
+    image: emby/embyserver:4.8.10.0
+    container_name: emby
+    environment:
+      - UID=${PUID:-1000}
+      - GID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    ports:
+      # 8096 is Jellyfin's. Emby answers on 8092 from outside and still
+      # listens on its own 8096 inside the container.
+      - "8092:8096"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/emby/config/emby:/config
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/data
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+          cpus: '4.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

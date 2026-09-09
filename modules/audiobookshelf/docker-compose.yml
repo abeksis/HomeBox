@@ -1,0 +1,68 @@
+# ==========================================
+# HOMEBOX - Audiobookshelf Module
+# Audiobooks and podcasts, with the position remembered per device.
+# ==========================================
+
+x-homebox:
+  id: audiobookshelf
+  added_at: "2026-09-09"
+  title: "Audiobookshelf"
+  tagline: "Audiobooks that remember where you stopped"
+  description: "A server for audiobooks and podcasts with apps on Android and iOS. It keeps your position per book across devices, which is the one thing a music player never gets right for a twenty-hour recording. Also downloads podcasts on a schedule and can read ebooks."
+  icon: "audiobookshelf.svg"
+  category: "media"
+  required: false
+  default: false
+  ram: "~200MB"
+  theme:
+    emoji: "🎧"
+    color: "#82612c"
+    bg: "rgba(130,97,44,0.12)"
+  tips:
+    - "Point a library at /data/books or /data/audiobooks — the pool is mounted whole, so any folder in it works"
+    - "One folder per book, named Author/Title, is what its scanner expects; a flat folder of loose files imports badly"
+    - "The mobile apps connect straight to this server's address, so it needs to be reachable from wherever you listen"
+  services:
+    audiobookshelf:
+      friendly_name: "Audiobookshelf"
+      color: "#82612c"
+      description: "Audiobook and podcast server"
+      icon: "audiobookshelf.svg"
+      port_map: 13378
+      container_port: 80
+      url_scheme: "http"
+      first_login: "Creates the root account on the first visit — pick the password there."
+
+services:
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf:2.35.1
+    container_name: audiobookshelf
+    environment:
+      - TZ=${TZ:-UTC}
+      - AUDIOBOOKSHELF_UID=${PUID:-1000}
+      - AUDIOBOOKSHELF_GID=${PGID:-1000}
+    ports:
+      - "13378:80"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/audiobookshelf/config/config:/config
+      - ${HB_ROOT:-/opt/homebox}/modules/audiobookshelf/config/metadata:/metadata
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/data
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2.00'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

@@ -1,0 +1,70 @@
+# ==========================================
+# HOMEBOX - Navidrome Module
+# A music server that speaks Subsonic, so the clients already exist.
+# ==========================================
+
+x-homebox:
+  id: navidrome
+  added_at: "2026-09-09"
+  title: "Navidrome"
+  tagline: "Your music, streamed properly"
+  description: "A fast music server for a library of your own files, with a clean web player and support for the Subsonic API — which means dozens of existing Android, iOS and desktop clients work against it unchanged. Handles a hundred thousand tracks on hardware that would make Plex struggle."
+  icon: "navidrome.svg"
+  category: "media"
+  required: false
+  default: false
+  ram: "~150MB"
+  theme:
+    emoji: "🎵"
+    color: "#4a90d9"
+    bg: "rgba(74,144,217,0.12)"
+  tips:
+    - "The music folder is mounted read-only: Navidrome never needs to write to your library, and a scanner bug should not be able to"
+    - "Any Subsonic client works — substreamer, Symfonium, play:Sub — pointed at this server's address"
+    - "First scan of a large library takes a while and the web player looks empty until it finishes; the log tells you where it is"
+  services:
+    navidrome:
+      friendly_name: "Navidrome"
+      color: "#4a90d9"
+      description: "Music server"
+      icon: "navidrome.svg"
+      port_map: 4533
+      url_scheme: "http"
+      first_login: "The first account you create on the first visit becomes the admin."
+
+services:
+  navidrome:
+    image: deluan/navidrome:0.63.2
+    container_name: navidrome
+    user: "${PUID:-1000}:${PGID:-1000}"
+    environment:
+      - TZ=${TZ:-UTC}
+      - ND_LOGLEVEL=info
+      - ND_SCANSCHEDULE=1h
+      - ND_MUSICFOLDER=/music
+    ports:
+      - "4533:4533"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/navidrome/config/navidrome:/data
+      # Read-only on purpose: a music server has no business writing to the
+      # library, and tags are edited by whatever put the files there.
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}/${HB_MEDIA_MUSIC:-music}:/music:ro
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '2.00'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true
