@@ -57,9 +57,14 @@ detectors:
 
 record:
   enabled: true
-  retain:
-    # 0.17 removed retain.mode here — it is days only, and an extra key
-    # fails validation rather than being ignored.
+  # 0.17 has no record.retain. Retention is per mode, and the schema the
+  # running app publishes at /api/config/schema.json is the authority:
+  #   continuous / motion -> { days }
+  #   alerts / detections -> { pre_capture, post_capture, retain: { days } }
+  # An unknown key here is rejected outright, not ignored.
+  continuous:
+    days: 0
+  motion:
     days: 7
   alerts:
     retain:
