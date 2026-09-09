@@ -59,50 +59,49 @@ else
   [ -f "$SYNAPSE_DIR/homeserver.yaml" ] \
     || { echo "matrix: generate ran but produced no homeserver.yaml" >&2; exit 1; }
 
-  # Point it at the Postgres beside it. The generated config defaults to
-  # SQLite, which Synapse itself documents as unsuitable for anything but a
-  # test server — it locks under concurrent room traffic.
-  python3 - "$SYNAPSE_DIR/homeserver.yaml" 2>/dev/null <<'PY' || true
-import re, sys
-path = sys.argv[1]
-text = open(path).read()
-text = re.sub(r'database:\n(\s+name:.*\n)(\s+args:\n(?:\s+.*\n)*)', '''database:
-  name: psycopg2
-  args:
-    user: synapse
-    password: SYNAPSE_DB_PASSWORD
-    dbname: synapse
-    host: matrix-db
-    port: 5432
-    cp_min: 5
-    cp_max: 10
-''', text, count=1)
-open(path, 'w').write(text)
-PY
+  # Point it at the Postgres beside it.
+  #
+  # `generate` always writes a SQLite database block, which Synapse itself
+  # documents as unsuitable for anything but a test server. Replacing it has
+  # to work with tools that exist in EVERY environment this runs in, which
+  # rules out python3: present on the host, absent from the dashboard
+  # container, where most installs happen.
+  #
+  # A conf.d override was tried first and is a trap. The image runs synapse
+  # with --config-path pointing at homeserver.yaml alone, so conf.d is never
+  # read. Synapse came up on SQLite, answered 200, reported healthy, and left
+  # the Postgres beside it holding zero tables. It was only caught by
+  # installing it that way and counting the tables.
+  #
+  # So rewrite the block itself, with awk.
+  awk -v pw="${MATRIX_DB_PASSWORD:-synapse}" '
+    # Drop the generated database block: from a line starting `database:` at
+    # column 0, until the next key at column 0.
+    /^database:/ { skip = 1; next }
+    skip && /^[^[:space:]#]/ { skip = 0 }
+    skip { next }
+    { print }
+    END {
+      print ""
+      print "database:"
+      print "  name: psycopg2"
+      print "  args:"
+      print "    user: synapse"
+      print "    password: \"" pw "\""
+      print "    dbname: synapse"
+      print "    host: matrix-db"
+      print "    port: 5432"
+      print "    cp_min: 5"
+      print "    cp_max: 10"
+    }
+  ' "$SYNAPSE_DIR/homeserver.yaml" > "$SYNAPSE_DIR/homeserver.yaml.new"
 
-  # python3 is not in the dashboard container — the media module learned that
-  # the hard way. Fall back to appending an override, which Synapse reads
-  # from conf.d after the main file.
-  if ! grep -q 'psycopg2' "$SYNAPSE_DIR/homeserver.yaml" 2>/dev/null; then
-    mkdir -p "$SYNAPSE_DIR/conf.d"
-    cat > "$SYNAPSE_DIR/conf.d/database.yaml" <<YAML
-# Overrides the SQLite database in homeserver.yaml. Synapse reads conf.d
-# after the main file, so this wins without editing what `generate` wrote.
-database:
-  name: psycopg2
-  args:
-    user: synapse
-    password: "${MATRIX_DB_PASSWORD:-synapse}"
-    dbname: synapse
-    host: matrix-db
-    port: 5432
-    cp_min: 5
-    cp_max: 10
-YAML
-    echo "matrix: database override written to conf.d"
-  else
-    sed -i "s/SYNAPSE_DB_PASSWORD/${MATRIX_DB_PASSWORD:-synapse}/" "$SYNAPSE_DIR/homeserver.yaml"
+  if ! grep -q 'psycopg2' "$SYNAPSE_DIR/homeserver.yaml.new"; then
+    rm -f "$SYNAPSE_DIR/homeserver.yaml.new"
+    echo "matrix: could not rewrite the database block, refusing to start on SQLite" >&2
+    exit 1
   fi
+  mv "$SYNAPSE_DIR/homeserver.yaml.new" "$SYNAPSE_DIR/homeserver.yaml"
 
   echo "matrix: generated homeserver.yaml and a signing key for $MATRIX_SERVER_NAME"
   echo "matrix: back up ${SYNAPSE_DIR}/*.signing.key — without it this server cannot be restored"
