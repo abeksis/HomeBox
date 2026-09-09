@@ -32,17 +32,36 @@ less hb.sh && sudo bash hb.sh
 branch or tag. `HB_TARBALL=<url>` installs from anywhere else, for a network
 with no route to GitHub.
 
-### Updating
+### Updating HomeBox itself
+
+**Open the Updates tab and press the button.** When a release is available the page
+says so, shows what changed, and updates the box — taking a backup first, and putting
+the previous version back on its own if the new one does not start.
+
+From a terminal, the same thing:
 
 ```bash
-cd /opt/homebox && git pull && sudo bash install.sh
+sudo homebox self-update            # or --check to look without doing
 ```
 
-`install.sh` is idempotent: it repairs what is missing and never regenerates a
-secret that already exists.
+Releases are git tags, and a box sits on one. `homebox version` prints both the version
+and the tag, which is how you tell a box that is mid-update from one that is not.
 
-That command updates HomeBox itself — the dashboard, the CLI, and the pinned
-image versions in the compose files.
+<details>
+<summary>Doing it by hand</summary>
+
+The manual path still works and is the escape hatch when the dashboard is what broke:
+
+```bash
+cd /opt/homebox && sudo git fetch --tags && sudo git checkout v0.2.0 && sudo bash install.sh
+```
+
+`install.sh` is idempotent: it repairs what is missing and never regenerates a secret
+that already exists.
+
+A box installed before self-update existed (0.1.0) has to make this one hop by hand —
+the mechanism cannot arrive through itself. After that, the button.
+</details>
 
 #### App image updates (the Updates tab)
 
