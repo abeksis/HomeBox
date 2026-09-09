@@ -1,0 +1,85 @@
+# ==========================================
+# HOMEBOX - SearXNG Module
+# Search results without a profile of you attached.
+# ==========================================
+
+x-homebox:
+  id: searxng
+  added_at: "2026-09-09"
+  title: "SearXNG"
+  tagline: "Search that does not watch you"
+  description: "A metasearch engine: it queries Google, Bing, DuckDuckGo, Wikipedia and dozens of others on your behalf and merges the results, without cookies, tracking or a profile. Set it as your browser's default and every search leaves from this box instead of from you."
+  icon: "searxng.svg"
+  category: "network"
+  required: false
+  default: false
+  ram: "~200MB"
+  theme:
+    emoji: "🔎"
+    color: "#3050ff"
+    bg: "rgba(48,80,255,0.12)"
+  tips:
+    - "Add it to Firefox or Chrome as a search engine with the URL http://<this box>:8088/search?q=%s"
+    - "Google rate-limits an instance that queries it too often and quietly stops returning results. If Google results vanish, that is why — turn it off in Preferences and lean on the other engines"
+    - "The secret key is generated at install and signs the preference cookies; it is not a login"
+    - "There is no account and no history. Settings are a cookie in your own browser, so they do not follow you to another device"
+  env_vars:
+    SEARXNG_SECRET:
+      label: "Instance secret"
+      type: "secret"
+      bytes: 32
+      format: "hex"
+      config_editable: false
+      dangerous: true
+    SEARXNG_URL:
+      label: "Public URL"
+      type: "text"
+  services:
+    searxng:
+      friendly_name: "SearXNG"
+      color: "#3050ff"
+      description: "Private metasearch"
+      icon: "searxng.svg"
+      port_map: 8088
+      container_port: 8080
+      url_scheme: "http"
+      first_login: "No account of any kind — it opens straight into the search box."
+
+services:
+  searxng:
+    # No version tags upstream; the digest is the only real identifier.
+    image: searxng/searxng:latest@sha256:0bbe85fb9bebe413a26c0e385c76309d15c91fdb9dc8a6bf01b35b714d0ece43
+    container_name: searxng
+    environment:
+      - TZ=${TZ:-UTC}
+      - SEARXNG_BASE_URL=${SEARXNG_URL:-http://${HB_HOST_ADDRESS:-localhost}:8088/}
+      - SEARXNG_SECRET=${SEARXNG_SECRET:-}
+    ports:
+      - "8088:8080"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/searxng/config/searxng:/etc/searxng
+    cap_drop:
+      - ALL
+    cap_add:
+      # It drops to an unprivileged user after binding, which is the only
+      # reason it needs these two back.
+      - CHOWN
+      - SETGID
+      - SETUID
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

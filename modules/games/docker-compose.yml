@@ -1,0 +1,67 @@
+# ==========================================
+# HOMEBOX - Games Module
+# Crafty: a control panel for Minecraft servers.
+# ==========================================
+
+x-homebox:
+  id: games
+  added_at: "2026-09-09"
+  title: "Crafty Controller"
+  tagline: "Minecraft servers, without the terminal"
+  description: "A web control panel for Minecraft Java servers: create one from a template, start and stop it, edit its properties, read the console, schedule backups and restarts, and give someone else permission to manage their own server without handing them the box. Where the Bedrock module runs one fixed server, this runs several and lets you build them."
+  icon: "crafty-controller.svg"
+  category: "other"
+  required: false
+  default: false
+  ram: "~600MB"
+  theme:
+    emoji: "🎮"
+    color: "#3f51b5"
+    bg: "rgba(63,81,181,0.12)"
+  tips:
+    - "It serves HTTPS with a self-signed certificate, so the browser warns on the first visit. That is expected here"
+    - "The admin password is printed in the log on the very first start only: homebox logs games"
+    - "Each server it creates opens its own game port, and those are not published by this module — add them to the compose file, or the servers are reachable only from this box"
+    - "Java servers only. Bedrock is a separate module because it is a different program with a different protocol"
+  services:
+    games:
+      friendly_name: "Crafty Controller"
+      color: "#3f51b5"
+      description: "Minecraft server manager"
+      icon: "crafty-controller.svg"
+      port_map: 8447
+      container_port: 8443
+      url_scheme: "https"
+      first_login: "Prints a generated admin password in the container log on its first start, and nowhere else. Read it with: homebox logs games"
+
+services:
+  games:
+    image: arcadiatechnology/crafty-4:4.10.8
+    container_name: crafty
+    environment:
+      - TZ=${TZ:-UTC}
+    ports:
+      - "8447:8443"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/games/config/backups:/crafty/backups
+      - ${HB_ROOT:-/opt/homebox}/modules/games/config/logs:/crafty/logs
+      - ${HB_ROOT:-/opt/homebox}/modules/games/config/servers:/crafty/servers
+      - ${HB_ROOT:-/opt/homebox}/modules/games/config/config:/crafty/app/config
+      - ${HB_ROOT:-/opt/homebox}/modules/games/config/import:/crafty/import
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '4.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

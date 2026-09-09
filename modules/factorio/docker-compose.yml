@@ -1,0 +1,61 @@
+# ==========================================
+# HOMEBOX - Factorio Module
+# The factory must grow, whether or not you are watching.
+# ==========================================
+
+x-homebox:
+  id: factorio
+  added_at: "2026-09-09"
+  title: "Factorio"
+  tagline: "The factory keeps running"
+  description: "A headless Factorio server, so a multiplayer base carries on between sessions instead of ending when the host closes the game. Everyone joins the same world, the same trains keep running, and nobody has to be online for the belts to move."
+  category: "other"
+  required: false
+  default: false
+  ram: "~2GB"
+  theme:
+    emoji: "🏭"
+    color: "#e58b2c"
+    bg: "rgba(229,139,44,0.12)"
+  tips:
+    - "Join from the game with Multiplayer then Connect to address, using this box's LAN address and port 34197. UDP, like Minecraft"
+    - "A save is created on the first start. Existing saves go in the module's config under saves/, and the newest is loaded"
+    - "Mods go in mods/ and every player needs the same set at the same versions, or they are refused at the door"
+    - "Autosaves are frequent and large. A long-running base can produce a few gigabytes of them"
+  services:
+    factorio:
+      friendly_name: "Factorio"
+      color: "#e58b2c"
+      description: "Factorio dedicated server"
+      internal: true
+
+services:
+  factorio:
+    image: factoriotools/factorio:stable-2.0.77
+    container_name: factorio
+    environment:
+      - TZ=${TZ:-UTC}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - UPDATE_MODS_ON_START=false
+    ports:
+      - "34197:34197/udp"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/factorio/config/factorio:/factorio
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

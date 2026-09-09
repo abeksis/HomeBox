@@ -1,0 +1,141 @@
+# ==========================================
+# HOMEBOX - PhotoPrism Module
+# A photo library that indexes what is already on disk.
+# ==========================================
+
+x-homebox:
+  id: photoprism
+  added_at: "2026-09-09"
+  title: "PhotoPrism"
+  tagline: "Your photos, indexed where they lie"
+  description: "Browses and searches a folder of photos you already have, rather than asking you to import them into its own store. Face and object recognition run locally, and it reads the originals read-only — so it can sit alongside Immich on the same library without either one owning it."
+  icon: "photoprism.svg"
+  category: "photos"
+  required: false
+  default: false
+  ram: "~1GB"
+  theme:
+    emoji: "🖼️"
+    color: "#00a6a6"
+    bg: "rgba(0,166,166,0.12)"
+  tips:
+    - "Originals are mounted READ-ONLY on purpose: this is an indexer, and it can run beside Immich on the same folder without the two fighting over the files"
+    - "MariaDB rather than SQLite — PhotoPrism supports both, but SQLite locks up on a large library during indexing, which is exactly when you notice"
+    - "The first index of a big library takes hours and pegs the CPU. Start it and leave it"
+    - "The admin password is generated at install: `homebox secrets photoprism` prints it"
+  env_vars:
+    PHOTOPRISM_ADMIN_PASSWORD:
+      label: "Admin password"
+      type: "secret"
+      config_editable: false
+    PHOTOPRISM_DB_PASSWORD:
+      label: "Database password"
+      type: "secret"
+      config_editable: false
+      dangerous: true
+  services:
+    photoprism:
+      friendly_name: "PhotoPrism"
+      color: "#00a6a6"
+      description: "Photo library and search"
+      icon: "photoprism.svg"
+      port_map: 2342
+      url_scheme: "http"
+      first_login: "Signs in as admin with the password HomeBox generated at install."
+    photoprism-db:
+      friendly_name: "PhotoPrism Database"
+      description: "MariaDB holding the index"
+      internal: true
+
+services:
+  photoprism:
+    # The source pins 240915. PhotoPrism tags by date; this is the current one.
+    image: photoprism/photoprism:260728
+    container_name: photoprism
+    # PhotoPrism needs to write its cache and sidecar files as this user, and
+    # the originals mount below keeps it out of your actual photos.
+    user: "${PUID:-1000}:${PGID:-1000}"
+    environment:
+      - TZ=${TZ:-UTC}
+      - PHOTOPRISM_ADMIN_USER=admin
+      - PHOTOPRISM_ADMIN_PASSWORD=${PHOTOPRISM_ADMIN_PASSWORD:-}
+      - PHOTOPRISM_AUTH_MODE=password
+      - PHOTOPRISM_SITE_URL=${PHOTOPRISM_URL:-http://${HB_HOST_ADDRESS:-localhost}:2342/}
+      - PHOTOPRISM_ORIGINALS_LIMIT=5000
+      - PHOTOPRISM_DATABASE_DRIVER=mysql
+      - PHOTOPRISM_DATABASE_SERVER=photoprism-db:3306
+      - PHOTOPRISM_DATABASE_NAME=photoprism
+      - PHOTOPRISM_DATABASE_USER=photoprism
+      - PHOTOPRISM_DATABASE_PASSWORD=${PHOTOPRISM_DB_PASSWORD:-photoprism}
+      # Off: it never modifies an original, which is what lets it share a
+      # folder with another photo app.
+      - PHOTOPRISM_READONLY=true
+      - PHOTOPRISM_DISABLE_TENSORFLOW=false
+      - PHOTOPRISM_DETECT_NSFW=false
+    ports:
+      - "2342:2342"
+    volumes:
+      # Read-only, and that is the whole design: Immich owns the library,
+      # PhotoPrism reads it.
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}/${HB_MEDIA_PHOTOS:-photos}:/photoprism/originals:ro
+      - ${HB_ROOT:-/opt/homebox}/modules/photoprism/config/storage:/photoprism/storage
+    depends_on:
+      - photoprism-db
+    networks:
+      - homebox_proxy
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '4.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  photoprism-db:
+    image: mariadb:11.8.9
+    container_name: photoprism-db
+    environment:
+      - TZ=${TZ:-UTC}
+      - MARIADB_ROOT_PASSWORD=${PHOTOPRISM_DB_PASSWORD:-photoprism}
+      - MARIADB_DATABASE=photoprism
+      - MARIADB_USER=photoprism
+      - MARIADB_PASSWORD=${PHOTOPRISM_DB_PASSWORD:-photoprism}
+    command: >
+      --innodb-buffer-pool-size=512M
+      --transaction-isolation=READ-COMMITTED
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --max-connections=512
+      --innodb-rollback-on-timeout=OFF
+      --innodb-lock-wait-timeout=120
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/photoprism/config/mariadb:/var/lib/mysql
+    networks:
+      - homebox_internal
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true
+  homebox_internal:
+    external: true

@@ -1,0 +1,61 @@
+# ==========================================
+# HOMEBOX - Terraria Module
+# A world that keeps its progress between sessions.
+# ==========================================
+
+x-homebox:
+  id: terraria
+  added_at: "2026-09-09"
+  title: "Terraria"
+  tagline: "One world, everyone's progress"
+  description: "A dedicated Terraria server so a shared world persists between sessions — the house everyone built, the bosses already beaten, the chests where you left them. No host has to be online, and nobody loses progress because someone quit."
+  icon: "terraria.png"
+  category: "other"
+  required: false
+  default: false
+  ram: "~1GB"
+  theme:
+    emoji: "🌳"
+    color: "#8bc34a"
+    bg: "rgba(139,195,74,0.12)"
+  tips:
+    - "Join from the game with Multiplayer then Join via IP, using this box's LAN address and port 7777"
+    - "The world is generated on the first start and lives in the module config. Copy it out before a big fight if it matters to you"
+    - "Client and server versions must match exactly. A client one patch ahead is refused with a message that does not say so clearly"
+  services:
+    terraria:
+      friendly_name: "Terraria"
+      color: "#8bc34a"
+      description: "Terraria dedicated server"
+      icon: "terraria.png"
+      internal: true
+
+services:
+  terraria:
+    image: ryshe/terraria:vanilla-1.4.5.6
+    container_name: terraria
+    environment:
+      - TZ=${TZ:-UTC}
+    ports:
+      - "7777:7777"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/terraria/config/terraria:/root/.local/share/Terraria/Worlds
+    stdin_open: true
+    tty: true
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

@@ -1,0 +1,86 @@
+# ==========================================
+# HOMEBOX - Valheim Module
+# The tenth Norse world, hosted properly.
+# ==========================================
+
+x-homebox:
+  id: valheim
+  added_at: "2026-09-09"
+  title: "Valheim"
+  tagline: "A world that survives the host logging off"
+  description: "A dedicated Valheim server. Hosting from inside the game means the world ends when that player quits and their character has to be there for anyone to play; a dedicated server means the world simply exists, and anyone can drop in and keep building."
+  icon: "valheim.png"
+  category: "other"
+  required: false
+  default: false
+  ram: "~4GB"
+  theme:
+    emoji: "🛡️"
+    color: "#8d6e63"
+    bg: "rgba(141,110,99,0.12)"
+  tips:
+    - "Valheim is genuinely memory hungry — 4GB is a floor, not a suggestion, and a large world with several players wants more"
+    - "The server password must be at least five characters and cannot contain the server name, or the server refuses to start and says very little about why"
+    - "Ports 2456 to 2458 are UDP. Only 2456 is the game; the others are the Steam query protocol that makes it findable"
+    - "Worlds are in the module config under worlds_local. Back them up: Valheim corrupting a world on an unclean shutdown is not unheard of"
+  env_vars:
+    VALHEIM_SERVER_NAME:
+      label: "Server name"
+      type: "text"
+      default: "HomeBox"
+    VALHEIM_WORLD_NAME:
+      label: "World name"
+      type: "text"
+      default: "Dedicated"
+    VALHEIM_PASSWORD:
+      label: "Server password"
+      type: "secret"
+      generated: false
+  services:
+    valheim:
+      friendly_name: "Valheim"
+      color: "#8d6e63"
+      description: "Valheim dedicated server"
+      icon: "valheim.png"
+      internal: true
+
+services:
+  valheim:
+    image: lloesche/valheim-server:latest@sha256:20fde516ce311e6084f82f295c9eb6934af57b357c657937a04f62bdf5946149
+    container_name: valheim
+    environment:
+      - TZ=${TZ:-UTC}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - SERVER_NAME=${VALHEIM_SERVER_NAME:-HomeBox}
+      - WORLD_NAME=${VALHEIM_WORLD_NAME:-Dedicated}
+      - SERVER_PASS=${VALHEIM_PASSWORD:-}
+      - SERVER_PUBLIC=false
+      - UPDATE_CRON=0 4 * * *
+    ports:
+      - "2456:2456/udp"
+      - "2457:2457/udp"
+      - "2458:2458/udp"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/valheim/config/data:/config
+      - ${HB_ROOT:-/opt/homebox}/modules/valheim/config/server:/opt/valheim
+    cap_add:
+      - sys_nice
+    stop_grace_period: 2m
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+          cpus: '4.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

@@ -1,0 +1,76 @@
+# ==========================================
+# HOMEBOX - Project Zomboid Module
+# The apocalypse continues while you are at work.
+# ==========================================
+
+x-homebox:
+  id: zomboid
+  added_at: "2026-09-09"
+  title: "Project Zomboid"
+  tagline: "The apocalypse, persistent"
+  description: "A dedicated Project Zomboid server. The world keeps decaying, the power grid still fails on schedule and the base you fortified is where you left it — whether or not anybody is playing. Which is rather the point of a survival game about time passing."
+  category: "other"
+  required: false
+  default: false
+  ram: "~4GB"
+  theme:
+    emoji: "🧟"
+    color: "#6d4c41"
+    bg: "rgba(109,76,65,0.12)"
+  tips:
+    - "First start downloads the game from Steam and builds the world — several minutes before anything answers"
+    - "Join from the game with the LAN address and port 16261. Both published ports are UDP"
+    - "Server settings live in the module config as an .ini file. Edit it while the server is stopped, or it is overwritten on shutdown"
+    - "Zomboid keeps the entire loaded map in memory. 4GB is the working floor for a handful of players"
+  env_vars:
+    ZOMBOID_SERVER_NAME:
+      label: "Server name"
+      type: "text"
+      default: "HomeBox"
+    ZOMBOID_ADMIN_PASSWORD:
+      label: "Admin password"
+      type: "secret"
+      config_editable: false
+  services:
+    zomboid:
+      friendly_name: "Project Zomboid"
+      color: "#6d4c41"
+      description: "Project Zomboid dedicated server"
+      internal: true
+
+services:
+  zomboid:
+    image: renegademaster/zomboid-dedicated-server:2.5.0
+    container_name: zomboid
+    environment:
+      - TZ=${TZ:-UTC}
+      - SERVER_NAME=${ZOMBOID_SERVER_NAME:-HomeBox}
+      - ADMIN_PASSWORD=${ZOMBOID_ADMIN_PASSWORD:-}
+      - MAX_PLAYERS=8
+      - PAUSE_ON_EMPTY=true
+      - PUBLIC_SERVER=false
+      - GAME_VERSION=stable
+    ports:
+      - "16261:16261/udp"
+      - "16262:16262/udp"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/zomboid/config/data:/home/steam/ZomboidDedicatedServer
+      - ${HB_ROOT:-/opt/homebox}/modules/zomboid/config/zomboid:/home/steam/Zomboid
+    stop_grace_period: 2m
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+          cpus: '4.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

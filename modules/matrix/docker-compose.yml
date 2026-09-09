@@ -1,0 +1,153 @@
+# ==========================================
+# HOMEBOX - Matrix Module
+# Synapse and Element: a chat server nobody else runs.
+# ==========================================
+
+x-homebox:
+  id: matrix
+  added_at: "2026-09-09"
+  title: "Matrix"
+  tagline: "Chat on a server you own"
+  description: "Synapse is a Matrix homeserver and Element is the client for it — end-to-end encrypted messaging, voice and video for your household or group, federating with the rest of the Matrix network if you want it to. Your messages sit in a database on this box, not on anybody's platform."
+  icon: "synapse.svg"
+  category: "productivity"
+  required: false
+  default: false
+  ram: "~1GB"
+  theme:
+    emoji: "💬"
+    color: "#0dbd8b"
+    bg: "rgba(13,189,139,0.12)"
+  tips:
+    - "The server name is permanent. It is baked into every user ID and every room, and changing it later means starting over — pick it before installing, not after"
+    - "Registration is closed after install. Create accounts with: homebox logs matrix, then `register_new_matrix_user` inside the container"
+    - "Federation needs port 8448 reachable and a .well-known file on the server-name domain. Without both, this works fine as a private island and cannot talk to matrix.org"
+    - "Lose the signing key in the config directory and the server can never be restored — every room it is in stops trusting it"
+  env_vars:
+    MATRIX_SERVER_NAME:
+      label: "Server name"
+      type: "text"
+    MATRIX_DB_PASSWORD:
+      label: "Database password"
+      type: "secret"
+      config_editable: false
+      dangerous: true
+  services:
+    matrix:
+      friendly_name: "Element"
+      color: "#0dbd8b"
+      description: "Matrix web client"
+      icon: "element.svg"
+      port_map: 8182
+      container_port: 80
+      url_scheme: "http"
+      first_login: "No account until you create one — registration is closed by default."
+    matrix-synapse:
+      friendly_name: "Synapse"
+      color: "#0dbd8b"
+      description: "Matrix homeserver"
+      icon: "synapse.svg"
+      port_map: 8448
+      container_port: 8008
+      url_scheme: "http"
+    matrix-db:
+      friendly_name: "Matrix Database"
+      description: "Postgres holding the rooms"
+      icon: "postgres.svg"
+      internal: true
+
+services:
+  matrix-synapse:
+    image: matrixdotorg/synapse:v1.156.0
+    container_name: matrix-synapse
+    environment:
+      - TZ=${TZ:-UTC}
+      - UID=${PUID:-1000}
+      - GID=${PGID:-1000}
+      - SYNAPSE_CONFIG_PATH=/data/homeserver.yaml
+    ports:
+      - "8448:8008"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/matrix/config/synapse:/data
+    depends_on:
+      - matrix-db
+    networks:
+      - homebox_proxy
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  matrix:
+    image: vectorim/element-web:v1.12.26
+    container_name: element
+    environment:
+      - TZ=${TZ:-UTC}
+    ports:
+      - "8182:80"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/matrix/config/element/config.json:/app/config.json:ro
+    depends_on:
+      - matrix-synapse
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.50'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  matrix-db:
+    image: postgres:16-alpine
+    container_name: matrix-db
+    environment:
+      - TZ=${TZ:-UTC}
+      - POSTGRES_USER=synapse
+      - POSTGRES_PASSWORD=${MATRIX_DB_PASSWORD:-synapse}
+      - POSTGRES_DB=synapse
+      # Synapse REQUIRES this collation and ctype. With the default it refuses
+      # to start and says so, which is at least honest, but the fix is here.
+      - POSTGRES_INITDB_ARGS=--encoding=UTF8 --lc-collate=C --lc-ctype=C --data-checksums
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/matrix/config/postgres:/var/lib/postgresql/data
+    shm_size: 128mb
+    networks:
+      - homebox_internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U synapse -d synapse"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true
+  homebox_internal:
+    external: true

@@ -1,0 +1,88 @@
+# ==========================================
+# HOMEBOX - Minecraft Bedrock Module
+# A world that is still there tomorrow.
+# ==========================================
+
+x-homebox:
+  id: bedrock
+  added_at: "2026-09-09"
+  title: "Minecraft (Bedrock)"
+  tagline: "A world that stays up"
+  description: "A dedicated Bedrock Edition server, which is the version on consoles, phones, tablets and Windows — so everyone can join the same world from whatever they own. It runs whether or not the person who built the house is online, and the world lives on your disk rather than in someone's realm subscription."
+  icon: "minecraft.svg"
+  category: "other"
+  required: false
+  default: false
+  ram: "~1GB"
+  theme:
+    emoji: "⛏️"
+    color: "#5b8731"
+    bg: "rgba(91,135,49,0.12)"
+  tips:
+    - "Add it in the game as a server at this box's LAN address, port 19132. Bedrock is UDP, so a TCP port forward will not work"
+    - "Running the server accepts Minecraft's EULA on your behalf — that is what EULA=TRUE below means"
+    - "The world is a folder in this module's config. Copy it out before experimenting, because there is no undo in Minecraft"
+    - "Console players (Xbox, PlayStation, Switch) cannot join a private server directly without extra tooling — that is a platform restriction, not a setting here"
+  env_vars:
+    BEDROCK_SERVER_NAME:
+      label: "Server name"
+      type: "text"
+      default: "HomeBox"
+    BEDROCK_GAMEMODE:
+      label: "Game mode"
+      type: "text"
+      default: "survival"
+    BEDROCK_DIFFICULTY:
+      label: "Difficulty"
+      type: "text"
+      default: "normal"
+  services:
+    bedrock:
+      friendly_name: "Minecraft Bedrock"
+      color: "#5b8731"
+      description: "Minecraft Bedrock server"
+      icon: "minecraft.svg"
+      # A game port, not a web page — nothing to open in a browser.
+      internal: true
+
+services:
+  bedrock:
+    image: itzg/minecraft-bedrock-server:2026.8.2
+    container_name: bedrock
+    environment:
+      - TZ=${TZ:-UTC}
+      # Running the server at all is accepting it; stating it here is honest
+      # rather than hidden in a file the image writes for you.
+      - EULA=TRUE
+      - SERVER_NAME=${BEDROCK_SERVER_NAME:-HomeBox}
+      - GAMEMODE=${BEDROCK_GAMEMODE:-survival}
+      - DIFFICULTY=${BEDROCK_DIFFICULTY:-normal}
+      - ALLOW_CHEATS=false
+      - ONLINE_MODE=true
+      - UID=${PUID:-1000}
+      - GID=${PGID:-1000}
+    ports:
+      # UDP. Bedrock does not speak TCP at all, and a TCP forward on the
+      # router is the usual reason nobody can connect.
+      - "19132:19132/udp"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/bedrock/config/data:/data
+    stdin_open: true
+    tty: true
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true
