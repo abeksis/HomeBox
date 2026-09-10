@@ -3261,11 +3261,20 @@ async function startPlatformUpgrade(data) {
     });
     const body = await res.json();
     if (!res.ok) throw new Error(body.error || `the server answered ${res.status}`);
+    // The same dialog an image upgrade uses. A button that goes quiet for a
+    // minute while the page it is on restarts needs to show its work.
+    platformShown = 0;
+    openProgress(`Updating HomeBox to ${data.latest}`);
     pollPlatform();
   } catch (err) {
     toast(`Could not start the update: ${err.message}`, 'error', 8000);
   }
 }
+
+// Lines already shown, so a poll only appends what is new. The log is re-read
+// whole each time — it is the only thing that survives the restart — and
+// replaying it would repeat the entire update every two seconds.
+let platformShown = 0;
 
 /**
  * Poll while an update runs — and keep polling THROUGH the restart.
@@ -3286,15 +3295,28 @@ function pollPlatform() {
       const data = await (await fetch('api/platform')).json();
       missed = 0;
       renderPlatform(data);
+
+      // Append only what the dialog has not shown. After the dashboard
+      // restarts, this poll returns every line including the ones written
+      // while the browser could not reach anything — which is exactly the
+      // stretch somebody wants to read.
+      const lines = data.log || [];
+      for (let i = platformShown; i < lines.length; i += 1) progressLine(lines[i]);
+      platformShown = lines.length;
+
       if (!data.running) {
         clearInterval(platformPoll);
         platformPoll = null;
         const last = (data.history || [])[0];
         if (last && last.kind === 'platform') {
+          closeProgress(last.ok, last.ok ? `Now on ${last.to}` : `Rolled back to ${last.from}`);
           // The version changed underneath this page, so its CSS and JS are
-          // now the previous release's. Reload rather than leave a mixed page.
-          if (last.ok) { location.reload(); return; }
+          // now the previous release's. Reload rather than leave a mixed page
+          // — but only after the dialog has had a moment to be read.
+          if (last.ok) { setTimeout(() => location.reload(), 2500); return; }
           toast(`The update did not finish: ${last.detail}`, 'error', 12000);
+        } else {
+          closeProgress(false, 'The update stopped');
         }
         loadUpdates();
       }
@@ -3315,7 +3337,16 @@ async function loadPlatform() {
   try {
     const data = await (await fetch('api/platform')).json();
     renderPlatform(data);
-    if (data.running) pollPlatform();
+    if (data.running && !platformPoll) {
+      // Rejoining an update already in flight — after a reload, or after the
+      // dashboard restarted under the page. Open the dialog and start from the
+      // beginning of the log, so what happened while the browser was away is
+      // read rather than skipped. Without the dialog, progressLine has nowhere
+      // to write and every line is silently dropped.
+      platformShown = 0;
+      openProgress(`Updating HomeBox to ${data.progress ? data.progress.to : ''}`);
+      pollPlatform();
+    }
   } catch { /* the card simply stays hidden */ }
 }
 

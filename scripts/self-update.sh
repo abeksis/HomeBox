@@ -52,6 +52,7 @@ STATE_DIR="$HB_ROOT/state"
 PROGRESS="$STATE_DIR/platform-progress.json"
 HISTORY="$STATE_DIR/platform-history.json"
 LOCK="$STATE_DIR/platform-update.lock"
+LOGFILE="$STATE_DIR/platform-update.log"
 BACKUP_DIR="$STATE_DIR/platform-backups"
 KEEP_BACKUPS=5
 # /healthz, not /api/summary.
@@ -99,7 +100,16 @@ phase() {
     printf '}\n'
   } > "$tmp" && mv "$tmp" "$PROGRESS"
   printf '[self-update] %-10s %s\n' "$ph" "$msg"
+  # And to a log the dashboard can show.
+  #
+  # The progress file holds only the CURRENT step, which is all the little
+  # inline line needed. A dialog wants the whole story — and more to the point,
+  # the dashboard is rebuilt partway through, so anything the browser did not
+  # already receive is gone unless it was written down. This file is what makes
+  # the log survive the restart it is describing.
+  printf '%s  %s\n' "$ph" "$msg" >> "$LOGFILE"
 }
+
 
 # One line appended to the history the Updates tab shows. Same shape as the
 # image-update history, so the UI renders both without a second code path.
@@ -135,6 +145,10 @@ if [ -f "$LOCK" ]; then
   echo "[self-update] clearing a lock left by pid $old, which is gone"
 fi
 echo $$ > "$LOCK"
+# Fresh log per run. A failed update's log is worth keeping until the next
+# attempt and no longer, and appending across runs would show somebody the
+# story of two updates as though it were one.
+: > "$LOGFILE"
 
 # Cleaning up old helper containers is deliberately NOT done here.
 #

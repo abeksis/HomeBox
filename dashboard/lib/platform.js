@@ -40,6 +40,7 @@ const CACHE_FILE = path.join(state.STATE_DIR, 'platform-update.json');
 const PROGRESS_FILE = path.join(state.STATE_DIR, 'platform-progress.json');
 const HISTORY_FILE = path.join(state.STATE_DIR, 'platform-history.json');
 const LOCK_FILE = path.join(state.STATE_DIR, 'platform-update.lock');
+const LOG_FILE = path.join(state.STATE_DIR, 'platform-update.log');
 
 // The detached helper that does the update. Named so it can be found and read
 // after a failure, and pruned before the next run.
@@ -306,8 +307,24 @@ async function status() {
     updateAvailable: available,
     running: !!(progress && progress.phase && !['done', 'failed'].includes(progress.phase)),
     progress,
+    // The whole run, so a dialog can show what happened rather than only what
+    // is happening. It has to come from a file: the dashboard is rebuilt
+    // partway through an update, and every line the browser had not already
+    // received would otherwise be lost with the connection that was carrying
+    // it.
+    log: await readLog(),
     history: history.slice(0, HISTORY_LIMIT),
   };
+}
+
+/** The current run's log, capped — this is read on a poll, several times a minute. */
+async function readLog() {
+  try {
+    const text = await fsp.readFile(LOG_FILE, 'utf8');
+    return text.split('\n').filter(Boolean).slice(-200);
+  } catch {
+    return [];
+  }
 }
 
 /* --------------------------------------------------------------- upgrade */
