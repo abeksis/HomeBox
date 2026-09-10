@@ -39,7 +39,7 @@ other people. This is the checklist.
    ```json
    "channels": { "stable": "0.2.0" }
    ```
-   Boxes see it within five minutes. Do this last — a manifest pointing at a tag that
+   Boxes see it within about twenty minutes. Do this last — a manifest pointing at a tag that
    does not exist yet is an update that fails on every box that tries.
 
 7. **Take it yourself first.** Update your own box through the button. If it is not good
@@ -73,8 +73,15 @@ One line in `releases/manifest.json`:
 "freeze_reason": "0.2.1 breaks Immich on boxes without a NAS. Fix coming today."
 ```
 
-Push it. Every box stops offering the update within five minutes and shows the reason
-instead of the button. Boxes that are **mid-update** stop too: `scripts/self-update.sh`
+Push it. Every box stops offering the update within about twenty minutes and shows the
+reason instead of the button.
+
+**Where twenty minutes comes from**, because the number matters when a release is
+actively hurting somebody: `raw.githubusercontent.com` serves the manifest with
+`cache-control: max-age=300`, and each box re-reads it every 15 minutes. Worst case is
+the sum. It used to be **six hours** — the manifest check shared the image check's timer,
+which is right for a dozen registry round-trips and absurd for one conditional GET of a
+200-byte file. The docs claimed five minutes the whole time, counting only the CDN. Boxes that are **mid-update** stop too: `scripts/self-update.sh`
 re-reads the manifest from git one step before it writes anything, and refuses.
 
 Say what is actually wrong. `freeze_reason` is shown verbatim to somebody who was about

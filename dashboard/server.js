@@ -1141,6 +1141,28 @@ async function main() {
 const CHECK_EVERY_MS = 6 * 60 * 60 * 1000;   // four times a day
 const FIRST_CHECK_MS = 5 * 60 * 1000;
 
+/**
+ * The manifest is read on its OWN, much shorter timer.
+ *
+ * These two checks look alike and cost nothing alike. The image check opens a
+ * connection to a registry for every container on the box — that belongs on a
+ * six-hour timer. The platform check is one conditional GET for a 200-byte
+ * static file that answers 304 almost every time.
+ *
+ * Sharing the six-hour timer had a consequence nobody had counted: it is also
+ * how long a FREEZE takes to reach a box. `docs/RELEASING.md` said "every box
+ * stops offering the update within five minutes", and five minutes is only
+ * `raw.githubusercontent.com`'s cache — the box's own poll sat behind it at
+ * six hours. A release found to be bad could keep installing itself on other
+ * people's machines all afternoon.
+ *
+ * Fifteen minutes is four requests an hour per box, nearly all of them 304s.
+ * The emergency switch now means roughly what it says: 5 minutes of CDN plus
+ * at most 15 of polling.
+ */
+const PLATFORM_CHECK_EVERY_MS = 15 * 60 * 1000;
+const PLATFORM_FIRST_CHECK_MS = 60 * 1000;
+
 function scheduleUpdateChecks() {
   const run = () => {
     updates.check()
@@ -1154,30 +1176,32 @@ function scheduleUpdateChecks() {
       // A registry being unreachable is normal and not worth a stack trace in
       // the log of a box that is otherwise fine.
       .catch((err) => console.log(`[homebox] update check skipped: ${err.message}`));
-
-    // HomeBox itself, on the same timer rather than a second one. One outbound
-    // request to a static JSON file, and it is what puts the dot in the nav
-    // without anybody opening the Updates tab to go looking for it.
-    // force: this IS the thing that refreshes the cache.
-    //
-    // check() skips the network when the cached answer is younger than
-    // STALE_AFTER_MS, which is right for the UI — a page load should not fire
-    // a request — and exactly wrong here. STALE_AFTER_MS and CHECK_EVERY_MS
-    // are both six hours, so the scheduled run woke up to find a cache aged
-    // precisely at the threshold and usually returned it untouched. The
-    // scheduler was guarded against doing its only job, and a release could
-    // sit unnoticed indefinitely: anything that refreshed the cache — opening
-    // the tab, `self-update --check` — pushed the next real fetch out by
-    // another six hours.
-    platform.check({ force: true })
-      .then((r) => {
-        if (r.frozen) console.log(`[homebox] platform updates paused: ${r.reason}`);
-        else if (r.updateAvailable) console.log(`[homebox] HomeBox ${r.latest} is available (on ${r.current})`);
-      })
-      .catch((err) => console.log(`[homebox] platform check skipped: ${err.message}`));
   };
+
+  // HomeBox itself. One outbound request to a static JSON file, and it is what
+  // puts the dot in the nav without anybody opening the Updates tab to go
+  // looking for it.
+  //
+  // force: this IS the thing that refreshes the cache. check() skips the
+  // network when the cached answer is younger than STALE_AFTER_MS, which is
+  // right for the UI — a page load should not fire a request — and exactly
+  // wrong here. STALE_AFTER_MS and CHECK_EVERY_MS were both six hours, so the
+  // scheduled run woke up to find a cache aged precisely at the threshold and
+  // usually returned it untouched. The scheduler was guarded against doing its
+  // only job, and a release could sit unnoticed indefinitely: anything that
+  // refreshed the cache — opening the tab, `self-update --check` — pushed the
+  // next real fetch out by another six hours.
+  const runPlatform = () => platform.check({ force: true })
+    .then((r) => {
+      if (r.frozen) console.log(`[homebox] platform updates paused: ${r.reason}`);
+      else if (r.updateAvailable) console.log(`[homebox] HomeBox ${r.latest} is available (on ${r.current})`);
+    })
+    .catch((err) => console.log(`[homebox] platform check skipped: ${err.message}`));
+
   setTimeout(run, FIRST_CHECK_MS).unref();
   setInterval(run, CHECK_EVERY_MS).unref();
+  setTimeout(runPlatform, PLATFORM_FIRST_CHECK_MS).unref();
+  setInterval(runPlatform, PLATFORM_CHECK_EVERY_MS).unref();
 }
 
 main().catch((err) => {
