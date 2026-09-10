@@ -3222,7 +3222,8 @@ function renderPlatform(data) {
         <button type="button" class="btn-pill primary" id="platform-go">Update HomeBox</button>
       </div>
     </div>
-    <p class="platform-reassure">Your apps keep running and their data is not touched. If the new version does not start, this box puts ${escapeHtml(data.current)} back on its own.</p>
+    <p class="platform-reassure">Takes about a minute. Your apps keep running and their data is not touched, and if the new version does not start, this box puts ${escapeHtml(data.current)} back on its own.<br>
+    You can close this page — the update runs on the box, not in the browser, and this card picks it up again when you come back.</p>
     ${notes ? `<div class="platform-whatsnew">
       <span class="platform-whatsnew-label">What's new in ${escapeHtml(data.latest)}</span>
       ${notes}${link}
