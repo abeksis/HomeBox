@@ -1,0 +1,133 @@
+# ==========================================
+# HOMEBOX - Headscale Module
+# The other half of Tailscale: the coordination server, run by you.
+# ==========================================
+
+x-homebox:
+  id: headscale
+  added_at: "2026-09-10"
+  title: "Headscale"
+  tagline: "Your own Tailscale coordination server"
+  description: "Tailscale's control plane, self-hosted. Your devices still speak the ordinary Tailscale protocol and still connect directly to each other — but the server that decides who is on the network, and holds the keys that prove it, is this box instead of a company's. Comes with a web UI for enrolling devices and issuing pre-auth keys."
+  icon: "headscale.svg"
+  category: "network"
+  required: false
+  default: false
+  ram: "~120MB"
+  theme:
+    emoji: "🕸️"
+    color: "#3f5efb"
+    bg: "rgba(63,94,251,0.12)"
+  tips:
+    - "The Tailscale APP is the client and this is the server. Point a client at it with `tailscale up --login-server https://your-headscale-host` — the official mobile apps need a custom server set before login"
+    - "Clients reach this over HTTPS with a real certificate, so it has to be published: put it behind the Proxy module or the Cloudflare Tunnel and set the URL below to that hostname"
+    - "server_url is written into every client's config when it enrols. Changing it later means every device has to log in again, so decide the hostname before you enrol anything"
+    - "config/data holds db.sqlite AND noise_private.key. The key IS this server's identity — restore both together or every device is a stranger again"
+    - "Create devices from the web UI at /web: make a pre-auth key, then run `tailscale up --login-server <url> --authkey <key>` on the machine"
+  env_vars:
+    HEADSCALE_URL:
+      label: "Public HTTPS address clients will use"
+      type: "text"
+      config_editable: true
+  services:
+    headscale:
+      friendly_name: "Headscale"
+      color: "#3f5efb"
+      description: "Coordination server"
+      icon: "headscale.svg"
+    headscale-ui:
+      friendly_name: "Headscale UI"
+      color: "#3f5efb"
+      description: "Web interface for devices and keys"
+      icon: "headscale.svg"
+    headscale-proxy:
+      friendly_name: "Headscale Proxy"
+      color: "#3f5efb"
+      description: "Puts the API and the UI on one address"
+      icon: "nginx.svg"
+      port_map: 8091
+      url_scheme: "http"
+      first_login: "The web UI is at /web. It asks for an API key — make one with `homebox exec headscale headscale apikeys create`."
+
+services:
+  # Pinned to the exact version this box was migrated from. Headscale's
+  # database schema moves between minor releases and its migrations are
+  # one-way, so a bump here is a decision, not a convenience.
+  headscale:
+    image: headscale/headscale:0.29.3
+    container_name: headscale
+    command: serve
+    environment:
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/headscale/config/config.yaml:/etc/headscale/config.yaml:ro
+      - ${HB_ROOT:-/opt/homebox}/modules/headscale/config/data:/var/lib/headscale
+    networks:
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.00'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  headscale-ui:
+    image: ghcr.io/gurucomputing/headscale-ui:2026.03.17
+    container_name: headscale-ui
+    environment:
+      - TZ=${TZ:-UTC}
+    networks:
+      - homebox_internal
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.50'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  # Headscale serves the API at / and knows nothing about the UI; the UI is a
+  # static site that expects to be served from /web. One nginx in front makes
+  # them one origin, which is what a Tailscale client and a browser both need.
+  headscale-proxy:
+    image: nginx:1.31.3-alpine
+    container_name: headscale-proxy
+    environment:
+      - TZ=${TZ:-UTC}
+    ports:
+      - "8091:8080"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/headscale/config/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ${HB_ROOT:-/opt/homebox}/modules/headscale/config/custom-patch.js:/etc/nginx/custom-patch.js:ro
+    networks:
+      - homebox_proxy
+      - homebox_internal
+    depends_on:
+      - headscale
+      - headscale-ui
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.50'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true
+  homebox_internal:
+    external: true

@@ -185,7 +185,31 @@ async function check({ force = false } = {}) {
   try {
     const res = await get(MANIFEST_URL, cached && cached.etag ? { headers: { 'if-none-match': cached.etag } } : {});
     if (res.status === 304 && cached) {
-      return { ...cached, checkedAt: Date.now() };
+      // 304 means the MANIFEST has not changed. It says nothing at all about
+      // this box — and `current` is not a fact about the manifest. An update
+      // changes it while every input on the server side stays byte-identical,
+      // so the etag matches, this branch is taken, and the stale answer is
+      // handed back whole.
+      //
+      // A box logged this every fifteen minutes while running 0.4.8:
+      //   [homebox] HomeBox 0.4.8 is available (on 0.4.6)
+      // and would have kept logging it until somebody, somewhere, published
+      // an unrelated release.
+      //
+      // This is the same mistake status() already carries a comment about.
+      // Fixing it there fixed the UI and left the cache wrong underneath.
+      const fresh = {
+        ...cached,
+        checkedAt: Date.now(),
+        current,
+        updateAvailable: !cached.frozen
+          && !cached.reason
+          && isVersion(cached.latest)
+          && isVersion(current)
+          && compare(cached.latest, current) > 0,
+      };
+      await writeJson(CACHE_FILE, fresh);
+      return fresh;
     }
     if (res.status !== 200) throw new Error(`manifest answered ${res.status}`);
     manifest = JSON.parse(res.body);
