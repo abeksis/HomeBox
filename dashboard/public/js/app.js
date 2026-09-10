@@ -871,13 +871,54 @@ function highlight(line, needle) {
     + escapeHtml(line.slice(at + needle.length));
 }
 
+/**
+ * Two names for the same container, and both are worth showing.
+ *
+ * "npm" is what Docker calls it and what every log line is tagged with;
+ * "Nginx Proxy Manager" is what a person calls it. A picker that shows only
+ * the first makes you translate, and one that shows only the second makes the
+ * log lines look like they belong to something else. So: the friendly name,
+ * with the container name after it when the two are genuinely different.
+ *
+ * "Radarr" and "radarr" are not different — comparing them loosely is what
+ * keeps this from printing "Radarr (radarr)" on half the list.
+ */
+function logPickerEntry(c) {
+  const mod = c.project ? state.modules.find((m) => `homebox-${m.id}` === c.project) : null;
+  const svc = mod && mod.services ? mod.services.find((x) => x.name === c.service) : null;
+
+  // ONLY the emoji, never the icon file: this is an <option>, and a browser
+  // renders exactly one thing inside it — text. An <img> would silently
+  // vanish and leave a blank column.
+  const emoji = (mod && mod.theme && mod.theme.emoji) || '';
+  const friendly = (svc && svc.friendly_name) || c.name;
+
+  // "npm" is what Docker calls it and what every log line is tagged with;
+  // "Nginx Proxy Manager" is what a person calls it. Showing only the first
+  // makes you translate; only the second makes the log lines look like they
+  // belong to something else. So both — but "Radarr" and "radarr" are not
+  // two names, and comparing them loosely is what keeps this from printing
+  // "Radarr (radarr)" down half the list.
+  const loose = (v) => String(v).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const alias = loose(friendly) === loose(c.name) ? '' : ` (${c.name})`;
+
+  return {
+    // Sorted on the NAME, not on the rendered label. Sorting the label puts
+    // the emoji first, and emoji sort by codepoint — which groups the list
+    // by picture and scatters the alphabet, so somebody hunting for "Radarr"
+    // has to read every line.
+    sortKey: `${friendly} ${c.name}`.toLowerCase(),
+    label: `${emoji ? `${emoji} ` : ''}${friendly}${alias}${c.state === 'stopped' ? ' — stopped' : ''}`,
+  };
+}
+
 function renderLogPicker() {
   const picker = $('#log-picker');
   const selected = picker.value;
   picker.innerHTML = '<option value="">Pick a service…</option>' + state.containers
-    .slice()
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map((c) => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}${c.state === 'stopped' ? ' (stopped)' : ''}</option>`)
+    .map((c) => ({ name: c.name, ...logPickerEntry(c) }))
+    .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
+    .map((e) => `<option value="${escapeHtml(e.name)}">${escapeHtml(e.label)}</option>`)
     .join('');
   if (selected) picker.value = selected;
 }

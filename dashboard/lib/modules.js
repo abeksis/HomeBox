@@ -141,10 +141,30 @@ async function loadAll() {
  *   stopped      — installed, none up
  *   unhealthy    — a container's healthcheck is failing
  */
+/**
+ * HomeBox's own update helper, which is not one of your apps.
+ *
+ * `homebox-self-update` is launched with `docker run` FROM THE DASHBOARD'S
+ * IMAGE — and Docker copies an image's labels onto the container it creates.
+ * So the helper arrives carrying `com.docker.compose.project=homebox-dashboard`
+ * and `service=dashboard`, and every piece of code that groups containers by
+ * compose label counts it as a second dashboard.
+ *
+ * It is not `--rm` on purpose, so a failed update stays readable. The result
+ * was that after any successful update the HomeBox card read
+ * "1/2 running · partial" forever — HomeBox reporting itself as half broken.
+ *
+ * Excluded here, at the one place module membership is decided, so the card,
+ * the counts and the Running list all agree. It stays visible in the
+ * Containers table and the Logs picker, which is the reason it is kept.
+ */
+const PLATFORM_CONTAINERS = new Set(['homebox-self-update']);
+
 function withContainers(modules, containers, hostAddress) {
   const byProject = new Map();
   for (const c of containers) {
     if (!c.project) continue;
+    if (PLATFORM_CONTAINERS.has(c.name)) continue;
     if (!byProject.has(c.project)) byProject.set(c.project, []);
     byProject.get(c.project).push(c);
   }
