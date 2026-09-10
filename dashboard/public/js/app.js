@@ -3316,7 +3316,13 @@ function pollPlatform() {
           if (last.ok) { setTimeout(() => location.reload(), 2500); return; }
           toast(`The update did not finish: ${last.detail}`, 'error', 12000);
         } else {
-          closeProgress(false, 'The update stopped');
+          // No history entry means the run never got far enough to write one
+          // — most often it never started at all. The progress file is the
+          // only thing that knows why, so say what it says rather than the
+          // useless truth that something stopped.
+          const why = data.progress && data.progress.message;
+          closeProgress(false, why || 'The update stopped');
+          if (why) toast(why, 'error', 12000);
         }
         loadUpdates();
       }

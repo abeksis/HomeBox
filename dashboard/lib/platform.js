@@ -127,6 +127,35 @@ const readHistory = () => readJson(HISTORY_FILE, []);
 /** Written by self-update.sh as it goes. The only news that crosses a restart. */
 const readProgress = () => readJson(PROGRESS_FILE, null);
 
+/**
+ * Is an update actually in flight, or does it only say so?
+ *
+ * "Phase is not done or failed" is not enough. The progress file is written
+ * by this process one moment BEFORE the helper is launched, and every phase
+ * after that is written by the helper — so anything that stops the helper
+ * from ever running (a refused `docker run`, a power cut one second later)
+ * freezes the file on "starting" with nobody left to move it. The page then
+ * spins forever on a run that does not exist.
+ *
+ * The lock is the proof. `self-update.sh` takes it as its first real act and
+ * holds it until it is finished, so:
+ *
+ *   lock present  -> something is holding it; the run is alive
+ *   lock absent   -> either it never started, or it finished and cleared it
+ *
+ * The grace window covers the only honest gap: the couple of seconds between
+ * this process writing "starting" and the helper taking the lock.
+ */
+const LAUNCH_GRACE_MS = 120000;
+
+function isRunning(progress) {
+  if (!progress || !progress.phase) return false;
+  if (['done', 'failed'].includes(progress.phase)) return false;
+  if (fs.existsSync(LOCK_FILE)) return true;
+  const started = Date.parse(progress.startedAt || progress.updatedAt || '');
+  return Number.isFinite(started) && Date.now() - started < LAUNCH_GRACE_MS;
+}
+
 /* ----------------------------------------------------------------- check */
 
 /**
@@ -305,7 +334,7 @@ async function status() {
     ...base,
     current,
     updateAvailable: available,
-    running: !!(progress && progress.phase && !['done', 'failed'].includes(progress.phase)),
+    running: isRunning(progress),
     progress,
     // The whole run, so a dialog can show what happened rather than only what
     // is happening. It has to come from a file: the dashboard is rebuilt
@@ -359,6 +388,18 @@ async function upgrade({ to = null } = {}) {
     lines: [],
   });
 
+  // Start this run's log EMPTY.
+  //
+  // The dialog shows the log file, and the script truncates it when it starts
+  // — but a run that never starts never truncates anything. A box was left
+  // showing "Updating HomeBox to 0.4.4" above the finished output of the
+  // PREVIOUS update, last line "done  Now on 0.4.3". Every word on screen was
+  // true of a different run.
+  try {
+    await fsp.writeFile(LOG_FILE, `starting  Updating to ${target}
+`);
+  } catch { /* the script writes this file too; it is not worth failing over */ }
+
   // Clear the previous helper out of the way, from here — the one place that
   // is not inside it. The script used to do this itself and was removing the
   // container it was running in.
@@ -372,9 +413,32 @@ async function upgrade({ to = null } = {}) {
   // On the HOST, not in here: git is not installed in this image, and the
   // script's whole job is to replace the code this process is running.
   // Detached, because that includes rebuilding this container.
-  await storage.onHostDetached(['bash', `${ROOT}/scripts/self-update.sh`, target], {
-    name: HELPER_NAME,
-  });
+  //
+  // If the LAUNCH fails, this is the only place that will ever know. The
+  // script writes every later phase itself, so an exception here leaves the
+  // progress file on "starting" and the page spinning on a run that does not
+  // exist — until somebody deletes the file by hand. Happened for real:
+  // `docker run` refused with exit 125 because the dashboard's own image had
+  // been collected, and the box showed a stuck update for the rest of the day.
+  try {
+    await storage.onHostDetached(['bash', `${ROOT}/scripts/self-update.sh`, target], {
+      name: HELPER_NAME,
+    });
+  } catch (err) {
+    const why = err && err.message ? err.message : String(err);
+    await writeJson(PROGRESS_FILE, {
+      phase: 'failed',
+      message: `could not start the update: ${why}`,
+      from: current.current,
+      to: target,
+      updatedAt: new Date().toISOString(),
+    });
+    try {
+      await fsp.appendFile(LOG_FILE, `failed  could not start the update: ${why}
+`);
+    } catch { /* nothing more to say */ }
+    throw err;
+  }
 
   return { ok: true, from: current.current, to: target };
 }

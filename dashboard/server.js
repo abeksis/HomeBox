@@ -224,6 +224,9 @@ async function serveStatic(res, urlPath) {
   }
 }
 
+/** Containers HomeBox runs for itself, which are not apps and are not news. */
+const PLATFORM_CONTAINERS = new Set(['homebox-self-update']);
+
 /** Container names are a closed set; never interpolate a client string blind. */
 async function resolveContainerName(name) {
   if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/.test(name || '')) return null;
@@ -236,7 +239,17 @@ async function resolveContainerName(name) {
  * Ordering matters: an unhealthy container is worse news than a stopped one,
  * because a stopped container is usually stopped on purpose.
  */
-function healthVerdict(containers, metrics, dockerOk) {
+function healthVerdict(all, metrics, dockerOk) {
+  // HomeBox's own machinery is not one of your apps.
+  //
+  // `homebox-self-update` is deliberately not `--rm`: a failed update has to
+  // stay readable afterwards. The cost is that it sits there stopped, and the
+  // box then greeted every successful update with "1 container is stopped" —
+  // HomeBox reporting its own tooling to you as a fault, every single time.
+  //
+  // It stays visible in the Logs picker, which is the whole reason it is kept.
+  const containers = all.filter((c) => !PLATFORM_CONTAINERS.has(c.name));
+
   if (!dockerOk) {
     return {
       level: 'bad',
@@ -401,8 +414,10 @@ async function apiSummary() {
     counts: {
       modules: modules.length,
       installed: withState.filter((m) => m.installed).length,
-      containers: containers.length,
-      running: containers.filter((c) => c.state !== 'stopped').length,
+      // Same exclusion as the verdict: a stopped update helper counted here
+      // reads as "20 running of 21" on a box where everything is running.
+      containers: containers.filter((c) => !PLATFORM_CONTAINERS.has(c.name)).length,
+      running: containers.filter((c) => !PLATFORM_CONTAINERS.has(c.name) && c.state !== 'stopped').length,
       unclaimed: unclaimed.length,
     },
     moduleErrors: errors,
