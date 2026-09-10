@@ -60,12 +60,44 @@ class StorageError extends Error {
 
 /* ------------------------------------------------------ the host escape */
 
-/** The image this dashboard is running, which the helper reuses. */
+/**
+ * An image the helper can be started from.
+ *
+ * The obvious answer is "the one this dashboard is running", and it is the
+ * right one — but it is not always still there. A container reports the image
+ * it was created from, and a later rebuild of the SAME tag orphans that image:
+ * the daemon keeps its layers alive for the running process and drops the
+ * image record, after which `/containers/json` reports a bare `sha256:...`
+ * and `docker run` on it answers "No such image".
+ *
+ * That is not a hypothetical. A box sitting healthy on 0.4.3 could not start
+ * the update helper at all, because the only reference it knew was to an image
+ * that had been collected out from under it. The button did nothing and said
+ * "docker exited 125".
+ *
+ * So the reference is CHECKED, and when it does not resolve the newest
+ * `homebox-dashboard:*` tag on the box is used instead. The helper does not
+ * actually need this particular image — it needs an image with `nsenter` in
+ * it, and every build of the dashboard has one.
+ */
 async function ownImage() {
   const containers = await docker.listContainers();
   const me = containers.find((c) => c.service === 'dashboard' && c.state !== 'stopped');
   if (!me || !me.image) throw new StorageError('cannot tell which image this dashboard runs', { status: 500 });
-  return me.image;
+  if (await docker.imageExists(me.image)) return me.image;
+
+  const dashboards = (await docker.listImages())
+    .filter((i) => i.tags.some((t) => t.startsWith('homebox-dashboard:')))
+    .sort((a, b) => b.created - a.created);
+  const tag = dashboards.length
+    ? dashboards[0].tags.find((t) => t.startsWith('homebox-dashboard:'))
+    : null;
+  if (tag) return tag;
+
+  throw new StorageError(
+    `the image this dashboard runs (${me.image}) no longer exists, and no homebox-dashboard image was found to replace it`,
+    { status: 500 },
+  );
 }
 
 /**

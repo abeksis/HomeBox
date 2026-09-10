@@ -116,6 +116,38 @@ async function imageDigests(idOrName) {
   }
 }
 
+/**
+ * Does the daemon still have this image?
+ *
+ * Worth asking, because a running container is not proof that it does. A
+ * container reports the image it was created from, and once that reference is
+ * untagged and collected the daemon keeps the LAYERS alive for the running
+ * process but drops the image record. `/containers/json` then degrades the
+ * Image field from a tag to a bare `sha256:...`, and `docker run` on that id
+ * answers "No such image" — while the container using it is up and healthy.
+ *
+ * Seen on a real box: the dashboard was running a
+ * `homebox-dashboard:0.4.3` that a later rebuild of the same tag had orphaned.
+ */
+async function imageExists(idOrName) {
+  try {
+    await request(`/v1.43/images/${encodeURIComponent(idOrName)}/json`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Every image the daemon holds, with the tags it answers to. */
+async function listImages() {
+  const raw = await request('/v1.43/images/json');
+  return raw.map((i) => ({
+    id: i.Id,
+    tags: Array.isArray(i.RepoTags) ? i.RepoTags.filter((t) => t && t !== '<none>:<none>') : [],
+    created: i.Created || 0,
+  }));
+}
+
 async function logs(name, tail = 200) {
   const path = `/v1.43/containers/${encodeURIComponent(name)}/logs?stdout=1&stderr=1&timestamps=0&tail=${tail}`;
   const body = await request(path, { raw: true });
@@ -193,4 +225,5 @@ async function reachable() {
 
 module.exports = {
   listContainers, listNetworks, logs, version, reachable, normalizeState, imageDigests,
+  imageExists, listImages,
 };
