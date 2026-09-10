@@ -3120,3 +3120,17 @@ code.mono {
   background: var(--warn-soft);
   color: var(--warn);
 }
+
+/* Versions that exist but cannot be reached by swapping an image — a Postgres
+   major, a MariaDB major. There is no button here on purpose, so the row must
+   not look like one that lost its button: it is greyed and set apart, and it
+   says why in the row itself rather than in a tooltip nobody opens. */
+.update-row.held-back {
+  opacity: 0.72;
+  border-top-style: dashed;
+}
+.update-row.held-back .update-row-name { color: var(--text-muted); font-weight: 600; }
+.update-row.held-back .update-tag {
+  background: var(--border-hair);
+  color: var(--text-muted);
+}

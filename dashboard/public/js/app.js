@@ -3424,7 +3424,7 @@ function renderUpdates(data) {
       </div>`);
   }
 
-  renderNewVersions(data.newVersions || []);
+  renderNewVersions(data.newVersions || [], data.heldBack || []);
   renderUpdateHistory(data.history || []);
 }
 
@@ -3436,11 +3436,32 @@ function renderUpdates(data) {
  * config format or need a migration — so it is news to act on, not a click.
  * One list would hide two very different risks behind one button.
  */
-function renderNewVersions(rows) {
+function renderNewVersions(rows, held = []) {
   const box = $('#updates-versions');
   if (!box) return;
-  if (!rows || !rows.length) { box.hidden = true; return; }
+  if ((!rows || !rows.length) && !held.length) { box.hidden = true; return; }
   box.hidden = false;
+
+  // Versions that exist and cannot be taken by swapping an image. Rendered
+  // WITHOUT a button, and said out loud rather than hidden: a database left on
+  // an old major version is worth knowing about, and silence is how a box
+  // quietly ages.
+  const heldHtml = held.length ? `
+    <div class="update-row held-back">
+      <div class="update-row-info">
+        <div class="update-row-name">Not offered here
+          <span class="update-tag" title="These need a migration, not an image swap.">needs a migration</span>
+        </div>
+        ${held.map((h) => `<div class="update-row-digest mono">${escapeHtml(h.container)}: ${escapeHtml(h.tag)} → ${escapeHtml(h.newerVersion)} — ${escapeHtml(h.why)}</div>`).join('')}
+      </div>
+    </div>` : '';
+  if (!rows || !rows.length) {
+    box.innerHTML = `<div class="updates-card-head">
+        <div><h2>Newer versions published</h2>
+        <small>Nothing here can be applied from this page.</small></div>
+      </div>${heldHtml}`;
+    return;
+  }
 
   box.innerHTML = `<div class="updates-card-head">
       <div>
@@ -3459,7 +3480,7 @@ function renderNewVersions(rows) {
           <div class="update-row-digest mono">${escapeHtml(r.tag)} → ${escapeHtml(r.newerVersion)}</div>
         </div>
         <button type="button" class="btn-soft" data-upgrade="${escapeHtml(r.container)}">Upgrade</button>
-      </div>`).join('');
+      </div>`).join('') + heldHtml;
 }
 
 function renderUpdateHistory(history) {

@@ -220,8 +220,26 @@ async function checkOne(target) {
   // Never fatal. Not every registry lists tags, and a repository that refuses
   // must not turn a working rebuild check into an error.
   let newer = null;
+  let blocked = null;
   try {
     newer = versions.newerThan(ref.tag, await registry.listTags(ref));
+
+    // A database's data directory belongs to one major version. Postgres 17
+    // will not open Postgres 14's files — it refuses at startup, the container
+    // never becomes healthy, and the only thing that saves the box is the
+    // rollback. Offering that as a one-click is offering a button whose only
+    // possible outcomes are "nothing happened" and "nothing happened, slowly".
+    //
+    // Reported from a real box, which was offered exactly this for Immich's
+    // database and took it.
+    if (newer && versions.crossesMajor(target.image, ref.tag, newer.tag)) {
+      blocked = {
+        tag: newer.tag,
+        why: 'a major version of a database, which cannot be moved by swapping the image — '
+          + 'its data directory belongs to the version that wrote it',
+      };
+      newer = null;
+    }
   } catch { /* no tag listing here; the digest answer above still stands */ }
 
   return {
@@ -231,6 +249,8 @@ async function checkOne(target) {
     latestDigest: latest,
     updateAvailable: current !== latest,
     newerVersion: newer ? newer.tag : null,
+    // A newer version that exists and deliberately is not offered.
+    blockedVersion: blocked,
   };
 }
 
@@ -288,6 +308,21 @@ async function check() {
       }))
       .sort((a, b) => a.container.localeCompare(b.container));
 
+    // Versions that exist and are deliberately not offered. Shown rather than
+    // hidden: a database sitting on an old major version is worth knowing
+    // about, and "HomeBox never mentioned it" is how a box quietly ages. What
+    // it must not have is a button.
+    const heldBack = results
+      .filter((r) => r.blockedVersion)
+      .map((r) => ({
+        container: r.container,
+        title: r.title,
+        tag: r.tag,
+        newerVersion: r.blockedVersion.tag,
+        why: r.blockedVersion.why,
+      }))
+      .sort((a, b) => a.container.localeCompare(b.container));
+
     // "Skipped" is shown, not swallowed. A box where half the images could not
     // be reached and a box where everything is current look identical on a
     // page that only counts updates, and only one of them is fine.
@@ -301,6 +336,7 @@ async function check() {
       checked: results.filter((r) => !r.skipped).length,
       available,
       newVersions,
+      heldBack,
       skipped,
     };
     await state.writeJson(CACHE_FILE, cache);
