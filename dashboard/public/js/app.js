@@ -3401,9 +3401,9 @@ function renderUpdates(data) {
   $('#updates-all').hidden = count < 2;
 
   if (!data.lastCheck) {
-    list.innerHTML = '<p class="empty-state">Press <strong>Check now</strong> to compare every running image against its registry.</p>';
+    list.innerHTML = '<p class="empty-state updates-note">Press <strong>Check now</strong> to compare every running image against its registry.</p>';
   } else if (!count) {
-    list.innerHTML = '<p class="empty-state"><strong>Everything is current.</strong> Every image running on this box matches the newest build the registry has for its pinned version.</p>';
+    list.innerHTML = '<p class="empty-state updates-note"><strong>Everything is current.</strong> Every image running on this box matches the newest build the registry has for its pinned version.</p>';
   } else {
     list.innerHTML = data.available.map((u) => `
       <div class="update-row" data-container="${escapeHtml(u.container)}">

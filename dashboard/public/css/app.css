@@ -3134,3 +3134,25 @@ code.mono {
   background: var(--border-hair);
   color: var(--text-muted);
 }
+
+
+/* A note on this page is a PANEL, not loose text.
+   Set on the page background these paragraphs were grey-on-near-black with
+   no edge, and they read as something that had failed to load rather than
+   something written on purpose. --bg-2 is the "inner panel" step: lighter
+   than the card, which is the opposite direction from --tile-bg and the
+   right one here — a tile is recessed into a card, a note is laid on top of
+   the page. */
+.updates-note,
+.updates-footnote {
+  margin: 0;
+  padding: 0.9rem 1.15rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 0.83rem;
+  line-height: 1.65;
+}
+.updates-note strong,
+.updates-footnote strong { color: var(--text); }
