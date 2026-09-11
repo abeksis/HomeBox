@@ -148,8 +148,17 @@ async function listImages() {
   }));
 }
 
-async function logs(name, tail = 200) {
-  const path = `/v1.43/containers/${encodeURIComponent(name)}/logs?stdout=1&stderr=1&timestamps=0&tail=${tail}`;
+/**
+ * A container's recent output.
+ *
+ * `timestamps` is opt-in. With it, Docker prefixes EVERY physical line with
+ * the moment it was written — including the fragments of a message that
+ * contains its own newlines, which otherwise arrive bare and read as orphans.
+ * It is off by default so a caller that greps the text (a first-login
+ * credential search, say) is not handed a prefix it did not ask for.
+ */
+async function logs(name, tail = 200, { timestamps = false } = {}) {
+  const path = `/v1.43/containers/${encodeURIComponent(name)}/logs?stdout=1&stderr=1&timestamps=${timestamps ? 1 : 0}&tail=${tail}`;
   const body = await request(path, { raw: true });
   return stripAnsi(demultiplex(body));
 }

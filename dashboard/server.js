@@ -1077,7 +1077,10 @@ const server = http.createServer(async (req, res) => {
       const name = await resolveContainerName(url.searchParams.get('name'));
       if (!name) return sendJson(res, 404, { error: 'no such container' });
       const tail = Math.min(Math.max(Number(url.searchParams.get('tail')) || 200, 1), 2000);
-      return sendJson(res, 200, { name, tail, text: await docker.logs(name, tail) });
+      // Timestamps on: the Live Logs page draws one row per physical line, and
+      // the Docker prefix is what lets a fragment of a multi-line message
+      // read as a row of its own rather than as debris from the line above.
+      return sendJson(res, 200, { name, tail, text: await docker.logs(name, tail, { timestamps: true }) });
     }
     if (route === '/api/prefs') {
       if (req.method === 'GET') {

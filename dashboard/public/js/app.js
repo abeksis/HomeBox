@@ -849,78 +849,44 @@ async function loadLogs(name) {
  * re-read the container.
  */
 /**
- * One entry per line, which is not the same thing as one line per line.
+ * One row per physical line — the way the reference product draws it, and
+ * the only way that leaves every log's own shape alone.
  *
- * Docker hands back PHYSICAL lines. An application writes ENTRIES, and plenty
- * of them contain newlines of their own. Uptime Kuma reports a failed ping by
- * embedding the whole ping output — so a single monitor going down arrives as
- * seven lines, four of which say "Destination Host Unreachable" and none of
- * which carry a timestamp. Read as seven rows it looks like seven events.
+ * 0.4.12 folded lines that did not look like the start of an entry into the
+ * entry above. It fixed Uptime Kuma's multi-line ping reports and destroyed
+ * everything drawn in lines: the linuxserver.io banner every LSIO image prints
+ * on boot is ASCII art, none of its lines look like an entry, and it was
+ * smeared into one row of box-drawing characters glued to
+ * "[migrations] no migrations found". A picture is only a picture as lines.
  *
- * A line that looks like the start of an entry starts one. Anything else is a
- * continuation of the entry above it.
- *
- * Measured against eight real containers on a live box before it was written,
- * because guessing at this would have been guessing:
- *
- *   npm, radarr, immich, vaultwarden, headscale, portainer   100% starts
- *   uptime-kuma                                               20% starts
- *   qbittorrent                                               22% starts
- *
- * Six formats need no folding at all and are left exactly as they are. The
- * one that does need it is the one that scores LOWEST — which is why there is
- * no "only fold when most lines look like entries" rule here. That rule was
- * the obvious one, and it would have skipped the only case that matters.
+ * What makes a multi-line message readable instead is the Docker timestamp,
+ * now requested on every line: a fragment of a ping report gets the same
+ * prefix as a real entry, so it reads as a row, not as debris. It is drawn
+ * dimmed, because the app usually prints a timestamp of its own and two at
+ * full strength are noise.
  */
-const ENTRY_START = /^(?:\d{4}[-/]\d{1,2}[-/]\d{1,2}[T ]|\[\d{4}-\d{1,2}-\d{1,2}[T ]|\[\d{1,2}\/\d{1,2}\/\d{4}\]|\[[A-Za-z][\w .:+-]{0,24}\]|\d{2}:\d{2}:\d{2}[.,\d]*\s)/;
+const DOCKER_TS = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z) /;
 
-function logEntries(text) {
-  const entries = [];
-  let open = null;   // the entry a continuation may be appended to
-
-  for (const raw of String(text).split(NL)) {
-    if (ENTRY_START.test(raw)) {
-      open = { head: raw.trimEnd(), rest: [] };
-      entries.push(open);
-      continue;
-    }
-    const trimmed = raw.trim();
-    // A line before the first recognisable entry has nothing to belong to, so
-    // it stands on its own — and stays closed, so the lines after it are not
-    // swallowed into a heading that was never an entry.
-    if (!open) {
-      if (trimmed) entries.push({ head: raw.trimEnd(), rest: [] });
-      continue;
-    }
-    if (trimmed) open.rest.push(trimmed);
-  }
-  return entries;
+function logLineHtml(line, needle) {
+  const m = DOCKER_TS.exec(line);
+  const ts = m ? `<span class="log-ts">${escapeHtml(m[1])}</span> ` : '';
+  const body = m ? line.slice(m[0].length) : line;
+  return `<span class="log-line">${ts}${needle ? highlight(body, needle) : escapeHtml(body)}</span>`;
 }
 
 function renderLogs() {
   const view = $('#log-view');
   const filter = $('#log-filter').value.trim();
+  const lines = String(logText).split(NL).filter((l) => l.length);
 
-  // The separator is dimmed rather than hidden: folding four lines into one
-  // must not read as though the box only ever said one thing.
-  const draw = (e, needle) => {
-    const head = needle ? highlight(e.head, needle) : escapeHtml(e.head);
-    const rest = e.rest.map((r) => `<span class="log-fold">⤶</span>${needle ? highlight(r, needle) : escapeHtml(r)}`);
-    return head + rest.join('');
-  };
-
-  const entries = logEntries(logText);
   if (!filter) {
-    view.innerHTML = entries.map((e) => draw(e, '')).join(NL);
+    view.innerHTML = lines.map((l) => logLineHtml(l, '')).join('');
   } else {
     const needle = filter.toLowerCase();
-    // Matched on the WHOLE entry: a stack trace whose message is on line one
-    // and whose "error" is on line four is one thing, and a filter that drops
-    // the half without the word leaves the half that makes no sense.
-    const hits = entries.filter((e) => [e.head, ...e.rest].join(' ').toLowerCase().includes(needle));
+    const hits = lines.filter((l) => l.toLowerCase().includes(needle));
     view.innerHTML = hits.length
-      ? hits.map((e) => draw(e, filter)).join(NL)
-      : `<span style="opacity:.6">No entry matches ${escapeHtml(filter)}.</span>`;
+      ? hits.map((l) => logLineHtml(l, filter)).join('')
+      : `<span class="log-line" style="opacity:.6">No line matches ${escapeHtml(filter)}.</span>`;
   }
   if ($('#log-follow').checked) view.parentElement.scrollTop = view.parentElement.scrollHeight;
 }

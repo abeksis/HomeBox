@@ -1143,22 +1143,31 @@ code.mono {
   font-size: 0.78rem;
   line-height: 1.65;
   color: #a1a1aa;
-  /* One entry, one row — so the eye counts events by counting lines.
-     `pre-wrap` with `word-break: break-all` turned every long request line
-     into three, broken mid-word, and a screen of them could not be counted or
-     skimmed. The long tail is still there; it is to the right. */
-  white-space: pre;
-  overflow-x: auto;
+  /* The rows carry their own whitespace rule; the container must not add
+     newlines between them. */
+  white-space: normal;
 }
 
-/* The seam where a folded continuation was joined on. Dimmed, because the
-   fold is a fact about the log and not part of the message — but present,
-   because four lines becoming one must not read as though the box only ever
-   said one thing. */
-.log-fold {
+/* One physical line, one block — the reference product's rule, measured on a
+   live SparkBox rather than guessed: `pre-wrap` keeps a line's own spacing,
+   so an ASCII banner keeps its shape; `break-word` wraps a long line at a
+   word boundary. The previous `break-all` broke mid-word, which is what made
+   long lines look broken — not the wrapping itself. No horizontal scroll:
+   a log you have to scroll sideways to finish reading is a log you do not
+   finish reading. */
+.log-line {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Docker's timestamp on every row, dimmed: it is what keeps a fragment of a
+   multi-line message aligned with the rest, and most apps print a timestamp
+   of their own right after it. */
+.log-ts {
   color: var(--text-muted);
-  opacity: 0.55;
-  padding: 0 0.45rem;
+  opacity: 0.6;
   user-select: none;
 }
 /* A line the filter matched, so the eye lands on it in a wall of text. */
