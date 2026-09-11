@@ -848,17 +848,79 @@ async function loadLogs(name) {
  * rather than server-side so changing the filter is instant and does not
  * re-read the container.
  */
+/**
+ * One entry per line, which is not the same thing as one line per line.
+ *
+ * Docker hands back PHYSICAL lines. An application writes ENTRIES, and plenty
+ * of them contain newlines of their own. Uptime Kuma reports a failed ping by
+ * embedding the whole ping output — so a single monitor going down arrives as
+ * seven lines, four of which say "Destination Host Unreachable" and none of
+ * which carry a timestamp. Read as seven rows it looks like seven events.
+ *
+ * A line that looks like the start of an entry starts one. Anything else is a
+ * continuation of the entry above it.
+ *
+ * Measured against eight real containers on a live box before it was written,
+ * because guessing at this would have been guessing:
+ *
+ *   npm, radarr, immich, vaultwarden, headscale, portainer   100% starts
+ *   uptime-kuma                                               20% starts
+ *   qbittorrent                                               22% starts
+ *
+ * Six formats need no folding at all and are left exactly as they are. The
+ * one that does need it is the one that scores LOWEST — which is why there is
+ * no "only fold when most lines look like entries" rule here. That rule was
+ * the obvious one, and it would have skipped the only case that matters.
+ */
+const ENTRY_START = /^(?:\d{4}[-/]\d{1,2}[-/]\d{1,2}[T ]|\[\d{4}-\d{1,2}-\d{1,2}[T ]|\[\d{1,2}\/\d{1,2}\/\d{4}\]|\[[A-Za-z][\w .:+-]{0,24}\]|\d{2}:\d{2}:\d{2}[.,\d]*\s)/;
+
+function logEntries(text) {
+  const entries = [];
+  let open = null;   // the entry a continuation may be appended to
+
+  for (const raw of String(text).split(NL)) {
+    if (ENTRY_START.test(raw)) {
+      open = { head: raw.trimEnd(), rest: [] };
+      entries.push(open);
+      continue;
+    }
+    const trimmed = raw.trim();
+    // A line before the first recognisable entry has nothing to belong to, so
+    // it stands on its own — and stays closed, so the lines after it are not
+    // swallowed into a heading that was never an entry.
+    if (!open) {
+      if (trimmed) entries.push({ head: raw.trimEnd(), rest: [] });
+      continue;
+    }
+    if (trimmed) open.rest.push(trimmed);
+  }
+  return entries;
+}
+
 function renderLogs() {
   const view = $('#log-view');
   const filter = $('#log-filter').value.trim();
+
+  // The separator is dimmed rather than hidden: folding four lines into one
+  // must not read as though the box only ever said one thing.
+  const draw = (e, needle) => {
+    const head = needle ? highlight(e.head, needle) : escapeHtml(e.head);
+    const rest = e.rest.map((r) => `<span class="log-fold">⤶</span>${needle ? highlight(r, needle) : escapeHtml(r)}`);
+    return head + rest.join('');
+  };
+
+  const entries = logEntries(logText);
   if (!filter) {
-    view.textContent = logText;
+    view.innerHTML = entries.map((e) => draw(e, '')).join(NL);
   } else {
     const needle = filter.toLowerCase();
-    const lines = logText.split(NL).filter((l) => l.toLowerCase().includes(needle));
-    view.innerHTML = lines.length
-      ? lines.map((line) => highlight(line, filter)).join(NL)
-      : `<span style="opacity:.6">No line matches ${escapeHtml(filter)}.</span>`;
+    // Matched on the WHOLE entry: a stack trace whose message is on line one
+    // and whose "error" is on line four is one thing, and a filter that drops
+    // the half without the word leaves the half that makes no sense.
+    const hits = entries.filter((e) => [e.head, ...e.rest].join(' ').toLowerCase().includes(needle));
+    view.innerHTML = hits.length
+      ? hits.map((e) => draw(e, filter)).join(NL)
+      : `<span style="opacity:.6">No entry matches ${escapeHtml(filter)}.</span>`;
   }
   if ($('#log-follow').checked) view.parentElement.scrollTop = view.parentElement.scrollHeight;
 }

@@ -1143,8 +1143,23 @@ code.mono {
   font-size: 0.78rem;
   line-height: 1.65;
   color: #a1a1aa;
-  white-space: pre-wrap;
-  word-break: break-all;
+  /* One entry, one row — so the eye counts events by counting lines.
+     `pre-wrap` with `word-break: break-all` turned every long request line
+     into three, broken mid-word, and a screen of them could not be counted or
+     skimmed. The long tail is still there; it is to the right. */
+  white-space: pre;
+  overflow-x: auto;
+}
+
+/* The seam where a folded continuation was joined on. Dimmed, because the
+   fold is a fact about the log and not part of the message — but present,
+   because four lines becoming one must not read as though the box only ever
+   said one thing. */
+.log-fold {
+  color: var(--text-muted);
+  opacity: 0.55;
+  padding: 0 0.45rem;
+  user-select: none;
 }
 /* A line the filter matched, so the eye lands on it in a wall of text. */
 .log-output mark { background: var(--accent-soft); color: var(--text); border-radius: 3px; }
