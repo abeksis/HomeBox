@@ -824,6 +824,7 @@ function renderContainers() {
 // source, so the character survives every tool that rewrites this file.
 const NL = String.fromCharCode(10);
 let logText = '';
+let logTz = null;
 
 async function loadLogs(name) {
   const picker = $('#log-picker');
@@ -836,6 +837,7 @@ async function loadLogs(name) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
     logText = data.text.trim() || '(no output)';
+    logTz = data.timezone || null;
     renderLogs();
   } catch (err) {
     logText = '';
@@ -867,9 +869,62 @@ async function loadLogs(name) {
  */
 const DOCKER_TS = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z) /;
 
+/**
+ * Docker's timestamp is UTC, always — the API has no other mode, and a
+ * container's TZ does not touch it. Left as-is it sits beside the app's own
+ * "+03:00" stamp three hours apart, which reads as two clocks disagreeing.
+ *
+ * Converted here, in the box's timezone — the one HomeBox runs with, sent
+ * alongside the logs — not the browser's: a phone abroad should still show
+ * the same wall-clock time the apps printed. The exact UTC instant stays on
+ * the element as a tooltip.
+ *
+ * One formatter per zone, built once. An unknown zone makes Intl throw a
+ * RangeError, and a missing one means the logs arrived without it; both fall
+ * back to the raw stamp rather than silently showing some other zone.
+ */
+const LOG_TS_FORMATS = new Map();
+
+function logTimeFormat(zone) {
+  if (!zone) return null;
+  if (LOG_TS_FORMATS.has(zone)) return LOG_TS_FORMATS.get(zone);
+  let fmt = null;
+  try {
+    fmt = new Intl.DateTimeFormat('sv-SE', {
+      timeZone: zone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    });
+  } catch {
+    fmt = null;
+  }
+  LOG_TS_FORMATS.set(zone, fmt);
+  return fmt;
+}
+
+function logTimestamp(utc) {
+  const fmt = logTimeFormat(logTz);
+  const when = new Date(utc);
+  if (!fmt || Number.isNaN(when.getTime())) return utc;
+  return fmt.format(when);
+}
+
+/** The line as the reader sees it — what a filter must match against. */
+function logDisplayText(line) {
+  const m = DOCKER_TS.exec(line);
+  return m ? `${logTimestamp(m[1])} ${line.slice(m[0].length)}` : line;
+}
+
 function logLineHtml(line, needle) {
   const m = DOCKER_TS.exec(line);
-  const ts = m ? `<span class="log-ts">${escapeHtml(m[1])}</span> ` : '';
+  const ts = m
+    ? `<span class="log-ts" title="${escapeHtml(m[1])}">${escapeHtml(logTimestamp(m[1]))}</span> `
+    : '';
   const body = m ? line.slice(m[0].length) : line;
   return `<span class="log-line">${ts}${needle ? highlight(body, needle) : escapeHtml(body)}</span>`;
 }
@@ -883,7 +938,7 @@ function renderLogs() {
     view.innerHTML = lines.map((l) => logLineHtml(l, '')).join('');
   } else {
     const needle = filter.toLowerCase();
-    const hits = lines.filter((l) => l.toLowerCase().includes(needle));
+    const hits = lines.filter((l) => logDisplayText(l).toLowerCase().includes(needle));
     view.innerHTML = hits.length
       ? hits.map((l) => logLineHtml(l, filter)).join('')
       : `<span class="log-line" style="opacity:.6">No line matches ${escapeHtml(filter)}.</span>`;

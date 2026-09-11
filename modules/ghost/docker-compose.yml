@@ -50,6 +50,7 @@ services:
     image: ghost:6.57.1-alpine
     container_name: ghost
     environment:
+      - TZ=${TZ:-UTC}
       - NODE_ENV=production
       - database__client=mysql
       - database__connection__host=ghost-db

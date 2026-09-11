@@ -48,6 +48,7 @@ services:
     image: wordpress:6.9.4
     container_name: wordpress
     environment:
+      - TZ=${TZ:-UTC}
       - WORDPRESS_DB_HOST=wordpress-db
       - WORDPRESS_DB_USER=wordpress
       - WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD:-wordpress}

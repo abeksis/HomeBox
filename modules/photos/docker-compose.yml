@@ -113,6 +113,8 @@ services:
   immich-redis:
     image: docker.io/valkey/valkey:8-bookworm
     container_name: immich-redis
+    environment:
+      - TZ=${TZ:-UTC}
     healthcheck:
       test: ["CMD-SHELL", "redis-cli ping || exit 1"]
       interval: 30s
@@ -136,6 +138,7 @@ services:
     image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
     container_name: immich-postgres
     environment:
+      - TZ=${TZ:-UTC}
       - POSTGRES_USER=immich
       - POSTGRES_PASSWORD=${IMMICH_DB_PASSWORD:-immich}
       - POSTGRES_DB=immich
