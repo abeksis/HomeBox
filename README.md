@@ -102,6 +102,12 @@ HomeBox release, via the `git pull` above.
 sudo bash /opt/homebox/scripts/uninstall.sh
 ```
 
+Or without anything on the box to run it from — it asks exactly the same way:
+
+```bash
+curl -fsSL https://get.abeksis.net/uninstall.sh | sudo bash
+```
+
 It prints an inventory of exactly what will go — containers, networks, images
 built here, and the size of each thing under `/opt/homebox` — then asks you to
 type `remove`. Options:
@@ -115,7 +121,7 @@ type `remove`. Options:
 If the tree is already gone, run it straight from here:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/abeksis/HomeBox/main/scripts/uninstall.sh | sudo bash -s -- --yes
+curl -fsSL https://get.abeksis.net/uninstall.sh | sudo bash -s -- --yes
 ```
 
 **Docker is left installed.** It was probably wanted anyway, and removing it
