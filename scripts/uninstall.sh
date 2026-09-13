@@ -3,6 +3,7 @@
 # Remove HomeBox from this machine.
 #
 #   sudo bash /opt/homebox/scripts/uninstall.sh              # asks first
+#   curl -fsSL https://get.abeksis.net/uninstall.sh | sudo bash   # same, asks first
 #   sudo bash /opt/homebox/scripts/uninstall.sh --yes        # no questions
 #   sudo bash /opt/homebox/scripts/uninstall.sh --keep-data  # keep data/ + backups/
 #
@@ -151,9 +152,21 @@ fi
 # ---------------------------------------------------------------- 2. confirm
 
 if [ "$ASSUME_YES" -ne 1 ]; then
-  [ -t 0 ] || die "not a terminal, so nothing was removed. Re-run with --yes if you mean it."
+  # Piped from curl, stdin IS this script, so `[ -t 0 ]` is false even with a
+  # person sitting at the keyboard — and the only way through used to be
+  # --yes, which also skips the inventory check this prompt exists for. The
+  # answer is read from the terminal itself instead. No terminal at all (cron,
+  # CI, a detached ssh) is still a refusal: nothing here guesses "yes".
+  if [ -t 0 ]; then
+    CONFIRM_FROM=/dev/stdin
+  elif { : </dev/tty; } 2>/dev/null; then
+    CONFIRM_FROM=/dev/tty
+  else
+    die "not a terminal, so nothing was removed. Re-run with --yes if you mean it."
+  fi
   printf '\nType %sremove%s to continue: ' "$BOLD" "$RESET"
-  read -r answer
+  answer=""
+  read -r answer <"$CONFIRM_FROM" || answer=""
   [ "$answer" = "remove" ] || die "nothing was removed"
 fi
 
