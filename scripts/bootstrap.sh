@@ -26,22 +26,46 @@ set -euo pipefail
 #   HB_TARBALL=http://192.0.2.20/homebox.tar.gz sudo -E bash hb.sh
 HB_REPO="${HB_REPO:-abeksis/HomeBox}"
 
-# The newest RELEASE, not the development branch.
+# The release a NEW box starts on: whatever releases/manifest.json calls
+# stable — the same file every installed box reads to decide what it may
+# update to. A fresh install and an update offer therefore agree, a tag that
+# has been cut but not yet announced is not handed out, and a paused release is
+# said out loud instead of installed quietly.
 #
-# This used to default to `main`, which meant every new install got whatever
-# had been pushed most recently — including the twenty minutes between
-# committing something broken and noticing. That is an acceptable way to run
-# your own box and not a way to give one to somebody else.
+# This used to ask `git ls-remote` for the newest tag, right here — sixty lines
+# before step 1 installs git. A clean Debian has no git; the failure was
+# swallowed by 2>/dev/null and the fallback was `main`, so a friend installing
+# on a fresh machine got the development branch without a word. curl is safe
+# to rely on at this point: it is what fetched this script.
 #
-# `git ls-remote --sort=-v:refname` asks GitHub for the tags in version order
-# and takes the first. If that fails — no tags yet, or no network — it falls
-# back to main, because an install that refuses to start is worse than one
-# that starts on the dev branch and says so.
+# No pipes into grep -q or head here. Under `set -euo pipefail` a reader that
+# exits early can SIGPIPE the writer and fail the whole pipeline, and a failed
+# substitution in an assignment ends the script. Bash's own regex match reads
+# the text in place.
+if [ -n "${HB_REF:-}" ]; then HB_REF_ASKED=1; else HB_REF_ASKED=0; fi
+HB_MANIFEST_URL="${HB_MANIFEST_URL:-https://raw.githubusercontent.com/${HB_REPO}/main/releases/manifest.json}"
+HB_MANIFEST=""
+HB_FROZEN=0
+if [ "$HB_REF_ASKED" -eq 0 ]; then
+  HB_MANIFEST="$(curl -fsSL --max-time 15 "$HB_MANIFEST_URL" 2>/dev/null)" || HB_MANIFEST=""
+  if [[ $HB_MANIFEST =~ \"freeze\"[[:space:]]*:[[:space:]]*true ]]; then HB_FROZEN=1; fi
+fi
+
 default_ref() {
   local tag
-  tag="$(git ls-remote --tags --refs --sort=-v:refname "https://github.com/${HB_REPO}.git" 2>/dev/null \
-    | head -1 | sed 's|.*refs/tags/||')"
-  if [ -n "$tag" ]; then printf '%s' "$tag"; else printf 'main'; fi
+  if [[ $HB_MANIFEST =~ \"stable\"[[:space:]]*:[[:space:]]*\"([0-9]+\.[0-9]+\.[0-9]+)\" ]]; then
+    printf 'v%s' "${BASH_REMATCH[1]}"
+    return 0
+  fi
+  # No manifest (a fork without one, no route to GitHub's raw host): the
+  # newest stable-shaped tag, if git happens to be installed already.
+  # Pre-release tags are not somebody's first install.
+  if command -v git >/dev/null 2>&1; then
+    tag="$(git ls-remote --tags --refs "https://github.com/${HB_REPO}.git" 2>/dev/null \
+      | sed 's|.*refs/tags/||' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)" || tag=""
+    if [ -n "$tag" ]; then printf '%s' "$tag"; return 0; fi
+  fi
+  printf 'main'
 }
 HB_REF="${HB_REF:-$(default_ref)}"
 # Did the caller ASK for a tarball? Recorded as a flag, before the default is
@@ -86,6 +110,12 @@ cat <<'BANNER'
  Your own apps, on your own box. Nothing phones home.
 BANNER
 printf ' %ssource:%s %s@%s\n' "$DIM" "$RESET" "$HB_REPO" "$HB_REF"
+if [ "$HB_REF_ASKED" -eq 0 ] && [ "$HB_REF" = main ]; then
+  warn "no release found (manifest unreachable, no tags) — installing the development branch"
+fi
+if [ "$HB_FROZEN" -eq 1 ]; then
+  warn "the maintainer has paused updates in releases/manifest.json — installing ${HB_REF} anyway; check the project page first"
+fi
 
 # --------------------------------------------------------------- 1. checks
 
