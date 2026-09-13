@@ -2,7 +2,10 @@
 # ==========================================================================
 # HomeBox bootstrap — the one-liner.
 #
-#   curl -fsSL https://raw.githubusercontent.com/abeksis/HomeBox/main/scripts/bootstrap.sh | sudo bash
+#   curl -fsSL https://get.abeksis.net/install.sh | sudo bash
+#
+# get.abeksis.net is a Cloudflare redirect (302) to this file on main; the
+# long form, https://raw.githubusercontent.com/abeksis/HomeBox/main/scripts/bootstrap.sh, is the same bytes.
 #
 # This is the piece install.sh cannot be: install.sh configures a tree that is
 # already on disk, and something has to put it there first. This downloads the
@@ -16,7 +19,7 @@
 # You are piping a script from the internet into a root shell. That is a real
 # thing to be careful about, and the answer is not to trust the wording here:
 #
-#   curl -fsSL https://raw.githubusercontent.com/abeksis/HomeBox/main/scripts/bootstrap.sh -o hb.sh
+#   curl -fsSL https://get.abeksis.net/install.sh -o hb.sh
 #   less hb.sh && sudo bash hb.sh
 # ==========================================================================
 set -euo pipefail

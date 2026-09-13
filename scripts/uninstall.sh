@@ -269,5 +269,5 @@ cat <<EOF
   HomeBox is gone. Docker was left installed.
 
   To install again:
-    ${BOLD}curl -fsSL https://raw.githubusercontent.com/abeksis/HomeBox/main/scripts/bootstrap.sh | sudo bash${RESET}
+    ${BOLD}curl -fsSL https://get.abeksis.net/install.sh | sudo bash${RESET}
 EOF

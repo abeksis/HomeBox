@@ -11,6 +11,14 @@ The dashboard runs on port **8443**.
 On a clean Debian or Ubuntu box:
 
 ```bash
+curl -fsSL https://get.abeksis.net/install.sh | sudo bash
+```
+
+`get.abeksis.net` is a redirect to `scripts/bootstrap.sh` on this repository's
+`main` branch — nothing is hosted there. If that hostname is ever unavailable,
+the long form does exactly the same thing:
+
+```bash
 curl -fsSL https://raw.githubusercontent.com/abeksis/HomeBox/main/scripts/bootstrap.sh | sudo bash
 ```
 
@@ -24,7 +32,7 @@ That command pipes a script from the internet into a root shell, which is
 worth being deliberate about. To read it first:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/abeksis/HomeBox/main/scripts/bootstrap.sh -o hb.sh
+curl -fsSL https://get.abeksis.net/install.sh -o hb.sh
 less hb.sh && sudo bash hb.sh
 ```
 
