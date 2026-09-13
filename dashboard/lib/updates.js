@@ -411,6 +411,17 @@ async function pruneBackups(id) {
   }
 }
 
+/** The module's declared rebuildable paths; empty when it declares none or is unknown. */
+async function moduleBackupExcludes(id) {
+  try {
+    const { modules } = await modulesLib.loadAll();
+    const mod = modules.find((m) => path.basename(m.dir) === id) || modules.find((m) => m.id === id);
+    return mod && Array.isArray(mod.backup_exclude) ? mod.backup_exclude : [];
+  } catch {
+    return [];
+  }
+}
+
 async function backupModule(id, onLine) {
   const dir = path.join(state.ROOT, 'modules', id, 'config');
   if (!fs.existsSync(dir)) {
@@ -422,8 +433,12 @@ async function backupModule(id, onLine) {
   const file = path.join(BACKUP_DIR, `${id}-${stamp()}.tar.gz`);
   if (onLine) onLine(`==> Backing up modules/${id}/config`, false);
 
+  const skip = await moduleBackupExcludes(id);
+  if (skip.length && onLine) onLine(`==> Skipping what ${id} rebuilds by itself: ${skip.join(', ')}`, false);
+
   await new Promise((resolve, reject) => {
-    const child = spawn('tar', ['-czf', file, '-C', path.join(state.ROOT, 'modules', id), 'config']);
+    const args = ['-czf', file, ...skip.map((p) => `--exclude=config/${p}`), '-C', path.join(state.ROOT, 'modules', id), 'config'];
+    const child = spawn('tar', args);
     let stderr = '';
     child.stderr.on('data', (c) => { stderr += c.toString(); });
     child.on('error', reject);
@@ -614,10 +629,14 @@ async function upgrade(which, { onLine = null } = {}) {
     // The version change is the one path with no automatic rollback of DATA.
     // A tag can be put back; a migration a new version ran on first start
     // cannot. So the backup is not optional here and it happens first.
+    // Of the module being changed — not of the whole box. This used to be a
+    // full config backup of every module, so moving Radarr to a new version
+    // also archived Jellyfin's artwork and Immich's database: ~950MB per
+    // click, for apps a Radarr migration cannot touch. It is the same
+    // per-module backup a rebuild already takes. A module with no config has
+    // no data for a new version to migrate, so there is nothing to refuse.
     say('==> Backing up before anything changes — a new version may migrate its database');
-    const backupLib = require('./backup');
-    const made = await backupLib.create({ kind: 'config' });
-    say(`==> Backup: ${made.name} (${Math.round(made.size / 1048576)}MB, ${made.seconds}s)`);
+    await backupModule(item.module, onLine);
 
     const previous = await pins.set(item.module, item.service, repo, item.newerVersion);
     say(`==> Pinned to ${item.newerVersion}`);
@@ -669,4 +688,4 @@ async function upgrade(which, { onLine = null } = {}) {
   }
 }
 
-module.exports = { check, status, apply, upgrade, readHistory, STALE_AFTER_MS };
+module.exports = { check, status, apply, upgrade, readHistory, STALE_AFTER_MS, backupModule };

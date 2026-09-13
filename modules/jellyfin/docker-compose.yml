@@ -18,6 +18,15 @@ x-homebox:
     emoji: "🍿"
     color: "#aa5cc3"
     bg: "rgba(170,92,195,0.12)"
+  backup:
+    # Rebuilt by Jellyfin on its own: artwork and images fetched during a
+    # library scan, transcoder scratch space, caches and logs. Libraries,
+    # users, watch history and settings live in jellyfin/data/data and stay.
+    exclude:
+      - jellyfin/data/metadata
+      - jellyfin/data/transcodes
+      - jellyfin/cache
+      - jellyfin/log
   tips:
     - "Point libraries at /data/<Movies> and /data/<TV series> — the same folder names the media module writes to, under the same single /data mount"
     - "Without a GPU every transcode is CPU work. Direct-play formats your TV understands and this box stays quiet"

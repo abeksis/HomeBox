@@ -18,6 +18,14 @@ x-homebox:
     emoji: "🎬"
     color: "#e5a00d"
     bg: "rgba(229,160,13,0.12)"
+  backup:
+    # Posters Radarr and Sonarr download again by themselves, and their logs.
+    # Their databases, config.xml files and qBittorrent's settings stay.
+    exclude:
+      - radarr/MediaCover
+      - radarr/logs
+      - sonarr/MediaCover
+      - sonarr/logs
   tips:
     - "Set Prowlarr up first — it pushes indexers into Radarr and Sonarr so you never paste the same tracker twice"
     - "Every container mounts the pool at the same path (/data), which is what lets downloads become hardlinks instead of copies. Change one mapping and your disk usage quietly doubles"

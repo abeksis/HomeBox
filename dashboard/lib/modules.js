@@ -58,6 +58,37 @@ function normalizeService(name, raw) {
   };
 }
 
+/**
+ * Paths under a module's config/ that the app rebuilds by itself — artwork
+ * fetched on a library scan, image caches, logs — and that every backup skips.
+ *
+ * Checked hard, because the App Store can author a module from a web form. An
+ * entry may only name something UNDER config/: plain path segments, no `..`,
+ * no leading slash, no glob characters. It can make a backup smaller and
+ * nothing else — it is never executed, and a rejected entry is dropped, not
+ * guessed at.
+ *
+ * Segments only, never a bare name: BusyBox tar, which is what runs in the
+ * dashboard image, matches a slash-less --exclude against every path component
+ * in the tree. `MediaCover` would drop a directory of that name anywhere;
+ * `config/radarr/MediaCover` drops exactly one.
+ */
+const SAFE_SEGMENT = /^[A-Za-z0-9._@+-]+$/;
+
+function backupExcludes(backup) {
+  const list = backup && Array.isArray(backup.exclude) ? backup.exclude : [];
+  const out = [];
+  for (const raw of list) {
+    if (typeof raw !== 'string') continue;
+    const trimmed = raw.trim().replace(/\/+$/, '');
+    if (!trimmed) continue;
+    const parts = trimmed.split('/');
+    if (parts.some((p) => !SAFE_SEGMENT.test(p) || p === '.' || p === '..')) continue;
+    out.push(parts.join('/'));
+  }
+  return [...new Set(out)];
+}
+
 function normalize(id, meta, dir) {
   const m = meta && typeof meta === 'object' ? meta : {};
   const services = Object.entries(m.services || {}).map(([name, svc]) => normalizeService(name, svc));
@@ -88,6 +119,7 @@ function normalize(id, meta, dir) {
       ? Object.entries(m.env_vars).map(([name, v]) => ({ name, ...(v && typeof v === 'object' ? v : {}) }))
       : [],
     services,
+    backup_exclude: backupExcludes(m.backup),
     hasSetup: fs.existsSync(path.join(dir, 'setup.sh')),
   };
 }
@@ -220,4 +252,4 @@ function enabledIds(modules) {
   return new Set(modules.filter((m) => m.default || m.required).map((m) => m.id));
 }
 
-module.exports = { loadAll, withContainers, enabledIds, CATEGORIES, MODULES_DIR };
+module.exports = { loadAll, withContainers, enabledIds, CATEGORIES, MODULES_DIR, backupExcludes };

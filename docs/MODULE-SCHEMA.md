@@ -141,6 +141,42 @@ timestamp that container prints is then hours off. Lend it the host's copy:
 Never bind-mount `/etc/timezone`: it does not exist on a systemd host, and
 Docker creates a *directory* there rather than failing.
 
+## Backups
+
+Every backup of a module — the per-module archive taken before an update, and
+the scheduled config backup of the whole box — skips what the module declares
+its app rebuilds by itself:
+
+```yaml
+x-homebox:
+  backup:
+    exclude:
+      - jellyfin/data/metadata   # artwork fetched again on a library scan
+      - jellyfin/cache
+      - jellyfin/log
+```
+
+Paths are relative to the module's `config/` directory. Declare only what the
+app genuinely regenerates without being asked — covers, image caches, logs,
+transcoder scratch space. Never a database, a settings file, or anything a
+person entered.
+
+The rules are strict, because a module can be authored from the App Store form:
+
+- plain path segments only — letters, digits and `. _ @ + -`
+- no `..`, no `.` segment, no leading `/`, no glob characters
+- anything that fails is dropped, never guessed at
+
+Always give the path to the directory, never a bare name. The dashboard image
+runs BusyBox tar, which matches a slash-less `--exclude` against every path
+component in the tree: `MediaCover` would drop a directory of that name
+anywhere, `radarr/MediaCover` drops exactly one.
+
+For scale, on a real box: Jellyfin's config backed up at 668 MB and 8.9 MB
+without `jellyfin/data/metadata`; the media stack at 133 MB and 9.3 MB without
+Radarr and Sonarr's covers and logs. A restored backup brings the app's
+database and settings back, and the app fetches the rest again on its own.
+
 ## Resource limits and logging
 
 Every service should carry them. A home box has no autoscaler: one runaway

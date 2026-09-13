@@ -26,6 +26,7 @@ const { spawn } = require('child_process');
 const { pipeline } = require('stream/promises');
 
 const state = require('./state-store');
+const modulesLib = require('./modules');
 
 const ALGORITHM = 'aes-256-gcm';
 const KEY_LENGTH = 32;
@@ -189,18 +190,38 @@ async function decryptFile(encPath, outPath, secret) {
  * of gigabytes, which is why it is not the default and not what the schedule
  * runs.
  */
-function tarArgs(kind) {
+function tarArgs(kind, excludes = []) {
   const args = ['-czf', '-', '-C', ROOT];
   const modules = fs.existsSync(path.join(ROOT, 'modules')) ? ['modules'] : [];
   const parts = [...modules, 'state'];
   if (fs.existsSync(ENV_FILE)) parts.push('.env');
   if (kind === 'full' && fs.existsSync(path.join(ROOT, 'data'))) parts.push('data');
   // Never fold the backup directory into a backup.
+  //
+  // Note the bare `backups`: BusyBox tar matches a slash-less pattern against
+  // every path component, so this also skips any directory named "backups"
+  // inside a module's config — an app's own backup folder. That is left as it
+  // is on purpose (a backup of backups is the fastest way to fill a disk), but
+  // it is a rule, not an accident, and changing it is a size decision.
   args.push('--exclude=./backups', '--exclude=backups');
+  // What each module declares it rebuilds by itself. Full relative paths only;
+  // see backupExcludes() in lib/modules.js for why.
+  for (const p of excludes) args.push(`--exclude=${p}`);
   return args.concat(parts);
 }
 
 let inFlight = false;
+
+/** Every module's declared rebuildable paths, as paths relative to ROOT. */
+async function rebuildableExcludes() {
+  try {
+    const { modules } = await modulesLib.loadAll();
+    return modules.flatMap((m) => (Array.isArray(m.backup_exclude) ? m.backup_exclude : [])
+      .map((p) => `modules/${path.basename(m.dir)}/config/${p}`));
+  } catch {
+    return [];
+  }
+}
 
 async function create({ kind = 'config' } = {}) {
   if (!['config', 'full'].includes(kind)) throw new BackupError(`unknown backup kind: ${kind}`);
@@ -218,8 +239,9 @@ async function create({ kind = 'config' } = {}) {
     // tar to a staging file rather than piping into the cipher: a tar that
     // fails halfway would otherwise produce a perfectly decryptable archive
     // of half a box.
+    const excludes = await rebuildableExcludes();
     await new Promise((resolve, reject) => {
-      const child = spawn('tar', tarArgs(kind), { cwd: ROOT });
+      const child = spawn('tar', tarArgs(kind, excludes), { cwd: ROOT });
       const out = fs.createWriteStream(plain);
       let stderr = '';
       child.stderr.on('data', (c) => { stderr = (stderr + c).slice(-8000); });
@@ -413,5 +435,4 @@ function revealKey() {
 module.exports = {
   create, list, remove, verify, prune, status,
   getSchedule, setSchedule, startScheduler,
-  revealKey, decryptFile, resolveName, BACKUP_DIR, BackupError, PRESETS,
-};
+  revealKey, decryptFile, resolveName, BACKUP_DIR, BackupError, PRESETS, tarArgs, rebuildableExcludes };
