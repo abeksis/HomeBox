@@ -210,7 +210,11 @@ tr[id^="svc-"]:target td { background: var(--accent-soft); }
 .guide-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
 .guide-card { display: flex; flex-direction: column; gap: 0.3rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 22px; color: var(--text); transition: background 0.15s, border-color 0.15s; }
 .guide-card:hover { text-decoration: none; background: var(--surface-2); border-color: var(--line-strong); }
-.guide-card .mono-label { margin: 0 0 4px; font-size: 0.8rem; color: var(--muted); }
+.guide-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.guide-glyph { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 11px; background: var(--accent-soft); box-shadow: inset 0 0 0 1px rgba(234, 106, 18, 0.25); }
+.guide-glyph svg { width: 21px; height: 21px; fill: none; stroke: var(--accent); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.guide-card:hover .guide-glyph { background: rgba(234, 106, 18, 0.2); }
+.guide-card .mono-label { margin: 0; font-size: 0.8rem; color: var(--muted); }
 .guide-title { font-weight: 800; font-size: 1.08rem; }
 .guide-sum { color: var(--muted); font-size: 0.93rem; }
 

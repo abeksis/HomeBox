@@ -536,8 +536,24 @@ function appPage(lang, m, cats) {
   });
 }
 
+// A line glyph per guide, drawn like the dashboard's icons. A guide added
+// without one gets the generic page glyph rather than an empty plate.
+const GUIDE_GLYPHS = {
+  install: '<path d="M4 17.5 9.5 12 4 6.5"/><path d="M12 18h8"/>',
+  'first-steps': '<path d="M12 3.5 14.4 9l5.9.5-4.5 3.9 1.4 5.8L12 16.1l-5.2 3.1 1.4-5.8L3.7 9.5 9.6 9z"/>',
+  updates: '<path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/>',
+  backups: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/><circle cx="12" cy="16" r="1.4"/>',
+  'remote-access': '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.5 3.5 5.5 3.5 8.5s-1 6-3.5 8.5c-2.5-2.5-3.5-5.5-3.5-8.5s1-6 3.5-8.5z"/>',
+  uninstall: '<path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/><path d="M10.5 11v5M13.5 11v5"/>',
+  faq: '<circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.5a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.5"/><circle cx="12" cy="17" r="0.6"/>',
+  page: '<path d="M6 3.5h8l4 4V20.5H6z"/><path d="M14 3.5v4h4M9 12h6M9 16h6"/>',
+};
+
 const guideCard = (g, lang, i = null) => `<a class="guide-card" href="${href(lang, `guides/${g.slug}/`)}">
-  ${i == null ? '' : `<span class="mono-label">${String(i + 1).padStart(2, '0')}</span>`}
+  <span class="guide-head">
+    <span class="guide-glyph"><svg viewBox="0 0 24 24" aria-hidden="true">${GUIDE_GLYPHS[g.slug] || GUIDE_GLYPHS.page}</svg></span>
+    ${i == null ? '' : `<span class="mono-label">${String(i + 1).padStart(2, '0')}</span>`}
+  </span>
   <span class="guide-title">${esc(g.title)}</span>
   <span class="guide-sum">${esc(g.summary)}</span>
 </a>`;
