@@ -2268,13 +2268,16 @@ function openModule(id) {
     <div class="run-output" id="run-output" hidden></div>`;
   $('#sheet').hidden = false;
   $('#sheet-backdrop').hidden = false;
-  $('#sheet').dataset.module = mod.id;
+  // Not data-module: the document click handler opens a module for anything
+  // inside [data-module], so the drawer marked that way swallowed its own
+  // close button and reopened itself.
+  $('#sheet').dataset.openModule = mod.id;
 }
 
 function closeSheet() {
   $('#sheet').hidden = true;
   $('#sheet-backdrop').hidden = true;
-  delete $('#sheet').dataset.module;
+  delete $('#sheet').dataset.openModule;
 }
 
 /* ---------------------------------------------------------------- actions */
@@ -2369,7 +2372,7 @@ Type the module name to confirm:`);
 
   state.busy.add(id);
   renderApps();
-  if ($('#sheet').dataset.module === id) openModule(id);
+  if ($('#sheet').dataset.openModule === id) openModule(id);
 
   const out = $('#run-output');
   if (out) {
@@ -2395,7 +2398,7 @@ Type the module name to confirm:`);
   } finally {
     state.busy.delete(id);
     await loadModules(true);
-    if ($('#sheet').dataset.module === id) {
+    if ($('#sheet').dataset.openModule === id) {
       const keep = out ? out.textContent : null;
       openModule(id);
       if (keep) {
