@@ -90,7 +90,22 @@ case "$HB_REF" in
   *)       HB_REF_NS="refs/heads" ;;
 esac
 HB_TARBALL="${HB_TARBALL:-https://codeload.github.com/${HB_REPO}/tar.gz/${HB_REF_NS}/${HB_REF}}"
-HB_ROOT="${HB_ROOT:-/opt/podhouse}"
+# The folder follows the release being installed, not this script. This file is
+# served from main, and main moved to /opt/podhouse in 0.6.0 — but a release
+# before that mounts a fixed /opt/homebox into the dashboard and only works
+# from there. Installing 0.5.x into /opt/podhouse gave a dashboard that could
+# not see its own modules.
+if [ -z "${HB_ROOT:-}" ]; then
+  case "$HB_REF" in
+    v[0-9]*)
+      if [ "$(printf '%s\n%s\n' "${HB_REF#v}" 0.6.0 | sort -V | head -n 1)" = 0.6.0 ]; then
+        HB_ROOT=/opt/podhouse
+      else
+        HB_ROOT=/opt/homebox
+      fi ;;
+    *) HB_ROOT=/opt/podhouse ;;
+  esac
+fi
 HB_USER="${HB_USER:-${SUDO_USER:-$(id -un)}}"
 
 if [ -t 1 ]; then
