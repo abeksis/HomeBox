@@ -11,7 +11,7 @@ The dashboard runs on port **8443**.
 On a clean Debian or Ubuntu box:
 
 ```bash
-curl -fsSL https://get.abeksis.net/install.sh | sudo bash
+curl -fsSL https://get.podhouse.dev/install.sh | sudo bash
 ```
 
 It downloads this repository, unpacks it to `/opt/homebox`, then runs
@@ -24,16 +24,16 @@ That command pipes a script from the internet into a root shell, which is
 worth being deliberate about. To read it first:
 
 ```bash
-curl -fsSL https://get.abeksis.net/install.sh -o hb.sh
+curl -fsSL https://get.podhouse.dev/install.sh -o hb.sh
 less hb.sh && sudo bash hb.sh
 ```
 
-`get.abeksis.net` serves `scripts/bootstrap.sh` from this repository's `main`
+`get.podhouse.dev` serves `scripts/bootstrap.sh` from this repository's `main`
 branch, byte for byte, and counts installs anonymously (per day and country,
 nothing stored per person — see [infra/get-worker](infra/get-worker)).
 
 <details>
-<summary>If get.abeksis.net is unreachable</summary>
+<summary>If get.podhouse.dev is unreachable</summary>
 
 The same script, straight from GitHub:
 
@@ -115,7 +115,7 @@ sudo bash /opt/homebox/scripts/uninstall.sh
 Or without anything on the box to run it from — it asks exactly the same way:
 
 ```bash
-curl -fsSL https://get.abeksis.net/uninstall.sh | sudo bash
+curl -fsSL https://get.podhouse.dev/uninstall.sh | sudo bash
 ```
 
 It prints an inventory of exactly what will go — containers, networks, images
@@ -131,7 +131,7 @@ type `remove`. Options:
 If the tree is already gone, run it straight from here:
 
 ```bash
-curl -fsSL https://get.abeksis.net/uninstall.sh | sudo bash -s -- --yes
+curl -fsSL https://get.podhouse.dev/uninstall.sh | sudo bash -s -- --yes
 ```
 
 **Docker is left installed.** It was probably wanted anyway, and removing it

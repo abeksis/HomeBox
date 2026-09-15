@@ -52,7 +52,7 @@ const GITHUB_MANIFEST_URL = `https://raw.githubusercontent.com/${REPO}/main/rele
 /**
  * Where the manifest is read from, in order.
  *
- * get.abeksis.net serves the same file from GitHub and counts, anonymously,
+ * get.podhouse.dev serves the same file from GitHub and counts, anonymously,
  * how many boxes run which version (see infra/get-worker): the box sends its
  * version in a header, and nothing else about it is sent or kept. It is the
  * only way the project knows whether a release reached anyone.
@@ -61,10 +61,11 @@ const GITHUB_MANIFEST_URL = `https://raw.githubusercontent.com/${REPO}/main/rele
  * check, and the only source when HB_ANONYMOUS_STATS=off in .env.
  */
 const STATS_OFF = /^(off|false|0|no)$/i.test(process.env.HB_ANONYMOUS_STATS || '');
+// get.abeksis.net answers too, for boxes installed before the domain moved.
 const MANIFEST_SOURCES = process.env.HB_MANIFEST_URL
   ? [{ url: process.env.HB_MANIFEST_URL, counted: false }]
   : [
-    ...(STATS_OFF ? [] : [{ url: 'https://get.abeksis.net/manifest.json', counted: true }]),
+    ...(STATS_OFF ? [] : [{ url: 'https://get.podhouse.dev/manifest.json', counted: true }]),
     { url: GITHUB_MANIFEST_URL, counted: false },
   ];
 

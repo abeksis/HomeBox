@@ -3,7 +3,10 @@ main = "src/index.js"
 compatibility_date = "2026-09-01"
 workers_dev = false
 
+# get.podhouse.dev is the name printed everywhere now; get.abeksis.net stays
+# because every box installed before the move checks for releases there.
 routes = [
+  { pattern = "get.podhouse.dev", custom_domain = true },
   { pattern = "get.abeksis.net/*", zone_name = "abeksis.net" }
 ]
 
@@ -18,4 +21,4 @@ database_id = "98034ffe-6478-4672-8842-202c139b45c7"
 
 # Secrets, set with `npx wrangler secret put <NAME>` — never in this file:
 #   SALT         random string mixed into the per-day box hash
-#   STATS_TOKEN  the key for https://get.abeksis.net/stats?key=...
+#   STATS_TOKEN  the key for https://get.podhouse.dev/stats?key=...

@@ -2,9 +2,9 @@
 # ==========================================================================
 # Podhouse bootstrap — the one-liner.
 #
-#   curl -fsSL https://get.abeksis.net/install.sh | sudo bash
+#   curl -fsSL https://get.podhouse.dev/install.sh | sudo bash
 #
-# get.abeksis.net serves this file from main (a Cloudflare Worker that also
+# get.podhouse.dev serves this file from main (a Cloudflare Worker that also
 # counts installs anonymously, infra/get-worker); the long form,
 # https://raw.githubusercontent.com/abeksis/Podhouse/main/scripts/bootstrap.sh, is the same bytes.
 #
@@ -20,7 +20,7 @@
 # You are piping a script from the internet into a root shell. That is a real
 # thing to be careful about, and the answer is not to trust the wording here:
 #
-#   curl -fsSL https://get.abeksis.net/install.sh -o hb.sh
+#   curl -fsSL https://get.podhouse.dev/install.sh -o hb.sh
 #   less hb.sh && sudo bash hb.sh
 # ==========================================================================
 set -euo pipefail

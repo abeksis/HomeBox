@@ -112,7 +112,7 @@ jump it still carries the steps for.
    and rebuilds — landing back where it started.
 
 Nothing reports back about an individual box. The anonymous counter at
-https://get.abeksis.net/stats shows how many boxes are on each version per day, so you
+https://get.podhouse.dev/stats shows how many boxes are on each version per day, so you
 can watch a release being taken up — but not who updated, or whether it worked for
 them. That is why the freeze switch matters: it is the only lever you have after a
 release is out.

@@ -48,7 +48,7 @@ not told a different number.
 ## What this is not
 
 There is no telemetry about what a box holds or does. Boxes read the manifest through
-get.abeksis.net, which counts anonymously how many run each version (a version header, a
+get.podhouse.dev, which counts anonymously how many run each version (a version header, a
 one-day salted hash, totals only after two days — see `infra/get-worker`), and
 `HB_ANONYMOUS_STATS=off` in `.env` skips even that. So you can see whether a release is
 being taken up, but not by whom, and the manifest is still the only way to act on a box.

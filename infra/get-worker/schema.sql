@@ -1,4 +1,4 @@
--- get.abeksis.net counters. Nothing here identifies a person or a box.
+-- get.podhouse.dev counters. Nothing here identifies a person or a box.
 
 -- Installs and uninstalls: one counter per day, script and country.
 CREATE TABLE IF NOT EXISTS events (

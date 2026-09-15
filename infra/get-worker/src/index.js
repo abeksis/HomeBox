@@ -1,5 +1,5 @@
 /**
- * get.abeksis.net — the front door for installing and updating Podhouse.
+ * get.podhouse.dev — the front door for installing and updating Podhouse.
  *
  *   /install.sh      scripts/bootstrap.sh on main
  *   /uninstall.sh    scripts/uninstall.sh on main
@@ -26,7 +26,7 @@
 
 const REPO = 'abeksis/Podhouse';
 const RAW = `https://raw.githubusercontent.com/${REPO}/main`;
-const SITE = 'https://podhouse.abeksis.net';
+const SITE = 'https://podhouse.dev';
 
 const FILES = {
   '/install.sh': { path: 'scripts/bootstrap.sh', kind: 'install', type: 'text/x-shellscript; charset=utf-8' },

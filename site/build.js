@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * Builds podhouse.abeksis.net into site/dist.
+ * Builds podhouse.dev into site/dist.
  *
  *   node site/build.js
  *
@@ -25,8 +25,8 @@ const { execFileSync } = require('child_process');
 const SITE = __dirname;
 const ROOT = path.resolve(SITE, '..');
 const DIST = path.join(SITE, 'dist');
-const DOMAIN = 'podhouse.abeksis.net';
-const INSTALL = 'curl -fsSL https://get.abeksis.net/install.sh | sudo bash';
+const DOMAIN = 'podhouse.dev';
+const INSTALL = 'curl -fsSL https://get.podhouse.dev/install.sh | sudo bash';
 const REPO = 'https://github.com/abeksis/Podhouse';
 
 // The module loader resolves everything from HOMEBOX_ROOT, read at require time.

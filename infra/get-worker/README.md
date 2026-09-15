@@ -1,4 +1,4 @@
-# get.abeksis.net
+# get.podhouse.dev
 
 A Cloudflare Worker in front of the install script and the release manifest. It serves
 them from `main` on GitHub and keeps two anonymous counts:
@@ -13,7 +13,7 @@ from one day to the next because the date is inside the hash. Boxes opt out with
 `HB_ANONYMOUS_STATS=off` in `.env` (then `dashboard/lib/platform.js` reads GitHub
 directly); a Worker outage also falls back to GitHub.
 
-Stats: `https://get.abeksis.net/stats?key=<STATS_TOKEN>` (page) or `/stats.json`.
+Stats: `https://get.podhouse.dev/stats?key=<STATS_TOKEN>` (page) or `/stats.json`.
 
 ## Deploy
 
@@ -29,7 +29,7 @@ npx wrangler deploy
 ```
 
 Then in Cloudflare → abeksis.net → Rules → Redirect Rules, **disable** the old
-`get.abeksis.net` redirect rules. Redirect rules run before Workers, so while they are
+`get.podhouse.dev` redirect rules. Redirect rules run before Workers, so while they are
 on, the Worker never sees `/install.sh`. The `get` DNS record stays as it is (proxied).
 
 ## Local test

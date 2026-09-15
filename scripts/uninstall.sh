@@ -3,7 +3,7 @@
 # Remove Podhouse from this machine.
 #
 #   sudo bash /opt/homebox/scripts/uninstall.sh              # asks first
-#   curl -fsSL https://get.abeksis.net/uninstall.sh | sudo bash   # same, asks first
+#   curl -fsSL https://get.podhouse.dev/uninstall.sh | sudo bash   # same, asks first
 #   sudo bash /opt/homebox/scripts/uninstall.sh --yes        # no questions
 #   sudo bash /opt/homebox/scripts/uninstall.sh --keep-data  # keep data/ + backups/
 #
@@ -282,5 +282,5 @@ cat <<EOF
   Podhouse is gone. Docker was left installed.
 
   To install again:
-    ${BOLD}curl -fsSL https://get.abeksis.net/install.sh | sudo bash${RESET}
+    ${BOLD}curl -fsSL https://get.podhouse.dev/install.sh | sudo bash${RESET}
 EOF
