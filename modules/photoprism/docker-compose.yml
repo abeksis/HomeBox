@@ -48,7 +48,7 @@ x-homebox:
 
 services:
   photoprism:
-    # The source pins 240915. PhotoPrism tags by date; this is the current one.
+    # PhotoPrism tags by date; this is the current one.
     image: photoprism/photoprism:260728
     container_name: photoprism
     # PhotoPrism needs to write its cache and sidecar files as this user, and

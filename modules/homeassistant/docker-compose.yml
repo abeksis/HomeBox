@@ -34,8 +34,8 @@ x-homebox:
 
 services:
   homeassistant:
-    # The source pins 2024.12.5. Home Assistant ships monthly and moves fast;
-    # an install nearly two years behind starts by asking to be updated.
+    # Pinned to a recent release. Home Assistant ships monthly and moves fast;
+    # an old pin starts every install by asking to be updated.
     image: homeassistant/home-assistant:2026.9.1
     container_name: homeassistant
     # Not a shortcut. Discovery is broadcast — mDNS and SSDP — and broadcast

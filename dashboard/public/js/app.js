@@ -32,6 +32,9 @@ const state = {
   containerFilter: 'all',
   containerQuery: '',
   busy: new Set(),
+  // App cards whose setup notes are unfolded. The catalog is rebuilt on every
+  // module refresh, which would otherwise fold them back under the reader.
+  openNotes: new Set(),
   // Mirrors DEFAULT_PREFS in server.js. Only ever seen for the moment before
   // /api/prefs answers, but a mismatch here is a visible flash of the wrong
   // background on every load.
@@ -766,16 +769,17 @@ function renderIncludedServices(m) {
       ${m.installed ? `<span class="dot ${live ? 'is-on' : 'is-off'}"></span>` : ''}${end}
     </li>`;
   }).join('');
-  return `<div class="module-apps">
-    <div class="module-apps-label">Runs</div>
-    <ul>${rows}</ul>
-  </div>`;
+  return `<ul class="module-apps" aria-label="Runs">${rows}</ul>`;
 }
 
-/** The setup notes a module declares in `tips:`. */
+/** The setup notes a module declares in `tips:`, folded until asked for. */
 function renderTips(m) {
   if (!m.tips || !m.tips.length) return '';
-  return `<ul class="module-notes">${m.tips.map((t) => `<li>${escapeHtml(t)}</li>`).join('')}</ul>`;
+  const count = m.tips.length === 1 ? '1 setup note' : `${m.tips.length} setup notes`;
+  return `<details class="module-notes" data-notes="${escapeHtml(m.id)}"${state.openNotes.has(m.id) ? ' open' : ''}>
+    <summary>${count}</summary>
+    <ul>${m.tips.map((t) => `<li>${escapeHtml(t)}</li>`).join('')}</ul>
+  </details>`;
 }
 
 function renderApps() {
@@ -789,26 +793,26 @@ function renderApps() {
     const art = iconArt(m.icon || (m.theme && m.theme.emoji), monogram(m.title, m.theme && m.theme.color));
     const queued = state.pending.has(m.id)
       ? (state.pending.get(m.id) ? ' is-queued-add' : ' is-queued-remove') : '';
+    // Two columns: a rail with everything you glance at (icon, state, memory,
+    // category, the button), and the reading on the right.
     return `<article class="module-card${m.installed ? ' is-installed' : ''}${queued}">
-      <div class="module-top">
+      <div class="module-rail">
         <span class="module-art" data-module="${escapeHtml(m.id)}" role="button" tabindex="0"
               title="Details for ${escapeHtml(m.title)}">${art}</span>
-        <div class="module-heading">
-          <h3 class="module-title" data-module="${escapeHtml(m.id)}" role="button" tabindex="0">${escapeHtml(m.title)}</h3>
-          ${m.installed
-            ? `<span class="module-state" data-status="${escapeHtml(m.status)}"><span class="dot ${m.status === 'running' ? 'is-on' : 'is-off'}"></span>${escapeHtml(cardStatusLabel(m))}</span>`
-            : (m.tagline ? `<span class="module-tagline">${escapeHtml(m.tagline)}</span>` : '')}
-        </div>
+        ${m.installed
+          ? `<span class="module-state" data-status="${escapeHtml(m.status)}"><span class="dot ${m.status === 'running' ? 'is-on' : 'is-off'}"></span>${escapeHtml(cardStatusLabel(m))}</span>`
+          : '<span class="module-state is-idle">Not installed</span>'}
+        ${m.ram ? `<span class="module-fact"><span>Memory</span>${escapeHtml(m.ram)}</span>` : ''}
+        <span class="badge">${escapeHtml(m.category)}</span>
+        ${m.required ? '<span class="badge badge-core">base system</span>' : ''}
         ${appActionButton(m)}
       </div>
-      ${m.installed && m.tagline ? `<p class="module-tagline">${escapeHtml(m.tagline)}</p>` : ''}
-      <p class="module-text">${escapeHtml(m.description)}</p>
-      ${renderIncludedServices(m)}
-      ${renderTips(m)}
-      <div class="module-foot">
-        ${m.required ? '<span class="badge badge-core">base system</span>' : ''}
-        ${m.ram ? `<span class="badge">${escapeHtml(m.ram)} memory</span>` : ''}
-        <span class="badge">${escapeHtml(m.category)}</span>
+      <div class="module-body">
+        <h3 class="module-title" data-module="${escapeHtml(m.id)}" role="button" tabindex="0">${escapeHtml(m.title)}</h3>
+        ${m.tagline ? `<p class="module-tagline">${escapeHtml(m.tagline)}</p>` : ''}
+        <p class="module-text">${escapeHtml(m.description)}</p>
+        ${renderIncludedServices(m)}
+        ${renderTips(m)}
       </div>
     </article>`;
   }).join('') || '<p class="empty">No app matches that.</p>';
@@ -4143,6 +4147,14 @@ async function applyPending() {
 }
 
 /* ----------------------------------------------------------------- wiring */
+
+// `toggle` does not bubble, hence the capture phase.
+document.addEventListener('toggle', (event) => {
+  const notes = event.target.closest && event.target.closest('[data-notes]');
+  if (!notes) return;
+  if (notes.open) state.openNotes.add(notes.dataset.notes);
+  else state.openNotes.delete(notes.dataset.notes);
+}, true);
 
 document.addEventListener('click', async (event) => {
   const queueBtn = event.target.closest('[data-queue]');

@@ -18,7 +18,7 @@ x-homebox:
     color: "#7c3aed"
     bg: "rgba(124,58,237,0.12)"
   tips:
-    - "On 8181, not the 8090 the source uses — Beszel answers there. Two apps cannot share a port"
+    - "Answers on 8181, because Beszel already holds 8090 and two apps cannot share a port"
     - "Start with a 3B or 7B model. On CPU those reply at reading speed; a 70B on CPU produces about a word every few seconds"
     - "Models are large — a few gigabytes each — and live in the module's config directory on the system disk. Check you have room before pulling three"
     - "The first account you create in Open WebUI becomes the admin, so make it before anything else on the network reaches the page"
@@ -50,7 +50,7 @@ services:
       - DO_NOT_TRACK=true
       - SCARF_NO_ANALYTICS=true
     ports:
-      # 8090 in the source, which is Beszel's port here.
+      # Not 8090: that is Beszel's.
       - "8181:8080"
     volumes:
       - ${HB_ROOT:-/opt/homebox}/modules/localai/config/open-webui:/app/backend/data
