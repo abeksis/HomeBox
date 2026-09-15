@@ -311,7 +311,7 @@
     <header class="screen-head with-action">
       <div>
         <h1>Updates</h1>
-        <p>New HomeBox releases, and rebuilt images for the versions your apps are pinned to. Nothing changes until you confirm it.</p>
+        <p>New HomeBox releases and updates for your apps. Nothing changes until you confirm it.</p>
         <p class="screen-meta" id="update-state">Loading…</p>
       </div>
       <button type="button" class="button" id="check-updates">Check now</button>
@@ -319,38 +319,36 @@
 
     <div class="summary-strip">
       <div class="summary-box">
-        <span>Waiting</span>
+        <span>HomeBox</span>
+        <strong id="updates-homebox">--</strong>
+        <small id="updates-homebox-note">checking</small>
+      </div>
+      <div class="summary-box" id="updates-apps-box">
+        <span>App updates</span>
         <strong id="updates-count">0</strong>
-        <small>containers with a rebuilt image</small>
+        <small id="updates-count-note">nothing waiting</small>
       </div>
       <div class="summary-box">
-        <span>How</span>
-        <strong>One by one</strong>
-        <small>back up, pull, recreate, wait until healthy</small>
-      </div>
-      <div class="summary-box">
-        <span>Where</span>
-        <strong id="updates-server">this box</strong>
-        <small id="updates-server-note">containers HomeBox manages</small>
+        <span>Held back</span>
+        <strong id="updates-held">0</strong>
+        <small id="updates-held-note">nothing needs a manual step</small>
       </div>
     </div>
 
     <!-- HomeBox itself. Hidden unless there is something to say. See renderPlatform(). -->
     <section class="block" id="platform-card" aria-label="HomeBox releases" hidden></section>
 
-    <section class="block" aria-label="Image rebuilds">
+    <!-- Every app update in one list; each row says what kind it is. See renderUpdates(). -->
+    <section class="block" aria-label="App updates">
       <div class="block-head">
         <div>
-          <h2>Image rebuilds</h2>
-          <small>Same version, newer build — usually security fixes in the base image.</small>
+          <h2>App updates</h2>
+          <small>Each one backs the app up first and puts the previous version back if it does not come up healthy.</small>
         </div>
-        <button type="button" class="button is-primary" id="updates-all" hidden>Update all</button>
+        <button type="button" class="button is-primary" id="updates-all" hidden>Apply all rebuilds</button>
       </div>
       <div id="update-items"></div>
     </section>
-
-    <!-- Newer VERSIONS — informational. See renderNewVersions(). -->
-    <section class="block" id="updates-versions" aria-label="Newer versions" hidden></section>
 
     <section class="block" aria-label="Past updates">
       <div class="block-head">
@@ -361,13 +359,6 @@
       </div>
       <div id="update-log"></div>
     </section>
-
-    <p class="footnote">
-      Modules pin exact image versions, so this page never moves an app to a new release on its own.
-      What it catches is a publisher rebuilding the same version with patched layers. Moving to a
-      newer version arrives with a HomeBox release, or by editing the module and running
-      <code>sudo homebox update &lt;module&gt;</code>.
-    </p>
   </section>
 
   <!-- ==================== SETTINGS ==================== -->

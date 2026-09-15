@@ -3260,7 +3260,7 @@ async function refreshUpdateBadge() {
       fetch('api/updates').then((r) => r.json()).catch(() => ({})),
       fetch('api/platform').then((r) => r.json()).catch(() => ({})),
     ]);
-    updateBadge((apps.available || []).length, self.updateAvailable ? self.latest : null);
+    updateBadge((apps.available || []).length + (apps.newVersions || []).length, self.updateAvailable ? self.latest : null);
   } catch { /* leave the dot as it was */ }
 }
 
@@ -3285,7 +3285,7 @@ function updateBadge(count, platformVersion = null) {
   // that is always on screen no matter what the code thinks it set.
   badge.hidden = !count;
   badge.title = count
-    ? `${count} container${count === 1 ? ' has' : 's have'} a newer image available`
+    ? `${count} app update${count === 1 ? '' : 's'} waiting`
     : '';
 }
 
@@ -3307,6 +3307,14 @@ function renderPlatform(data) {
   const p = data.progress;
   const running = data.running;
   const interrupted = p && !running && !['done', 'failed'].includes(p.phase);
+
+  // The summary box above the card, which is there even when the card is not.
+  if (data.current) {
+    $('#updates-homebox').textContent = data.current;
+    $('#updates-homebox-note').textContent = running ? `updating to ${p ? p.to : 'a new version'}`
+      : data.frozen ? 'updates are paused'
+        : data.updateAvailable ? `${data.latest} is available` : 'up to date';
+  }
 
   if (!data.updateAvailable && !data.frozen && !data.reason && !running && !interrupted) {
     card.hidden = true;
@@ -3532,10 +3540,18 @@ async function loadUpdates({ force = false } = {}) {
 function renderUpdates(data) {
   updatesState = data;
   const list = $('#update-items');
-  const count = (data.available || []).length;
+  const rebuilds = data.available || [];
+  const versions = data.newVersions || [];
+  const held = data.heldBack || [];
+  const count = rebuilds.length + versions.length;
 
   $('#updates-count').textContent = String(count);
-  $('#updates-server').textContent = location.hostname || 'this box';
+  $('#updates-count-note').textContent = count
+    ? [plural(versions.length, 'new version'), plural(rebuilds.length, 'rebuild')].filter(Boolean).join(' · ')
+    : 'nothing waiting';
+  $('#updates-apps-box').classList.toggle('is-waiting', count > 0);
+  $('#updates-held').textContent = String(held.length);
+  $('#updates-held-note').textContent = held.length ? 'needs a manual migration' : 'nothing needs a manual step';
   updateBadge(count);
 
   // Never say "up to date" without a check behind it — that is a claim, and
@@ -3555,27 +3571,38 @@ function renderUpdates(data) {
       + ' · Checks again on its own every 6 hours';
   }
 
-  // Only worth offering when there is more than one thing to do — with a
-  // single update the row's own button is the same action, one click closer.
-  $('#updates-all').hidden = count < 2;
+  // Rebuilds only. A new version is confirmed one at a time, because it can
+  // migrate data; and with a single rebuild the row's own button is the same
+  // action, one click closer.
+  $('#updates-all').hidden = rebuilds.length < 2;
 
   if (!data.lastCheck) {
-    list.innerHTML = '<p class="note-box">Press <strong>Check now</strong> to compare every running image against its registry.</p>';
-  } else if (!count) {
-    list.innerHTML = '<p class="note-box"><strong>Everything is current.</strong> Every image running on this box matches the newest build the registry has for its pinned version.</p>';
+    list.innerHTML = '<p class="note-box">Press <strong>Check now</strong> to compare every app against its registry.</p>';
+  } else if (!count && !held.length) {
+    list.innerHTML = '<p class="note-box"><strong>Everything is current.</strong> Every app on this box is on the newest build of its version, and no newer version is waiting.</p>';
   } else {
-    list.innerHTML = data.available.map((u) => `
-      <div class="update-item" data-container="${escapeHtml(u.container)}">
-        <div class="update-item-main">
-          <div class="update-item-name">
-            ${escapeHtml(u.container)}
-            <span class="kind" title="The publisher rebuilt this same version tag with new layers. Same version number, usually security patches underneath.">rebuild</span>
-          </div>
-          <div class="update-item-image mono">${escapeHtml(u.image)}</div>
-          <div class="update-item-digest mono">${escapeHtml(String(u.currentDigest).slice(7, 19))} → ${escapeHtml(String(u.latestDigest).slice(7, 19))}</div>
-        </div>
-        <button type="button" class="button is-small" data-update="${escapeHtml(u.container)}">Update</button>
-      </div>`).join('');
+    // New versions first: they are the news. Rebuilds next, held-back last
+    // and without a button — shown, so an old database is not a secret.
+    list.innerHTML = [
+      ...versions.map((r) => updateRow(r, {
+        kind: 'version', label: 'new version',
+        title: 'A newer version of this app has been published.',
+        detail: `${r.tag} → ${r.newerVersion}`,
+        action: `<button type="button" class="button is-small" data-upgrade="${escapeHtml(r.container)}">Upgrade</button>`,
+      })),
+      ...rebuilds.map((u) => updateRow(u, {
+        kind: 'rebuild', label: 'security rebuild',
+        title: 'The publisher rebuilt this same version with new layers — usually security patches underneath.',
+        detail: `${u.tag || 'same version'} · same version, patched image`,
+        action: `<button type="button" class="button is-small" data-update="${escapeHtml(u.container)}">Update</button>`,
+      })),
+      ...held.map((h) => updateRow(h, {
+        kind: 'held', label: 'held back',
+        title: 'Not offered here: this needs a migration, not an image swap.',
+        detail: `${h.tag} → ${h.newerVersion} · ${h.why}`,
+        action: '',
+      })),
+    ].join('');
   }
 
   // Whatever could not be checked is shown, not swallowed. A box where the
@@ -3589,63 +3616,35 @@ function renderUpdates(data) {
       </div>`);
   }
 
-  renderNewVersions(data.newVersions || [], data.heldBack || []);
   renderUpdateHistory(data.history || []);
 }
 
+function plural(n, word) {
+  return n ? `${n} ${word}${n === 1 ? '' : 's'}` : '';
+}
+
 /**
- * Newer VERSIONS, kept apart from the rebuild list above.
- *
- * A rebuild is a button: the same version, safe to pull, rolled back if it
- * misbehaves. A new version is a line in a compose file — it can change a
- * config format or need a migration — so it is news to act on, not a click.
- * One list would hide two very different risks behind one button.
+ * One row of App updates: the app's own icon and name, what kind of update
+ * it is, versions, and the button that kind takes. Names and icons come from
+ * the module list, so a row reads "Linkding" rather than a container name.
  */
-function renderNewVersions(rows, held = []) {
-  const box = $('#updates-versions');
-  if (!box) return;
-  if ((!rows || !rows.length) && !held.length) { box.hidden = true; return; }
-  box.hidden = false;
-
-  // Versions that exist and cannot be taken by swapping an image. Rendered
-  // WITHOUT a button, and said out loud rather than hidden: a database left on
-  // an old major version is worth knowing about, and silence is how a box
-  // quietly ages.
-  const heldHtml = held.length ? `
-    <div class="update-item is-held">
+function updateRow(item, { kind, label, title, detail, action }) {
+  const mod = state.modules.find((m) => m.id === item.module);
+  const svc = mod && mod.services.find((s) => s.name === item.service);
+  const name = (svc && svc.friendly_name) || item.title || item.container;
+  const color = (svc && svc.color) || (mod && mod.theme && mod.theme.color) || null;
+  const art = iconArt((svc && svc.icon) || (mod && (mod.icon || (mod.theme && mod.theme.emoji))), monogram(name, color));
+  return `
+    <div class="update-item is-${kind}" data-container="${escapeHtml(item.container)}">
+      <span class="update-item-art">${art}</span>
       <div class="update-item-main">
-        <div class="update-item-name">Not offered here
-          <span class="kind" title="These need a migration, not an image swap.">needs a migration</span>
+        <div class="update-item-name">${escapeHtml(name)}
+          <span class="kind ${kind}" title="${escapeHtml(title)}">${escapeHtml(label)}</span>
         </div>
-        ${held.map((h) => `<div class="update-item-digest mono">${escapeHtml(h.container)}: ${escapeHtml(h.tag)} → ${escapeHtml(h.newerVersion)} — ${escapeHtml(h.why)}</div>`).join('')}
+        <div class="update-item-digest mono">${escapeHtml(detail)}</div>
       </div>
-    </div>` : '';
-  if (!rows || !rows.length) {
-    box.innerHTML = `<div class="block-head">
-        <div><h2>Newer versions published</h2>
-        <small>Nothing here can be applied from this page.</small></div>
-      </div>${heldHtml}`;
-    return;
-  }
-
-  box.innerHTML = `<div class="block-head">
-      <div>
-        <h2>Newer versions published</h2>
-        <small>Not applied from here. A version change can need a config migration, so it arrives
-        with a HomeBox release — or edit the tag in the module and run
-        <code class="mono">homebox update &lt;module&gt;</code>.</small>
-      </div>
-    </div>` + rows.map((r) => `
-      <div class="update-item">
-        <div class="update-item-main">
-          <div class="update-item-name">${escapeHtml(r.container)}
-            <span class="kind version" title="A newer tag exists in the registry for this image.">new version</span>
-          </div>
-          <div class="update-item-image mono">${escapeHtml(r.image)}</div>
-          <div class="update-item-digest mono">${escapeHtml(r.tag)} → ${escapeHtml(r.newerVersion)}</div>
-        </div>
-        <button type="button" class="button is-small" data-upgrade="${escapeHtml(r.container)}">Upgrade</button>
-      </div>`).join('') + heldHtml;
+      ${action}
+    </div>`;
 }
 
 function renderUpdateHistory(history) {
@@ -3682,7 +3681,7 @@ async function upgradeVersion(container, from, to) {
     bodyHtml: `
       <p>Moving from <code class="mono">${escapeHtml(from)}</code> to
          <code class="mono">${escapeHtml(to)}</code>.</p>
-      <p class="signin-note">A full config backup is taken first, automatically. If the app does not
+      <p class="signin-note">A backup of this app is taken first, automatically. If the app does not
       come back healthy, the previous version is put straight back.</p>
       <p class="signin-note"><strong>Worth knowing:</strong> a new version can migrate its database on
       first start, and putting the old version back does not undo a migration. That is what the
@@ -4447,12 +4446,10 @@ $('#check-updates').addEventListener('click', () => runUpdateCheck());
 $('#updates-all').addEventListener('click', () => applyUpdate('all'));
 $('#update-items').addEventListener('click', (event) => {
   const btn = event.target.closest('[data-update]');
-  if (btn) applyUpdate(btn.dataset.update);
-});
-$('#updates-versions').addEventListener('click', (event) => {
-  const btn = event.target.closest('[data-upgrade]');
-  if (!btn) return;
-  const row = (updatesState.newVersions || []).find((v) => v.container === btn.dataset.upgrade);
+  if (btn) { applyUpdate(btn.dataset.update); return; }
+  const up = event.target.closest('[data-upgrade]');
+  if (!up) return;
+  const row = (updatesState.newVersions || []).find((v) => v.container === up.dataset.upgrade);
   if (row) upgradeVersion(row.container, row.tag, row.newerVersion);
 });
 

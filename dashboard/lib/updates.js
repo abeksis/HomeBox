@@ -290,11 +290,11 @@ async function check() {
       }))
       .sort((a, b) => a.container.localeCompare(b.container));
 
-    // Kept apart from `available` on purpose. A rebuild is a button: same
-    // version, safe to pull, rolled back if it misbehaves. A new VERSION is
-    // a line in a compose file — it can change a config format or need a
-    // migration, so it is news to act on, not a click. Mixing the two into
-    // one list would put those two very different risks behind one button.
+    // Kept apart from `available` on purpose. A rebuild is the same version,
+    // safe to pull and rolled back by re-tagging. A new VERSION may migrate
+    // its data on first start, so it takes a different path (upgrade(): a
+    // backup first, a confirmation that says so) and is never part of
+    // "update all". The page shows both in one list, each row saying which.
     const newVersions = results
       .filter((r) => r.newerVersion)
       .map((r) => ({
@@ -315,6 +315,8 @@ async function check() {
     const heldBack = results
       .filter((r) => r.blockedVersion)
       .map((r) => ({
+        module: r.module,
+        service: r.service,
         container: r.container,
         title: r.title,
         tag: r.tag,
@@ -636,7 +638,13 @@ async function upgrade(which, { onLine = null } = {}) {
     // per-module backup a rebuild already takes. A module with no config has
     // no data for a new version to migrate, so there is nothing to refuse.
     say('==> Backing up before anything changes — a new version may migrate its database');
-    await backupModule(item.module, onLine);
+    // Kept, because the history row names the archive to restore from. This
+    // was once a bare `await` while the lines below still read `made.name`:
+    // every upgrade switched the version, then threw a ReferenceError before
+    // recording it or re-checking, so the row stayed on the page as if nothing
+    // had happened.
+    const made = await backupModule(item.module, onLine);
+    const backupName = made ? path.basename(made) : null;
 
     const previous = await pins.set(item.module, item.service, repo, item.newerVersion);
     say(`==> Pinned to ${item.newerVersion}`);
@@ -668,21 +676,21 @@ async function upgrade(which, { onLine = null } = {}) {
         module: item.module, service: item.service, container: item.container,
         image: item.image, success: false, rolledBack: back.ok,
         reason: `${item.newerVersion} did not become healthy (${health.state})`,
-        backup: made.name,
+        backup: backupName,
       });
-      return { ok: false, rolledBack: back.ok, from: item.tag, to: item.newerVersion, backup: made.name };
+      return { ok: false, rolledBack: back.ok, from: item.tag, to: item.newerVersion, backup: backupName };
     }
 
     say(`==> ${item.container} is ${health.state} on ${item.newerVersion}`);
     await note({
       module: item.module, service: item.service, container: item.container,
       image: `${repo}:${item.newerVersion}`, success: true,
-      reason: `upgraded from ${item.tag}`, backup: made.name,
+      reason: `upgraded from ${item.tag}`, backup: backupName,
     });
     activity.note({ name: item.container, action: `upgraded to ${item.newerVersion}`, level: 'info' });
 
     await check().catch(() => {});
-    return { ok: true, from: item.tag, to: item.newerVersion, backup: made.name };
+    return { ok: true, from: item.tag, to: item.newerVersion, backup: backupName };
   } finally {
     applying = false;
   }
