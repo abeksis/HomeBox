@@ -1,0 +1,4 @@
+# Runtime state is per-install, not source.
+activity.json
+prefs.json
+*.tmp-*

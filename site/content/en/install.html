@@ -1,0 +1,42 @@
+<!--
+title: Install HomeBox
+summary: From a clean Debian or Ubuntu machine to a running dashboard, in about three minutes.
+order: 1
+-->
+<h2>What you need</h2>
+<ul>
+  <li><strong>Debian or Ubuntu</strong>, freshly installed or close to it. Other distributions may work, but the package steps are written for these.</li>
+  <li><strong>x86-64 or ARM64</strong> — a mini PC, an old laptop, a virtual machine or a VPS.</li>
+  <li>A user with <code>sudo</code>, and a connection to the internet.</li>
+  <li>Disk space for the apps you plan to run. HomeBox itself is small; photo libraries and media are not.</li>
+</ul>
+
+<h2>Run the installer</h2>
+<p>Open a terminal on the machine and paste:</p>
+{{install}}
+<p>It installs Docker if it is missing, downloads HomeBox into <code>/opt/homebox</code>, generates this machine's own passwords, and starts the reverse proxy and the dashboard. It installs the current <strong>release</strong>, not the development branch.</p>
+
+<div class="callout">
+  <p>It refuses to run over an existing install rather than half-upgrading one. To update a box that already has HomeBox, use the <a href="../updates/">Updates tab</a>.</p>
+</div>
+
+<h3>Prefer to read it first?</h3>
+<p>Piping a script into a root shell is worth being careful about. You can download it, read it, then run it:</p>
+<pre><code>curl -fsSL https://get.abeksis.net/install.sh -o hb.sh
+less hb.sh
+sudo bash hb.sh</code></pre>
+
+<h2>Claim your box</h2>
+<p>When it finishes, the installer prints the dashboard address and a one-time <strong>claim token</strong>:</p>
+<pre><code>HomeBox is up.
+
+  Dashboard   http://192.168.1.50:8443
+
+  CLAIM THIS BOX
+  …</code></pre>
+<p>Open the address in a browser, paste the token, and choose a password. The token proves that the person opening the dashboard is the person who installed it, and it only works once.</p>
+<p>Closed the terminal before copying it? Print it again:</p>
+<pre><code>homebox bootstrap-token</code></pre>
+
+<h2>Next</h2>
+<p>Install your first apps — see <a href="../first-steps/">First steps</a>.</p>

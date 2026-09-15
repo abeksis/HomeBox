@@ -1,0 +1,40 @@
+<!--
+title: Updates
+summary: How HomeBox updates itself and your apps — with a backup first and a way back if something goes wrong.
+order: 3
+-->
+<p>There are two kinds of update, and they are kept apart on purpose: updates to <strong>HomeBox itself</strong>, and updates to <strong>the apps it runs</strong>.</p>
+
+<h2>Updating HomeBox</h2>
+<p>HomeBox checks for a new release in the background every few minutes. When one is out, a red dot appears next to <strong>Updates</strong>. Open it, read what changed, and press the button.</p>
+<p>What happens next:</p>
+<ol>
+  <li>A backup of HomeBox's own settings is taken.</li>
+  <li>The new release is downloaded and installed.</li>
+  <li>HomeBox waits for the dashboard to come back healthy.</li>
+  <li>If it does not, the previous release is put back automatically.</li>
+</ol>
+<p>A progress window shows each step, and the dashboard reloads itself when it is done. Your apps keep running throughout.</p>
+<p>From a terminal:</p>
+<pre><code>sudo homebox self-update           # update now
+sudo homebox self-update --check   # only check</code></pre>
+
+<div class="callout warn">
+  <p><strong>"Updates are paused."</strong> If a release turns out to have a problem, it can be stopped for every box at once. The Updates tab then says so and explains why, instead of offering the button. Nothing needs doing on your side — the button comes back when a fixed release is out.</p>
+</div>
+
+<h2>Updating apps</h2>
+<p>Every app is pinned to an exact version, so nothing changes under you unattended. The Updates tab lists two things:</p>
+
+<h3>Rebuilds of the version you have</h3>
+<p>Publishers re-release the same version with security fixes in its base layers. HomeBox spots this by comparing what is running against what the publisher now serves, and offers an <strong>Update</strong> button. It backs up that app, pulls, restarts it, and waits for it to be healthy — rolling back if it is not.</p>
+
+<h3>Newer versions</h3>
+<p>When a genuinely newer version exists, the app shows an <strong>Upgrade</strong> button. A new version may change its database on first start, so HomeBox always backs the app up before it switches.</p>
+
+<div class="callout">
+  <p>A new <strong>major version of a database</strong> — Postgres 14 to 17, for example — is shown but never offered as a button. A database's files belong to the version that wrote them, and moving between majors needs a migration, not an image swap.</p>
+</div>
+
+<h2>What gets backed up before an update</h2>
+<p>Only the app being updated, not the whole box. Artwork, caches and logs that the app downloads or rebuilds by itself are skipped, so these backups are usually a few megabytes. They are kept per app in <code>/opt/homebox/state/update-backups</code>.</p>

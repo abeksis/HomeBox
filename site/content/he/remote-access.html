@@ -1,0 +1,34 @@
+<!--
+title: גישה מרחוק
+summary: ארבע דרכים להגיע לאפליקציות מחוץ לבית, ואיך לבחור ביניהן.
+order: 5
+-->
+<p>בבית הכל עובד מהרגע הראשון. גישה מבחוץ היא בחירה, ולכל אחת מארבע האפשרויות יש מחיר אחר.</p>
+
+<div class="table-wrap"><table>
+  <thead><tr><th>אפשרות</th><th>מתאימה ל-</th><th>פותחת פורט?</th></tr></thead>
+  <tbody>
+    <tr><td><a href="../../apps/tailscale/">Tailscale</a></td><td>הגישה הפרטית הפשוטה ביותר למכשירים שלך. עובדת מאחורי כל ראוטר.</td><td>לא</td></tr>
+    <tr><td><a href="../../apps/headscale/">Headscale</a></td><td>כמו Tailscale, כששרת התיאום יושב אצלך ולא אצל חברה.</td><td>כן — HTTPS</td></tr>
+    <tr><td><a href="../../apps/vpn/">VPN (WireGuard)</a></td><td>VPN קלאסי: סורקים קוד QR בטלפון ונמצאים ברשת הביתית.</td><td>כן — פורט UDP אחד</td></tr>
+    <tr><td><a href="../../apps/tunnel/">Cloudflare Tunnel</a></td><td>פרסום אפליקציה בדומיין שלך, לכל מי שפותח דפדפן.</td><td>לא</td></tr>
+  </tbody>
+</table></div>
+
+<h2>גישה פרטית: Tailscale</h2>
+<p>מתקינים את אפליקציית Tailscale בטלפון ובמחשב, מתקינים את מודול <strong>Tailscale</strong> על השרת, ומדביקים מפתח הזדהות ב-Settings. כל המכשירים נמצאים ברשת פרטית אחת, איפה שלא יהיו. כדי להגיע גם לשאר הרשת הביתית, מגדירים את השרת כ-subnet router.</p>
+
+<h2>גישה פרטית, כולה שלך: Headscale</h2>
+<p>Headscale מחליף את שרת התיאום של Tailscale; המכשירים ממשיכים להשתמש באפליקציות הרגילות של Tailscale. מפנים אותם לשרת שלך:</p>
+<pre><code>tailscale up --login-server https://headscale.example.com</code></pre>
+<div class="callout warn">
+  <p><strong>אי אפשר להעביר את Headscale דרך Cloudflare Tunnel או דרך ה-proxy של Cloudflare.</strong> הפרוטוקול של Tailscale צריך שדרוג חיבור ב-HTTPS ש-Cloudflare לא מעבירה. מפרסמים אותו ישירות: מפנים את פורט 443 לשרת, מוציאים לו תעודה ב-Proxy Manager, ומשאירים את רשומת ה-DNS שלו במצב <em>DNS only</em>.</p>
+</div>
+<p>אם מכשירים בבית לא מצליחים להגיע אליו בשם הציבורי שלו, כנראה שהראוטר לא תומך ב-NAT reflection. מוסיפים עקיפת DNS מקומית שמפנה את השם לכתובת המקומית של השרת.</p>
+
+<h2>VPN קלאסי: WireGuard</h2>
+<p>מתקינים את מודול <strong>VPN</strong>, מגדירים לו כתובת ציבורית — ה-IP של הבית או שם DNS דינמי — ומפנים בראוטר את פורט UDP ‏51820, ורק אותו. מוסיפים מכשיר בממשק הדפדפן וסורקים את קוד ה-QR באפליקציית WireGuard.</p>
+
+<h2>פרסום אפליקציה: Cloudflare Tunnel</h2>
+<p>יוצרים טאנל בלוח הבקרה של Cloudflare, מדביקים את הטוקן שלו במודול <strong>Cloudflare Tunnel</strong>, ומשייכים שם לאפליקציה. שום דבר לא נפתח בראוטר. כל מה שמתפרסם כך נגיש לכל האינטרנט, אז כדאי לשים Cloudflare Access לפני כל אפליקציה שלא היית סומך רק על ההתחברות שלה.</p>
+<p>טאנל הוא גם הדרך הפשוטה ביותר לתת ל-<a href="../../apps/passwords/">Vaultwarden</a> את ה-HTTPS שהוא צריך.</p>

@@ -1,0 +1,28 @@
+<!--
+title: Backups
+summary: Encrypted backups of every app's settings and databases — scheduled, and restored without touching anything live.
+order: 4
+-->
+<h2>What a backup contains</h2>
+<p>A <strong>config backup</strong> holds every app's settings and databases, HomeBox's own state, and the generated passwords. It does not include your photo library or media files — those are far larger, and usually better protected by the disk or NAS they live on.</p>
+<p>Artwork, caches and logs that apps download or rebuild by themselves are left out. Restore a backup and the app's database and settings come back; the app fetches the rest again on its own.</p>
+<p>Every backup is <strong>encrypted</strong> before it is written.</p>
+
+<h2>Keep the key somewhere else</h2>
+<div class="callout warn">
+  <p>Backups are encrypted with <code>HB_BACKUP_KEY</code> in <code>/opt/homebox/.env</code>. Without that key a backup cannot be opened — by anyone, including you. If the disk dies, the key dies with it. Copy it into your password manager now.</p>
+</div>
+
+<h2>Take one, or schedule them</h2>
+<p>In <strong>Settings → Backups</strong>, press <strong>Back up now</strong>, or turn on a schedule: every day, every Sunday, or on the 1st of the month, at 02:00. Choose how many to keep; the oldest are removed first. Scheduling is off until you turn it on.</p>
+<p>From a terminal:</p>
+<pre><code>sudo homebox backup     # take a config backup now
+homebox backups         # list them</code></pre>
+
+<h2>Restore</h2>
+<p>A restore decrypts and unpacks a backup into a separate folder. It does <strong>not</strong> overwrite anything live, so you can take out exactly the file or app you need:</p>
+<pre><code>sudo homebox restore homebox-config-20260914_020000.tar.gz.enc</code></pre>
+<p>The files land in <code>/opt/homebox/restore-&lt;date&gt;</code>. Stop the app, copy its folder back into <code>/opt/homebox/modules/&lt;app&gt;/config</code>, and start it again.</p>
+
+<h2>Get a copy out of the house</h2>
+<p>A backup on the same disk does not survive that disk. Download backups from the dashboard, or install <a href="../../apps/backup/">Duplicati</a> to send encrypted copies to a NAS or cloud storage automatically.</p>

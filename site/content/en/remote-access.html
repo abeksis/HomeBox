@@ -1,0 +1,34 @@
+<!--
+title: Remote access
+summary: Four ways to reach your apps from outside the house, and how to choose between them.
+order: 5
+-->
+<p>Everything works at home out of the box. Reaching it from outside is a choice, and the four options trade different things.</p>
+
+<div class="table-wrap"><table>
+  <thead><tr><th>Option</th><th>Good for</th><th>Opens a port?</th></tr></thead>
+  <tbody>
+    <tr><td><a href="../../apps/tailscale/">Tailscale</a></td><td>The easiest private access for your own devices. Works behind any router.</td><td>No</td></tr>
+    <tr><td><a href="../../apps/headscale/">Headscale</a></td><td>The same as Tailscale, with the coordination server on your own box instead of a company's.</td><td>Yes — HTTPS</td></tr>
+    <tr><td><a href="../../apps/vpn/">VPN (WireGuard)</a></td><td>A classic VPN: scan a QR code on your phone and you are on the home network.</td><td>Yes — one UDP port</td></tr>
+    <tr><td><a href="../../apps/tunnel/">Cloudflare Tunnel</a></td><td>Publishing an app on your own domain for anyone to open in a browser.</td><td>No</td></tr>
+  </tbody>
+</table></div>
+
+<h2>Private access: Tailscale</h2>
+<p>Install the Tailscale app on your phone and laptop, install the <strong>Tailscale</strong> module on the box, and paste an auth key into Settings. Every device lands on one private network, wherever it is. To reach the rest of your home network too, advertise the box as a subnet router.</p>
+
+<h2>Private access, fully yours: Headscale</h2>
+<p>Headscale replaces Tailscale's coordination server; your devices still use the normal Tailscale apps. Point them at your server:</p>
+<pre><code>tailscale up --login-server https://headscale.example.com</code></pre>
+<div class="callout warn">
+  <p><strong>Headscale cannot go through a Cloudflare Tunnel or Cloudflare's proxy.</strong> Tailscale's protocol needs an HTTPS connection upgrade that Cloudflare does not pass through. Publish it directly instead: forward port 443 to the box, give it a certificate with the Proxy Manager, and keep its DNS record <em>DNS only</em>.</p>
+</div>
+<p>If your devices at home cannot reach it by its public name, your router probably does not support NAT reflection. Add a local DNS override that points the name at the box's local address.</p>
+
+<h2>Classic VPN: WireGuard</h2>
+<p>Install the <strong>VPN</strong> module, set its public address to your home IP or dynamic-DNS name, and forward UDP port 51820 on your router — only that. Add a device in the web UI and scan the QR code with the WireGuard app.</p>
+
+<h2>Publishing an app: Cloudflare Tunnel</h2>
+<p>Create a tunnel in the Cloudflare dashboard, paste its token into the <strong>Cloudflare Tunnel</strong> module, and map a hostname to an app. Nothing is opened on your router. Anything published this way is reachable by the whole internet, so put Cloudflare Access in front of any app whose own login you would not trust on its own.</p>
+<p>A tunnel is also the simplest way to give <a href="../../apps/passwords/">Vaultwarden</a> the HTTPS it needs.</p>

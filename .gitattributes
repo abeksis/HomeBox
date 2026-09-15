@@ -1,0 +1,20 @@
+# Everything in this repo is checked out onto Debian and executed there.
+# Git for Windows converts LF to CRLF by default, and a shell script with
+# carriage returns does not run on Linux — bash reports "cannot execute:
+# required file not found" for the shebang, which says nothing about the real
+# cause. Force LF for every text file, whatever the checkout platform.
+* text=auto eol=lf
+
+*.sh    text eol=lf
+*.yml   text eol=lf
+*.json  text eol=lf
+*.js    text eol=lf
+*.css   text eol=lf
+*.html  text eol=lf
+*.md    text eol=lf
+homebox text eol=lf
+
+*.png binary
+*.jpg binary
+*.webp binary
+*.ico binary

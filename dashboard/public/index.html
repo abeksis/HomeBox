@@ -1,0 +1,881 @@
+<!doctype html>
+<html lang="en" data-theme="dark" data-accent="orange">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>HomeBox</title>
+  <meta name="color-scheme" content="dark light">
+  <link rel="icon" href="icons/homebox.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/homebox.css?v=__V__">
+</head>
+<body>
+
+<!-- ==================== SIGN IN ====================
+     In the same document as the dashboard and hidden until /api/auth/status
+     says who you are. Nothing behind it holds data: every value arrives from
+     an /api call the server gates. -->
+<div class="gate" id="gate" hidden>
+  <div class="gate-card">
+    <img class="gate-logo" src="icons/homebox.svg" alt="">
+    <h1 class="gate-title" id="gate-title">HomeBox</h1>
+    <p class="gate-text" id="gate-text">One moment&hellip;</p>
+
+    <form id="gate-form" autocomplete="on">
+      <label class="gate-field" id="gate-token-field" hidden>
+        <span>Setup token</span>
+        <input class="input" id="gate-token" name="token" autocomplete="off"
+               spellcheck="false" placeholder="printed at the end of the install">
+      </label>
+      <label class="gate-field">
+        <span id="gate-password-label">Password</span>
+        <input class="input" id="gate-password" name="password" type="password"
+               autocomplete="current-password" required>
+      </label>
+      <label class="gate-field" id="gate-confirm-field" hidden>
+        <span>Type it again</span>
+        <input class="input" id="gate-confirm" name="confirm" type="password"
+               autocomplete="new-password">
+      </label>
+      <button type="submit" class="button is-primary is-block" id="gate-submit">Sign in</button>
+      <p class="gate-error" id="gate-error" role="alert" hidden></p>
+    </form>
+
+    <p class="gate-hint" id="gate-hint" hidden>
+      No token to hand? Run <code class="mono">homebox bootstrap-token</code> on the server.
+    </p>
+  </div>
+</div>
+
+<div class="frame" id="frame">
+
+<!-- ==================== SIDEBAR ==================== -->
+<aside class="side" id="side">
+  <a class="side-brand" href="#home" data-page="home">
+    <img src="icons/homebox.svg" alt="" width="30" height="30">
+    <span class="side-brand-text">
+      <strong>HomeBox</strong>
+      <small class="mono" id="side-version">—</small>
+    </span>
+  </a>
+
+  <nav class="side-nav" aria-label="Sections">
+    <a href="#home" data-page="home" class="nav-item is-current" aria-current="page">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
+      <span>Overview</span>
+    </a>
+    <a href="#apps" data-page="apps" class="nav-item">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>
+      <span>Apps</span>
+    </a>
+    <a href="#containers" data-page="containers" class="nav-item">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg>
+      <span>Containers</span>
+    </a>
+    <a href="#logs" data-page="logs" class="nav-item">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14M5 10h14M5 15h9M5 20h6"/></svg>
+      <span>Logs</span>
+    </a>
+    <a href="#updates" data-page="updates" class="nav-item">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg>
+      <span>Updates</span>
+      <span class="nav-dot" id="updates-dot" hidden aria-hidden="true"></span>
+    </a>
+    <a href="#settings" data-page="settings" class="nav-item">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>
+      <span>Settings</span>
+    </a>
+  </nav>
+
+  <div class="side-foot">
+    <div class="side-meters" id="side-meters">
+      <div class="side-meter" id="side-cpu" title="Processor load right now"><span>CPU</span><b>--</b><i><em></em></i></div>
+      <div class="side-meter" id="side-ram" title="Memory in use right now"><span>Memory</span><b>--</b><i><em></em></i></div>
+      <div class="side-meter" id="side-disk" title="How full the system disk is"><span>Disk</span><b>--</b><i><em></em></i></div>
+    </div>
+    <div class="side-actions">
+      <span class="conn" id="conn" title="Live connection to the server"><span class="conn-dot"></span><span class="conn-text">connecting</span></span>
+      <button type="button" class="linkish" id="sign-out">Sign out</button>
+    </div>
+  </div>
+</aside>
+
+<main class="view" id="view">
+
+  <!-- ==================== OVERVIEW ==================== -->
+  <section id="screen-home" class="screen is-shown">
+    <header class="welcome">
+      <div>
+        <h1 id="welcome-title">Hello</h1>
+        <p id="welcome-text">Reading the state of your server…</p>
+      </div>
+    </header>
+
+    <!-- The one-line answer to "is my server OK?", above everything else. -->
+    <div class="health" id="health" data-level="unknown">
+      <span class="health-mark" id="health-mark" aria-hidden="true">•</span>
+      <div class="health-copy">
+        <div class="health-title" id="health-title">Reading the state of your server…</div>
+        <div class="health-text" id="health-text">This takes a second.</div>
+      </div>
+      <div class="health-action" id="health-action"></div>
+    </div>
+
+    <div class="home-layout">
+      <!-- APPS — every installed app with a web page, one click away -->
+      <section class="panel area-dock">
+        <div class="panel-head">
+          <h2 class="panel-title">Your apps</h2>
+          <span class="panel-note mono" id="dock-count"></span>
+        </div>
+        <div class="dock" id="dock"></div>
+      </section>
+
+      <!-- HOST — the numbers that matter, as meters -->
+      <section class="panel area-host">
+        <div class="panel-head">
+          <h2 class="panel-title">This server</h2>
+          <span class="panel-note mono" id="host-state">live</span>
+        </div>
+        <div class="meters">
+          <div class="meter" id="meter-cpu">
+            <div class="meter-top"><span class="meter-name">Processor</span><span class="meter-value mono" id="val-cpu">--</span></div>
+            <div class="meter-track"><span class="meter-fill" id="fill-cpu"></span></div>
+            <div class="meter-sub mono" id="detail-cpu"></div>
+          </div>
+          <div class="meter" id="meter-ram">
+            <div class="meter-top"><span class="meter-name">Memory</span><span class="meter-value mono" id="val-ram">--</span></div>
+            <div class="meter-track"><span class="meter-fill" id="fill-ram"></span></div>
+            <div class="meter-sub mono" id="detail-ram"></div>
+          </div>
+          <div class="meter" id="meter-disk">
+            <div class="meter-top"><span class="meter-name">Disk</span><span class="meter-value mono" id="val-disk">--</span></div>
+            <div class="meter-track"><span class="meter-fill" id="fill-disk"></span></div>
+            <div class="meter-sub mono" id="detail-disk"></div>
+          </div>
+          <div class="meter meter-plain">
+            <div class="meter-top"><span class="meter-name">Up for</span><span class="meter-value mono" id="val-uptime">--</span></div>
+            <div class="meter-sub mono" id="detail-load"></div>
+          </div>
+        </div>
+        <div class="shortcuts">
+          <button type="button" class="shortcut" id="restart-all" title="Restart every installed app">
+            <span class="shortcut-glyph" aria-hidden="true">&#8635;</span><span class="shortcut-text">Restart apps</span>
+          </button>
+          <button type="button" class="shortcut" id="update-all" title="Pull newer images for every installed app">
+            <span class="shortcut-glyph" aria-hidden="true">&#8593;</span><span class="shortcut-text">Pull updates</span>
+          </button>
+          <a class="shortcut" id="open-portainer" href="#apps" data-page="apps">
+            <span class="shortcut-glyph" aria-hidden="true">&#9638;</span><span class="shortcut-text">Portainer</span>
+          </a>
+          <a class="shortcut" href="#logs" data-page="logs">
+            <span class="shortcut-glyph" aria-hidden="true">&#8801;</span><span class="shortcut-text">Logs</span>
+          </a>
+        </div>
+      </section>
+
+      <!-- EVENTS — what the box did while nobody was looking -->
+      <section class="panel area-feed">
+        <div class="panel-head">
+          <h2 class="panel-title">Events</h2>
+          <span class="panel-note mono" id="feed-count">live</span>
+        </div>
+        <ul class="feed" id="feed-list">
+          <li class="empty">No events yet. Installs and container starts and stops appear here.</li>
+        </ul>
+      </section>
+
+      <!-- LINKS — bookmarks to things that are NOT on this box -->
+      <section class="panel area-wide" id="links-panel" hidden>
+        <div class="panel-head">
+          <h2 class="panel-title">Links</h2>
+          <span class="panel-note mono" id="links-count"></span>
+        </div>
+        <div class="links" id="links-row"></div>
+      </section>
+
+      <!-- RIGHT NOW — what the media apps are doing. Hidden until there is
+           something to say, so a box without them never shows an empty panel. -->
+      <section class="panel area-wide" id="pulse-panel" hidden>
+        <div class="panel-head">
+          <h2 class="panel-title">Right now</h2>
+          <button type="button" class="panel-note mono linkish" id="pulse-time" title="Ask the apps again"></button>
+        </div>
+        <div class="pulse" id="pulse-body"></div>
+      </section>
+
+      <!-- CONTAINERS — every container HomeBox owns, with controls -->
+      <section class="panel area-wide">
+        <div class="panel-head">
+          <h2 class="panel-title">Running containers</h2>
+          <span class="panel-note mono" id="proc-count"></span>
+        </div>
+        <div class="proc-list" id="proc-list"></div>
+      </section>
+
+      <!-- ADDRESSES — how to reach this box -->
+      <section class="panel area-net">
+        <div class="panel-head">
+          <h2 class="panel-title">Addresses</h2>
+          <span class="panel-note mono" id="net-address"></span>
+        </div>
+        <div class="facts" id="net-facts"></div>
+      </section>
+
+      <!-- SAFETY NET — what would be lost, and whether anything copies it -->
+      <section class="panel area-safety">
+        <div class="panel-head">
+          <h2 class="panel-title">Backups</h2>
+          <span class="panel-note mono" id="safety-count"></span>
+        </div>
+        <div class="stat-rows" id="safety-facts"></div>
+      </section>
+    </div>
+  </section>
+
+  <!-- ==================== APPS ==================== -->
+  <section id="screen-apps" class="screen">
+    <header class="screen-head">
+      <h1>Apps</h1>
+      <p>Pick what this box should run. Choosing an app queues it; nothing is pulled or removed until you apply the changes.</p>
+      <p class="screen-meta" id="store-summary"></p>
+    </header>
+
+    <!-- What the installed set is declared to need, against what the box has:
+         one square per 1% of the box's memory, coloured by the app asking. -->
+    <section class="memory-plan" id="memory-plan">
+      <div class="memory-plan-text">
+        <span class="memory-plan-label">Memory the installed apps ask for</span>
+        <strong class="memory-plan-figure" id="memory-figure">--</strong>
+        <span class="memory-plan-sub" id="memory-sub"></span>
+        <ul class="memory-plan-legend" id="memory-legend"></ul>
+      </div>
+      <div class="memory-grid" id="memory-grid" role="img" aria-label="Memory requested, one square per percent"></div>
+    </section>
+
+    <div class="store-tools">
+      <label class="searchbox">
+        <svg class="searchbox-glyph" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+          <circle cx="11" cy="11" r="6.5"/><path d="m20 20-4-4"/>
+        </svg>
+        <input type="text" id="store-query" class="searchbox-input"
+               placeholder="Find an app by name or what it does" autocomplete="off" aria-label="Find an app">
+        <button type="button" id="store-clear" class="searchbox-clear" hidden aria-label="Clear">&times;</button>
+      </label>
+      <div class="filter-chips" id="category-chips"></div>
+      <label class="sorter">
+        <span>Order</span>
+        <select id="store-order" class="select">
+          <option value="status">Installed first</option>
+          <option value="name">A to Z</option>
+          <option value="ram">Most memory</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="catalog" id="catalog-grid"></div>
+
+    <section class="panel orphans" id="orphans" hidden>
+      <div class="panel-head">
+        <h2 class="panel-title">Containers without a module</h2>
+        <span class="panel-note mono" id="orphans-count"></span>
+      </div>
+      <p class="help">Docker runs these on this box, but HomeBox did not create them, so no module manages them.</p>
+      <div class="orphan-list" id="orphan-list"></div>
+    </section>
+  </section>
+
+  <!-- ==================== CONTAINERS ==================== -->
+  <section id="screen-containers" class="screen">
+    <header class="screen-head">
+      <h1>Containers</h1>
+      <p>Everything Docker runs here, and which HomeBox module owns it. A container with no module was started some other way.</p>
+    </header>
+    <div class="table-tools">
+      <input type="text" class="input" id="container-search" placeholder="Filter by name or image" autocomplete="off" aria-label="Filter containers">
+      <div class="filter-chips" id="container-chips"></div>
+    </div>
+    <div class="scroll-x">
+      <table class="grid-table" id="containers-table">
+        <thead>
+          <tr><th>State</th><th>Name</th><th>Image</th><th>Ports</th><th>Module</th><th></th></tr>
+        </thead>
+        <tbody id="containers-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==================== LOGS ==================== -->
+  <section id="screen-logs" class="screen">
+    <header class="screen-head">
+      <h1>Logs</h1>
+      <p>The output of any container, newest at the bottom. When an app misbehaves, this is usually where it says why.</p>
+    </header>
+    <div class="log-tools">
+      <select id="log-picker" class="select" aria-label="Container">
+        <option value="">Choose a container…</option>
+      </select>
+      <input id="log-search" class="input" placeholder="Show only lines containing…" aria-label="Filter the output">
+      <select id="log-tail" class="select select-sm" aria-label="How many lines">
+        <option value="100">last 100</option>
+        <option value="200" selected>last 200</option>
+        <option value="500">last 500</option>
+        <option value="1000">last 1000</option>
+      </select>
+      <label class="check">
+        <input type="checkbox" id="log-stick" checked>
+        Stay at the bottom
+      </label>
+      <button type="button" class="button" id="log-reload">Reload</button>
+    </div>
+    <div class="console">
+      <pre class="console-body mono" id="log-view">Choose a container to read its output.</pre>
+    </div>
+  </section>
+
+  <!-- ==================== UPDATES ==================== -->
+  <section id="screen-updates" class="screen">
+    <header class="screen-head with-action">
+      <div>
+        <h1>Updates</h1>
+        <p>New HomeBox releases, and rebuilt images for the versions your apps are pinned to. Nothing changes until you confirm it.</p>
+        <p class="screen-meta" id="update-state">Loading…</p>
+      </div>
+      <button type="button" class="button" id="check-updates">Check now</button>
+    </header>
+
+    <div class="summary-strip">
+      <div class="summary-box">
+        <span>Waiting</span>
+        <strong id="updates-count">0</strong>
+        <small>containers with a rebuilt image</small>
+      </div>
+      <div class="summary-box">
+        <span>How</span>
+        <strong>One by one</strong>
+        <small>back up, pull, recreate, wait until healthy</small>
+      </div>
+      <div class="summary-box">
+        <span>Where</span>
+        <strong id="updates-server">this box</strong>
+        <small id="updates-server-note">containers HomeBox manages</small>
+      </div>
+    </div>
+
+    <!-- HomeBox itself. Hidden unless there is something to say. See renderPlatform(). -->
+    <section class="block" id="platform-card" aria-label="HomeBox releases" hidden></section>
+
+    <section class="block" aria-label="Image rebuilds">
+      <div class="block-head">
+        <div>
+          <h2>Image rebuilds</h2>
+          <small>Same version, newer build — usually security fixes in the base image.</small>
+        </div>
+        <button type="button" class="button is-primary" id="updates-all" hidden>Update all</button>
+      </div>
+      <div id="update-items"></div>
+    </section>
+
+    <!-- Newer VERSIONS — informational. See renderNewVersions(). -->
+    <section class="block" id="updates-versions" aria-label="Newer versions" hidden></section>
+
+    <section class="block" aria-label="Past updates">
+      <div class="block-head">
+        <div>
+          <h2>Past updates</h2>
+          <small>The last 20 updates run from this page, and how each ended.</small>
+        </div>
+      </div>
+      <div id="update-log"></div>
+    </section>
+
+    <p class="footnote">
+      Modules pin exact image versions, so this page never moves an app to a new release on its own.
+      What it catches is a publisher rebuilding the same version with patched layers. Moving to a
+      newer version arrives with a HomeBox release, or by editing the module and running
+      <code>sudo homebox update &lt;module&gt;</code>.
+    </p>
+  </section>
+
+  <!-- ==================== SETTINGS ==================== -->
+  <section id="screen-settings" class="screen">
+    <header class="screen-head">
+      <h1>Settings</h1>
+      <p>How this install is set up. Appearance is saved on the server in <code class="mono">state/prefs.json</code>, so every browser sees the same thing.</p>
+    </header>
+
+    <div class="subnav" id="settings-nav">
+      <button type="button" class="subnav-item is-current" data-stab="general">General</button>
+      <button type="button" class="subnav-item" data-stab="quick">Links</button>
+      <button type="button" class="subnav-item" data-stab="launcher">Your apps</button>
+      <button type="button" class="subnav-item" data-stab="catalog">Catalog</button>
+      <button type="button" class="subnav-item" data-stab="server">Configuration</button>
+      <button type="button" class="subnav-item" data-stab="network">Network</button>
+      <button type="button" class="subnav-item" data-stab="remote">Remote access</button>
+      <button type="button" class="subnav-item" data-stab="backup">Backups</button>
+      <button type="button" class="subnav-item" data-stab="passwords">Passwords</button>
+      <button type="button" class="subnav-item" data-stab="monitoring">Health</button>
+      <button type="button" class="subnav-item" data-stab="tools">Tools</button>
+    </div>
+
+    <!-- GENERAL -->
+    <div class="subpage is-shown" data-stab-panel="general">
+      <div class="cols">
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title">Appearance</h2></div>
+          <div class="setting">
+            <div class="setting-name">Mode</div>
+            <div class="setting-help">Dark, dim or light.</div>
+            <div class="choices" id="theme-choices"></div>
+          </div>
+          <div class="setting">
+            <div class="setting-name">Accent colour</div>
+            <div class="setting-help">Used for buttons, links and highlights.</div>
+            <div class="choices" id="accent-choices"></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title">"Right now" panel</h2></div>
+          <div class="setting">
+            <div class="setting-help">
+              Shows what your media apps are doing without opening them. A part appears only when
+              the app behind it is installed and answering; switching it off here hides it either way.
+            </div>
+            <label class="switch-row">
+              <input type="checkbox" id="live-enabled" checked>
+              <span><strong>Show it on the Overview</strong><small>Off hides the whole panel.</small></span>
+            </label>
+            <label class="switch-row">
+              <input type="checkbox" id="live-transfers" checked>
+              <span><strong>Transfers</strong><small>qBittorrent: current speed in each direction, and what is downloading.</small></span>
+            </label>
+            <label class="switch-row">
+              <input type="checkbox" id="live-queues" checked>
+              <span><strong>Queues</strong><small>Radarr and Sonarr: what is being fetched, and what is still missing.</small></span>
+            </label>
+            <label class="switch-row">
+              <input type="checkbox" id="live-upcoming" checked>
+              <span><strong>Upcoming releases</strong><small>Films and episodes you follow that come out in the next three weeks.</small></span>
+            </label>
+            <p class="help">
+              Radarr and Sonarr work without setup — HomeBox reads the API key they write to disk.
+              qBittorrent keeps no such file, so its web login is entered under
+              <a href="#settings" data-stab="server">Configuration → Media Stack</a>.
+            </p>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title">About this install</h2></div>
+          <dl class="kv" id="install-info"></dl>
+        </section>
+
+        <section class="panel" id="module-errors-card" hidden>
+          <div class="panel-head"><h2 class="panel-title">Modules that failed to load</h2></div>
+          <ul class="issues" id="module-errors"></ul>
+        </section>
+      </div>
+    </div>
+
+    <!-- LINKS -->
+    <div class="subpage" data-stab-panel="quick">
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Links</h2>
+          <span class="panel-note mono" id="quick-editor-summary"></span>
+        </div>
+        <p class="help">Shortcuts to things that are not on this box — a router, a NAS, a tracker.
+          HomeBox cannot discover these, so you add them once.
+          <strong>Saved on the server</strong>, so every device shows the same list.</p>
+
+        <div class="list-editor" id="quick-editor-list"></div>
+
+        <form class="form-card" id="quick-form">
+          <h3 class="form-title" id="quick-form-title">New link</h3>
+          <input type="hidden" name="id">
+          <div class="form-grid">
+            <label><span>Name</span><input class="input" name="name" maxlength="60" placeholder="Router" required></label>
+            <label><span>Second line</span><input class="input" name="subtitle" maxlength="60" placeholder="Admin page"></label>
+            <label class="span-2"><span>Address</span><input class="input" name="url" type="url" maxlength="500" placeholder="http://192.168.1.1" required></label>
+            <label class="span-2"><span>Icon — an emoji, or an image URL (it is downloaded and kept here)</span>
+              <input class="input" name="icon" maxlength="500" placeholder="&#128225; or https://…/icon.png"></label>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="button" id="quick-cancel" hidden>Cancel</button>
+            <button type="submit" class="button is-primary" id="quick-save">Add link</button>
+            <span class="status-text" id="quick-status" role="status"></span>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <!-- YOUR APPS (what the Overview shows) -->
+    <div class="subpage" data-stab-panel="launcher">
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">What "Your apps" shows</h2>
+          <span class="panel-note mono" id="launcher-editor-summary"></span>
+        </div>
+        <p class="help">Rename or hide the apps HomeBox found, or add your own shortcuts.
+          Hiding an app does not stop it.
+          <strong>These choices are kept in this browser only</strong> — another device keeps its own.</p>
+
+        <div class="list-editor" id="launcher-editor-list"></div>
+
+        <form class="form-card" id="launcher-add-form">
+          <h3 class="form-title" id="launcher-form-title">New shortcut</h3>
+          <div class="form-grid">
+            <label><span>Name</span>
+              <input class="input" id="launcher-name" name="name" maxlength="48" placeholder="Printer" required></label>
+            <label><span>Address</span>
+              <input class="input" id="launcher-address" name="address" type="url" maxlength="300" placeholder="http://printer.lan/" required></label>
+            <label><span>Icon — emoji or image URL</span>
+              <input class="input" id="launcher-icon" name="icon" maxlength="500" placeholder="&#128424;"></label>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="button" id="launcher-cancel" hidden>Cancel</button>
+            <button type="submit" class="button is-primary" id="launcher-submit">Add shortcut</button>
+            <span class="status-text" id="launcher-editor-status" role="status"></span>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <!-- CATALOG -->
+    <div class="subpage" data-stab-panel="catalog">
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Catalog</h2>
+          <button type="button" class="button is-primary is-small" id="catalog-add">New app</button>
+        </div>
+        <p class="help">Change how an app is described, or add a Docker app of your own.
+          <strong>Saved on the server, for every device.</strong>
+          Edits to built-in apps are stored separately, so an update never overwrites them and
+          Reset always restores the shipped text.</p>
+
+        <div class="list-editor" id="catalog-editor-list"></div>
+
+        <form class="form-card" id="catalog-form" hidden>
+          <h3 class="form-title" id="catalog-form-title">New app</h3>
+          <input type="hidden" name="id">
+          <div class="form-grid">
+            <label><span>Name</span><input class="input" name="name" maxlength="80" required></label>
+            <label><span>Icon — emoji or image URL</span><input class="input" name="icon" maxlength="500" placeholder="&#128230; or https://…/icon.png"></label>
+            <label><span>Category</span><select class="input" name="category" id="catalog-category" required></select></label>
+            <label><span>Memory it needs (MB)</span><input class="input" name="ramMb" type="number" min="16" max="65536" value="256" required></label>
+            <label class="span-2"><span>One-line description</span><input class="input" name="tagline" maxlength="180"></label>
+            <label class="span-2"><span>Description</span><textarea class="input" name="description" rows="3" maxlength="1200"></textarea></label>
+            <label class="span-2"><span>Setup notes — one per line</span><textarea class="input" name="tips" rows="4"></textarea></label>
+            <div class="only-new">
+              <div class="form-grid">
+                <label class="span-2"><span>Docker image</span>
+                  <input class="input" name="image" maxlength="300" placeholder="ghcr.io/vendor/app:1.2.3"></label>
+                <label><span>Port on this box</span><input class="input" name="port" type="number" min="1" max="65535"></label>
+                <label><span>Port inside the container</span><input class="input" name="containerPort" type="number" min="1" max="65535"></label>
+                <label><span>Service name</span><input class="input" name="serviceName" maxlength="80" placeholder="blank uses the name"></label>
+              </div>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="button" id="catalog-cancel">Cancel</button>
+            <button type="submit" class="button is-primary" id="catalog-save">Save</button>
+            <span class="status-text" id="catalog-status" role="status"></span>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <!-- CONFIGURATION -->
+    <div class="subpage" data-stab-panel="server">
+      <div class="cols">
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title">Paths</h2></div>
+          <dl class="kv" id="server-config"></dl>
+          <p class="help">Written once by <code class="mono">install.sh</code> into <code class="mono">/opt/homebox/.env</code>. Change them below, or in that file followed by a restart of the app that uses them.</p>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title">Where things live</h2></div>
+          <p class="help">Each app is a folder with its compose file, its description and its config. Copying the folder copies the app.</p>
+          <code class="code-block" id="server-tree"></code>
+        </section>
+      </div>
+
+      <!-- The raw file sits behind a toggle, closed by default: it holds
+           security keys and is rarely needed, but it is all there for whoever does. -->
+      <details class="raw-config" id="raw-config">
+        <summary class="raw-config-summary">
+          <span class="raw-config-title">Edit .env values</span>
+          <span class="raw-config-sub">For paths, ports and app settings. Rarely needed.</span>
+        </summary>
+        <div class="raw-config-body">
+          <p class="help" id="config-file-note"></p>
+          <div id="config-groups"></div>
+          <div class="form-actions">
+            <button type="button" class="button is-primary" id="config-save">Save</button>
+            <span class="status-text" id="config-save-status"></span>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <!-- NETWORK -->
+    <div class="subpage" data-stab-panel="network">
+      <div class="cols">
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title">Addresses</h2></div>
+          <div class="facts" id="settings-net-facts"></div>
+        </section>
+        <!-- NETWORK STORAGE — attach a NAS without a terminal -->
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Network storage</h2>
+            <span class="panel-note mono" id="storage-meta"></span>
+          </div>
+          <p class="help">
+            A library on a NAS must be mounted on this box before apps can use it — a container
+            cannot mount a network share by itself. HomeBox writes a systemd automount instead of an
+            fstab line, so an app never starts against an empty folder and decides its library is gone.
+            Once mounted, set <a href="#settings" data-stab="server">Configuration → Media</a> to it.
+          </p>
+
+          <div id="storage-list"></div>
+
+          <form class="mount-form" id="storage-form" autocomplete="off">
+            <div class="form-row">
+              <label class="form-label" for="storage-kind">Protocol</label>
+              <select class="select" id="storage-kind">
+                <option value="nfs">NFS — keeps hardlinks; best for media</option>
+                <option value="cifs">SMB (Windows share) — imports are copied</option>
+              </select>
+            </div>
+            <div class="form-row" id="storage-server-row">
+              <label class="form-label" for="storage-server">NAS address</label>
+              <input class="input" id="storage-server" placeholder="192.168.1.20" spellcheck="false">
+            </div>
+            <div class="form-row">
+              <label class="form-label" for="storage-share">
+                <span id="storage-share-label">Export path</span>
+              </label>
+              <input class="input" id="storage-share" placeholder="/volume1/media" spellcheck="false">
+            </div>
+            <div class="form-row storage-smb" hidden>
+              <label class="form-label" for="storage-user">Username</label>
+              <input class="input" id="storage-user" spellcheck="false" autocomplete="off">
+            </div>
+            <div class="form-row storage-smb" hidden>
+              <label class="form-label" for="storage-pass">Password</label>
+              <input class="input" id="storage-pass" type="password" autocomplete="new-password">
+            </div>
+            <div class="form-row">
+              <label class="form-label" for="storage-mountpoint">Mount at</label>
+              <input class="input" id="storage-mountpoint" value="/mnt/media_disk" spellcheck="false">
+            </div>
+            <p class="inline-note is-bad" id="storage-collision" hidden></p>
+            <div class="form-actions">
+              <button type="button" class="button" id="storage-check">Ask the NAS</button>
+              <button type="submit" class="button is-primary" id="storage-mount">Mount</button>
+            </div>
+            <div id="storage-probe"></div>
+          </form>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title">Open ports</h2><span class="panel-note mono" id="ports-meta"></span></div>
+          <p class="help">Every port this box listens on and the app behind it. All of these are reachable from your network.</p>
+          <div class="scroll-x">
+            <table class="grid-table">
+              <thead><tr><th>Port</th><th>App</th><th>Container</th></tr></thead>
+              <tbody id="ports-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- REMOTE ACCESS -->
+    <div class="subpage" data-stab-panel="remote">
+      <div class="cols">
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title">Getting in from outside</h2></div>
+          <p class="text">Anyone who can reach port 8443 and knows the dashboard password can install, stop and remove apps. Keep the dashboard on your own network.</p>
+          <p class="text">To reach it from elsewhere, use a VPN — one entrance instead of one per app. Install the <strong>VPN</strong> module and forward UDP 51820 on your router to this box; nothing else needs opening.</p>
+          <div id="remote-vpn-state"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title">Making one app public</h2></div>
+          <p class="help">If an app really has to be on the internet, give it a hostname and a certificate through the proxy, and put a login in front of anything that controls the box.</p>
+          <dl class="kv" id="remote-proxy"></dl>
+        </section>
+      </div>
+    </div>
+
+    <!-- BACKUPS -->
+    <div class="subpage" data-stab-panel="backup">
+      <div class="cols">
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Archives</h2>
+            <span class="panel-note mono" id="backup-summary"></span>
+          </div>
+
+          <div id="backup-no-key" class="alert-box" hidden></div>
+          <p class="help" id="backup-same-disk" hidden>These archives are on the disk they protect. They cover a mistake, not a failed drive — copy them to another machine.</p>
+          <p class="help" id="backup-latest"></p>
+
+          <div class="row-actions">
+            <button type="button" class="button" id="backup-now">Back up now</button>
+            <select id="backup-kind" class="select select-sm" aria-label="What to include">
+              <option value="config">Settings and secrets</option>
+              <option value="full">Everything, including the data folder</option>
+            </select>
+          </div>
+          <p class="help" id="backup-kind-note"></p>
+
+          <div class="archive-list" id="archive-list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title">Encryption key</h2></div>
+          <p class="help">Archives are encrypted with AES-256-GCM using this key, because they include <code class="mono">.env</code> with every generated password. <strong>Without the key an archive cannot be opened.</strong> Store a copy away from this machine.</p>
+          <div class="row-actions">
+            <button type="button" class="button" id="key-reveal">Show key</button>
+            <button type="button" class="button" id="key-copy" hidden>Copy</button>
+          </div>
+          <code class="code-block" id="backup-key-text" hidden></code>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title">Automatic backups</h2></div>
+          <div class="setting">
+            <label class="check">
+              <input type="checkbox" id="schedule-on">
+              Back up on a schedule
+            </label>
+            <div class="schedule" id="schedule-options" hidden>
+              <div class="schedule-line">
+                <label class="setting-help" for="schedule-every">Every</label>
+                <select id="schedule-every" class="select"></select>
+              </div>
+              <div class="schedule-line">
+                <label class="setting-help" for="schedule-keep">Keep the latest</label>
+                <input type="number" id="schedule-keep" class="input input-narrow" value="7" min="1" max="100">
+              </div>
+              <button type="button" class="button is-primary" id="schedule-save">Save</button>
+            </div>
+            <p class="status-text" id="schedule-state"></p>
+          </div>
+          <p class="help">A scheduled backup is always a <strong>settings</strong> backup. A media library is too big to copy on a timer, and a job that never finishes is worse than none.</p>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title">Restoring</h2></div>
+          <p class="help">Restoring runs from a shell on purpose: it overwrites live configuration while apps are running, and it needs the key you stored elsewhere.</p>
+          <code class="code-block" id="backup-restore-cmd"></code>
+        </section>
+      </div>
+    </div>
+
+    <!-- PASSWORDS -->
+    <div class="subpage" data-stab-panel="passwords">
+      <div class="cols">
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title">Dashboard password</h2></div>
+          <p class="help">The password for this page. Changing it signs out every other device that is signed in.</p>
+          <form class="form-card is-flat" id="password-form">
+            <div class="form-grid">
+              <label class="span-2"><span>Password now</span>
+                <input class="input" id="pw-old" type="password" autocomplete="current-password" required></label>
+              <label><span>New password</span>
+                <input class="input" id="pw-next" type="password" autocomplete="new-password" required></label>
+              <label><span>New password, again</span>
+                <input class="input" id="pw-again" type="password" autocomplete="new-password" required></label>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="button is-primary" id="pw-submit">Change it</button>
+              <span class="status-text" id="pw-status" role="status"></span>
+            </div>
+          </form>
+          <p class="help">Forgot it? There is no email reset. On the server run
+            <code class="mono">sudo rm /opt/homebox/state/auth.json</code>, then
+            <code class="mono">homebox bootstrap-token</code>, and set a new one.</p>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title">Generated passwords</h2><span class="panel-note mono" id="secrets-meta"></span></div>
+          <p class="help">Created once by <code class="mono">install.sh</code> in <code class="mono">.env</code> (mode 600) and never changed afterwards — a key that changes makes stored data unreadable.</p>
+          <p class="help">Each value stays hidden until you ask for it, so this page can be shown or shared without leaking them all. From a shell:</p>
+          <code class="code-block">homebox secrets &lt;module&gt;</code>
+          <div class="scroll-x spaced">
+            <table class="grid-table">
+              <thead><tr><th>Module</th><th>Name</th><th>Value</th></tr></thead>
+              <tbody id="secrets-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- HEALTH -->
+    <div class="subpage" data-stab-panel="monitoring">
+      <div class="cols">
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title">Host</h2><span class="panel-note mono">live</span></div>
+          <dl class="kv" id="monitoring-host"></dl>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title">Containers</h2><span class="panel-note mono" id="monitoring-meta"></span></div>
+          <div class="stat-rows" id="monitoring-health"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title">Alerts</h2></div>
+          <div id="monitoring-module"></div>
+        </section>
+      </div>
+    </div>
+
+    <!-- TOOLS -->
+    <div class="subpage" data-stab-panel="tools">
+      <div class="cols">
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title">Command line</h2></div>
+          <p class="help">The CLI and this page both run <code class="mono">docker compose</code> underneath, so they always agree about what is installed.</p>
+          <code class="code-block" id="tools-cli"></code>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2 class="panel-title">Diagnosis</h2></div>
+          <p class="help">Checks the environment, loads every module and has compose validate each one.</p>
+          <code class="code-block">homebox doctor</code>
+        </section>
+
+        <!-- UNLOCK AN APP — the way back into an app you are locked out of -->
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Locked out of an app</h2>
+            <span class="panel-note mono" id="reset-meta"></span>
+          </div>
+          <p class="help">
+            This does not show a password — HomeBox does not know accounts you created inside an app,
+            and should not. It puts the app back in a state where you can set a <strong>new</strong> one.
+            Only apps this version knows how to unlock are listed.
+          </p>
+          <div id="reset-list"></div>
+        </section>
+      </div>
+    </div>
+  </section>
+</main>
+</div>
+
+<!-- Module details, opened from a card -->
+<div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
+<aside class="sheet" id="sheet" hidden aria-label="App details">
+  <button type="button" class="sheet-close" id="sheet-close" aria-label="Close">&times;</button>
+  <div id="sheet-body"></div>
+</aside>
+
+<!-- Notices stack here; aria-live so a screen reader hears what a sighted user sees appear. -->
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+<script src="js/app.js?v=__V__"></script>
+</body>
+</html>

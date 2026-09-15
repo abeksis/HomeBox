@@ -1,0 +1,30 @@
+<!--
+title: Uninstall
+summary: Remove HomeBox cleanly — it shows exactly what will go and asks before touching anything.
+order: 6
+-->
+<h2>From the box</h2>
+<pre><code>sudo bash /opt/homebox/scripts/uninstall.sh</code></pre>
+<p>Or, if the files on the box are already gone or broken:</p>
+<pre><code>curl -fsSL https://get.abeksis.net/uninstall.sh | sudo bash</code></pre>
+<p>Both print an inventory of exactly what will be removed — containers, networks, images and the size of everything under <code>/opt/homebox</code> — and then ask you to type <code>remove</code>. Anything else, or pressing Ctrl+C, leaves the box as it was.</p>
+
+<h2>What stays</h2>
+<ul>
+  <li><strong>Docker.</strong> It was probably wanted anyway, and removing it would take any other containers on the machine with it.</li>
+  <li><strong>Storage outside <code>/opt/homebox</code>.</strong> A media library on a NAS or another disk is never touched. Uninstalling the dashboard must never mean deleting the films.</li>
+</ul>
+
+<div class="callout warn">
+  <p>Everything under <code>/opt/homebox</code> goes — including generated passwords, app settings and the backups stored there. Download a backup first if you might want it.</p>
+</div>
+
+<h2>Options</h2>
+<div class="table-wrap"><table>
+  <tbody>
+    <tr><td><code>--keep-data</code></td><td>Remove everything except <code>data/</code> and <code>backups/</code>.</td></tr>
+    <tr><td><code>--keep-images</code></td><td>Leave downloaded images in place.</td></tr>
+    <tr><td><code>--yes</code></td><td>Skip the question. For scripts only.</td></tr>
+  </tbody>
+</table></div>
+<pre><code>sudo bash /opt/homebox/scripts/uninstall.sh --keep-data</code></pre>

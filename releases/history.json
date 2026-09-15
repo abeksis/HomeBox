@@ -1,0 +1,222 @@
+[
+  {
+    "tag": "v0.4.22",
+    "date": "2026-09-15",
+    "body": "Reworded a few app descriptions in the catalog. No behaviour changes."
+  },
+  {
+    "tag": "v0.4.21",
+    "date": "2026-09-15",
+    "body": "The dashboard is now black with orange by default, with dark icon tiles.\nOther accent colours and the dim and light modes are still in\nSettings -> General -> Appearance."
+  },
+  {
+    "tag": "v0.4.20",
+    "date": "2026-09-14",
+    "body": "A redesigned dashboard. Sections now sit in a sidebar, the Overview is\nreorganised around your apps, this server and running containers, and\nAppearance offers dark, dim or light with six accent colours. Everything the\ndashboard did before, it still does; only the look and some labels changed\n(App Store is now Apps, Launcher is Your apps, Live Logs is Logs).\n\nHomeBox is now published under the MIT licence."
+  },
+  {
+    "tag": "v0.4.19",
+    "date": "2026-09-14",
+    "body": "Update checks now go through get.abeksis.net, which counts anonymously how\nmany boxes run each version: the box sends its HomeBox version, no IP or\nidentifier is kept, and per-box rows become plain totals within two days. If\nit is unreachable the check falls back to GitHub. To opt out, set\nHB_ANONYMOUS_STATS=off in /opt/homebox/.env and run\nsudo homebox up dashboard --yes."
+  },
+  {
+    "tag": "v0.4.18",
+    "date": "2026-09-13",
+    "body": "Films no longer stay stuck on the Coming soon card as \"out now\". A film is\nremoved once its digital release has passed, instead of lingering until its\ndisc release date."
+  },
+  {
+    "tag": "v0.4.17",
+    "date": "2026-09-13",
+    "body": "Updating an app now backs up only that app, not the whole box — the backup\nfor a single update drops from about 950MB to a few MB. Backups also skip\nartwork, caches and logs that apps download or recreate by themselves, such\nas Jellyfin's library images and Radarr and Sonarr's posters."
+  },
+  {
+    "tag": "v0.4.16",
+    "date": "2026-09-13",
+    "body": "Uninstalling with a one-line command piped from curl now shows what will be\nremoved and asks you to type 'remove', instead of refusing unless --yes was\ngiven."
+  },
+  {
+    "tag": "v0.4.15",
+    "date": "2026-09-13",
+    "body": "New installs on a machine without git were silently getting the development\nbranch instead of a release. They now start on the current stable release\nfrom the release manifest, and say so plainly if no release can be found."
+  },
+  {
+    "tag": "v0.4.14",
+    "date": "2026-09-11",
+    "body": "Live Logs timestamps now show in the box's own timezone instead of UTC, so\nthey match the times the apps print next to them. Hover a timestamp to see\nthe exact UTC time.\n\nFive services that were running on UTC now follow the box's timezone:\nImmich's database and cache, Nextcloud's cache, Ghost and WordPress. Already\ninstalled apps pick this up the next time they are updated."
+  },
+  {
+    "tag": "v0.4.13",
+    "date": "2026-09-11",
+    "body": "Live Logs now draws one row per line, like the reference product: long lines\nwrap at word boundaries instead of scrolling sideways, every row carries a\ndimmed timestamp, and boot banners drawn in ASCII art keep their shape\ninstead of being smeared into a single line.\n\nThis reverses the line folding introduced in 0.4.12."
+  },
+  {
+    "tag": "v0.4.12",
+    "date": "2026-09-11",
+    "body": "Live Logs now shows one log entry per row. Applications that put newlines\ninside a single message — Uptime Kuma's ping output is the worst offender —\nwere being drawn as one row per line, so a single monitor failing looked like\nseven separate events."
+  },
+  {
+    "tag": "v0.4.11",
+    "date": "2026-09-10",
+    "body": "The Live Logs picker now shows each service by name with its icon, instead of\nraw container names.\n\nAlso fixes the HomeBox app card reporting itself as \"1/2 running · partial\"\nafter every successful update — that second container was HomeBox's own\nupdate helper, which inherits the dashboard's compose labels."
+  },
+  {
+    "tag": "v0.4.10",
+    "date": "2026-09-10",
+    "body": "The Headscale icon was the full wordmark and rendered as a thin strip of\ndots in the app tile. Cropped to the mark."
+  },
+  {
+    "tag": "v0.4.9",
+    "date": "2026-09-10",
+    "body": "Adds Headscale: Tailscale's coordination server, self-hosted, with a web UI\nfor enrolling devices and issuing keys.\n\nAlso fixes a box reporting an update to the version it was already running.\nThe manifest check treated \"the manifest has not changed\" as \"nothing has\nchanged\", and the thing that had changed was the box itself."
+  },
+  {
+    "tag": "v0.4.8",
+    "date": "2026-09-10",
+    "body": "Boxes now notice a new release within about twenty minutes instead of up to\nsix hours. The manifest check has been moved off the image check's timer —\nthey look alike but one is a dozen registry round-trips and the other is a\nsingle conditional GET.\n\nThis matters most for the pause switch: a release found to be bad could\npreviously keep installing itself for six hours after it was stopped."
+  },
+  {
+    "tag": "v0.4.7",
+    "date": "2026-09-10",
+    "body": "The two notes on the Updates page — \"Everything is current\" and the\nfootnote under History — were grey text on a near-black page with no edge,\nand were hard to see. They are panels now."
+  },
+  {
+    "tag": "v0.4.6",
+    "date": "2026-09-10",
+    "body": "Fixes a stuck update dialog. When the update helper failed to launch, the\nprogress file was left on \"starting\" with nothing left to move it, so the\npage spun forever on a run that never began — above the log of a previous\nupdate, which made it look like the box had updated to the wrong version.\n\nAlso stops a successful update from ending with \"1 container is stopped\":\nthat was HomeBox's own update helper, which is kept on purpose so its log\nstays readable."
+  },
+  {
+    "tag": "v0.4.5",
+    "date": "2026-09-10",
+    "body": "The update button could not start on a box whose dashboard image had been\norphaned by a later rebuild of the same tag — it answered \"docker exited\n125\" and did nothing. It now checks that the reference resolves and falls\nback to the newest homebox-dashboard image on the box.\n\nA box already stuck this way needs one hop by hand, because the broken code\nis what would have to launch the update:\n\n  cd /opt/homebox && sudo git fetch --tags && sudo git checkout v0.4.5 && sudo bash install.sh"
+  },
+  {
+    "tag": "v0.4.4",
+    "date": "2026-09-10",
+    "body": "Never offer a database major-version upgrade.\n\nPostgres 17 cannot open a Postgres 14 data directory, and HomeBox was\noffering exactly that swap for Immich's database as a one-click upgrade.\nIt now refuses to, for postgres, mariadb, mysql, mongo, percona and\ntimescale, and shows the newer version without a button and with the\nreason instead of hiding it."
+  },
+  {
+    "tag": "v0.4.3",
+    "date": "2026-09-10",
+    "body": "The same live-log dialog an app image upgrade opens, fed from a file so\nit survives the dashboard restarting in the middle — and so a page\nreloaded mid-update can read back everything it missed."
+  },
+  {
+    "tag": "v0.4.2",
+    "date": "2026-09-10",
+    "body": "How long it takes, and whether you have to sit and watch it. You do not\n— the update runs on the box and reports through a file, so you can\nclose the page and it carries on.\n\nThis release exists to be installed with the button. If you are reading\nthese words in the card, press it."
+  },
+  {
+    "tag": "v0.4.1",
+    "date": "2026-09-10",
+    "body": "install.sh chowned everything to root when run by the updater, because\nnsenter carries no SUDO_USER. It now asks the tree who owns it.\n\nIf you updated through the button on 0.3.7-0.4.0, run:\n  sudo chown -R $USER:$USER /opt/homebox"
+  },
+  {
+    "tag": "v0.4.0",
+    "date": "2026-09-10",
+    "body": "The button path had never been run until today, and it was broken in\nthree separate ways that the CLI path could not reveal: the helper\ndeleted the container it was running in, git refused every command\nbecause nsenter carries no SUDO_UID, and a failed git status read as a\nclean tree.\n\nIf this release arrived through the button, all three are fixed."
+  },
+  {
+    "tag": "v0.3.9",
+    "date": "2026-09-10",
+    "body": "Its helper runs as root through nsenter, which git treats as dubious\nownership and refuses — while the CLI, running under sudo, was exempt.\nAlso stops a failed git status being read as a clean tree."
+  },
+  {
+    "tag": "v0.3.8",
+    "date": "2026-09-10",
+    "body": "Nothing to see here — this release exists so the Update button can be\nexercised end to end on a real box, which is the one path that had\nnever actually been run."
+  },
+  {
+    "tag": "v0.3.7",
+    "date": "2026-09-10",
+    "body": "It launched a helper container that immediately deleted itself, so the\nbutton reported success and did nothing. The CLI was unaffected, which\nis why this survived several releases."
+  },
+  {
+    "tag": "v0.3.6",
+    "date": "2026-09-10",
+    "body": "Current version 0.3.5 -> 0.3.6 available, on one line. What's new in its\nown block. A bigger red badge in the tab strip, and a Check button on\nthe card next to the thing it refreshes."
+  },
+  {
+    "tag": "v0.3.5",
+    "date": "2026-09-10",
+    "body": "It showed a timestamp and a Check now button and never mentioned that a\nbox checks on its own, so pressing the button looked mandatory.\n\nThis release is also the test: nobody pressed anything to find it."
+  },
+  {
+    "tag": "v0.3.4",
+    "date": "2026-09-10",
+    "body": "The scheduled check returned its own cache instead of fetching, so a box\ncould stay silent through a release indefinitely. It now forces the\nfetch — which is what a scheduled check is for."
+  },
+  {
+    "tag": "v0.3.3",
+    "date": "2026-09-10",
+    "body": "Small wording fix: the page intro described container images only,\nwritten before the page also handled HomeBox's own releases.\n\nIf you are reading this in the update card, the whole cycle works — the\ncheck ran on its own, the dot appeared, and the button did the rest."
+  },
+  {
+    "tag": "v0.3.2",
+    "date": "2026-09-10",
+    "body": "Every update was chowning module config directories, which breaks any\napp that runs as its own uid — Postgres in particular. If a database\ncontainer is unhealthy after updating, this is why; the fix restores\nthe ownership on the next run."
+  },
+  {
+    "tag": "v0.3.1",
+    "date": "2026-09-10",
+    "body": "The Check now button refreshed the container-image check only, leaving\nthe HomeBox update card showing whatever it last knew — with no way to\nrefresh it from the interface."
+  },
+  {
+    "tag": "v0.3.0",
+    "date": "2026-09-10",
+    "body": "Since 0.2.4, bootstrap.sh silently installed from a tarball instead of\ncloning, leaving boxes with no .git and therefore no way to update\nthemselves. Reinstall any box installed with 0.2.4 through 0.2.9 — or\ncheck for /opt/homebox/.git."
+  },
+  {
+    "tag": "v0.2.9",
+    "date": "2026-09-10",
+    "body": "After updating, the card kept showing the old version number and the\nbutton, because it read the version from the cached check rather than\nfrom the box."
+  },
+  {
+    "tag": "v0.2.8",
+    "date": "2026-09-10",
+    "body": "Fixes the Updates tab staying silent forever on a box where nothing had\never populated the update cache — which was every box installed before\n0.2.7, because the check was on no schedule at all."
+  },
+  {
+    "tag": "v0.2.7",
+    "date": "2026-09-10",
+    "body": "A new HomeBox release now shows a red dot next to Updates in the top\nbar, without opening the tab and without reloading the page.\n\nThe check runs on the server every six hours; the page picks up what it\nfound every five minutes. A red dot means a new version of HomeBox\nitself — image rebuilds keep the ordinary accent dot."
+  },
+  {
+    "tag": "v0.2.6",
+    "date": "2026-09-10",
+    "body": "The Updates card now takes its description from the annotated tag's own\nmessage when no GitHub Release exists.\n\nCutting a release already requires writing that message, so the card\nsays something useful by default instead of showing a bare version\nnumber — which is what 0.2.5 did.\n\nIf you are reading this text in the dashboard, the change works."
+  },
+  {
+    "tag": "v0.2.5",
+    "date": "2026-09-10",
+    "body": ""
+  },
+  {
+    "tag": "v0.2.4",
+    "date": "2026-09-09",
+    "body": ""
+  },
+  {
+    "tag": "v0.2.3",
+    "date": "2026-09-09",
+    "body": "Fixes the update health check, which polled an endpoint that requires a\nsession and so could never pass."
+  },
+  {
+    "tag": "v0.2.2",
+    "date": "2026-09-09",
+    "body": "Fixes the dirty-tree guard refusing every update over a file permission\nbit that bootstrap.sh sets on every install."
+  },
+  {
+    "tag": "v0.2.1",
+    "date": "2026-09-09",
+    "body": "Documentation: the Updates tab is now the documented way to update\nHomeBox, with the manual git path kept as the escape hatch."
+  },
+  {
+    "tag": "v0.2.0",
+    "date": "2026-09-09",
+    "body": "One-button platform updates.\n\nHomeBox can now update itself from the Updates tab: it takes a backup of\nstate/ and .env, checks out the release tag, runs any pending migrations,\nrebuilds, waits for the dashboard to answer, and puts the previous\nversion back on its own if it does not.\n\nReleases are annotated git tags. A new install lands on the newest tag\nrather than on the development branch. releases/manifest.json carries a\nfreeze switch that stops every box in the world within five minutes,\nincluding boxes that are mid-update."
+  },
+  {
+    "tag": "v0.1.0",
+    "date": "2026-09-09",
+    "body": "The last release before platform self-update existed. Kept as the point\na friend's box can be rolled back to, and as the 'from' side of the\nfirst real update."
+  }
+]

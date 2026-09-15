@@ -1,0 +1,48 @@
+# Builds homebox.abeksis.net from this repository and publishes it to GitHub Pages.
+#
+# Runs on every push to main and on every release tag, so the app catalog
+# follows the modules and the changelog follows the tags without anyone
+# remembering to rebuild. No dependencies to install: site/build.js is plain
+# Node, and it reads the modules through the dashboard's own loader.
+name: site
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The changelog is built from the release tags, which a shallow clone does not have.
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build
+        run: node site/build.js
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: https://homebox.abeksis.net
+    steps:
+      - uses: actions/deploy-pages@v4

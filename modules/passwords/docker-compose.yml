@@ -1,0 +1,92 @@
+# Passwords — a HomeBox module
+#
+# Vaultwarden: a Bitwarden-compatible vault that never leaves this box.
+
+x-homebox:
+  id: passwords
+  added_at: "2026-09-05"
+  title: "Password Vault"
+  tagline: "Bitwarden, hosted by you"
+  description: "Speaks the Bitwarden protocol, so the official mobile apps and browser extensions work against it unchanged — while the vault itself lives here. SQLite backed, so it is one directory to back up."
+  icon: "vaultwarden.svg"
+  category: "security"
+  required: false
+  default: false
+  ram: "~120MB"
+  theme:
+    emoji: "🔐"
+    color: "#175ddc"
+    bg: "rgba(23,93,220,0.12)"
+  tips:
+    - "This app CANNOT be used over http://<ip>:8222 — the vault encrypts in the browser via crypto.subtle, which browsers only expose over HTTPS or on localhost. Put it behind Proxy Manager with a certificate, or reach it through an SSH tunnel to localhost"
+    - "Register your account, then set Allow new signups to false in Settings — otherwise anyone who reaches the page can create one"
+    - "The official mobile apps refuse a self-signed certificate. For phone use this needs a real hostname with real TLS, not an IP"
+    - "This is the one app where a tested restore matters more than a backup — the config directory IS the vault"
+  env_vars:
+    VAULTWARDEN_DOMAIN:
+      label: "Public URL"
+      # Declared so it is an editable field in Settings rather than a line
+      # somebody has to know to add to .env by hand. No default: a wrong value
+      # here is worse than an empty one, because Vaultwarden builds invite and
+      # reset links from it and scopes WebAuthn to it.
+      type: "text"
+    VAULTWARDEN_SIGNUPS:
+      label: "Allow new signups"
+      type: "text"
+      default: "true"
+    VAULTWARDEN_ADMIN_TOKEN:
+      label: "Admin panel token"
+      type: "secret"
+      config_editable: false
+      dangerous: true
+  services:
+    vaultwarden:
+      friendly_name: "Vaultwarden"
+      color: "#175ddc"
+      description: "Password manager server"
+      icon: "vaultwarden.svg"
+      port_map: 8222
+      container_port: 80
+      url_scheme: "http"
+      first_login: "Create your account on the first visit, then turn signups off."
+
+services:
+  vaultwarden:
+    image: vaultwarden/server:1.37.1
+    container_name: vaultwarden
+    environment:
+      - TZ=${TZ:-UTC}
+      # Open for the first account, then closed from Settings. It was hardcoded
+      # true while the tip below told people to turn it off — which no amount
+      # of reading the tip could accomplish.
+      - SIGNUPS_ALLOWED=${VAULTWARDEN_SIGNUPS:-true}
+      - ADMIN_TOKEN=${VAULTWARDEN_ADMIN_TOKEN:-}
+      # Set this once the vault is behind a proxy with a certificate, e.g.
+      # https://vault.example.com. Vaultwarden builds invite and reset links
+      # and scopes WebAuthn from it, so a wrong value breaks both silently.
+      - DOMAIN=${VAULTWARDEN_DOMAIN:-}
+      - DATA_FOLDER=/data
+      - ROCKET_PORT=80
+    ports:
+      - "8222:80"
+    volumes:
+      - ${HB_ROOT:-/opt/homebox}/modules/passwords/config/vaultwarden:/data
+    networks:
+      - homebox_proxy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.50'
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+networks:
+  homebox_proxy:
+    external: true

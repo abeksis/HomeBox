@@ -1,0 +1,21 @@
+name = "homebox-get"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+workers_dev = false
+
+routes = [
+  { pattern = "get.abeksis.net/*", zone_name = "abeksis.net" }
+]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "homebox-stats"
+database_id = "98034ffe-6478-4672-8842-202c139b45c7"
+
+# No cron trigger: the account has no workers.dev subdomain, which Cloudflare
+# requires for schedules. The daily rollup runs from the first request each
+# isolate sees on a new day instead (src/index.js, maybeRollup).
+
+# Secrets, set with `npx wrangler secret put <NAME>` — never in this file:
+#   SALT         random string mixed into the per-day box hash
+#   STATS_TOKEN  the key for https://get.abeksis.net/stats?key=...

@@ -1,0 +1,378 @@
+'use strict';
+/**
+ * Everything that changes the box goes through here.
+ *
+ * The dashboard shells out to `docker compose` rather than reimplementing it
+ * over the Engine API: compose already knows how to resolve ${VARS} from
+ * .env, order dependencies, and reconcile a running project against a file.
+ * Reimplementing a fraction of that is how a dashboard ends up disagreeing
+ * with the CLI about what is installed.
+ *
+ * Because /opt/homebox is mounted at the same path inside this container as
+ * on the host, the bind mounts in a module file resolve identically whether
+ * compose is run from here or from an SSH session.
+ */
+
+const { spawn } = require('child_process');
+const fs = require('fs');
+const fsp = require('fs/promises');
+const path = require('path');
+
+const secrets = require('./secrets');
+
+const ROOT = process.env.HOMEBOX_ROOT || '/opt/homebox';
+const MODULES_DIR = path.join(ROOT, 'modules');
+const ENV_FILE = path.join(ROOT, '.env');
+
+// A module id becomes part of a filesystem path and a compose project name.
+// Anything outside this set is rejected before it reaches a shell argument.
+const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,39}$/;
+
+class ComposeError extends Error {
+  constructor(message, { code, stdout, stderr } = {}) {
+    super(message);
+    this.name = 'ComposeError';
+    this.code = code;
+    this.stdout = stdout;
+    this.stderr = stderr;
+  }
+}
+
+function moduleFile(id) {
+  if (!ID_PATTERN.test(id)) throw new ComposeError(`invalid module id: ${id}`);
+  const file = path.join(MODULES_DIR, id, 'docker-compose.yml');
+  if (!fs.existsSync(file)) throw new ComposeError(`no such module: ${id}`);
+  return file;
+}
+
+/**
+ * Run a command with arguments as an array — never a shell string. A module
+ * id is validated above, but keeping argv-style execution means even a bad
+ * one cannot become shell syntax.
+ */
+function run(command, args, { timeout = 600000, cwd = ROOT, onLine = null, env = null } = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { cwd, env: { ...process.env, HB_ROOT: ROOT, ...(env || {}) } });
+    let stdout = '';
+    let stderr = '';
+    // Pulling images produces a lot of progress output; keep only the tail so
+    // one install cannot balloon the response.
+    const cap = (buf, chunk) => (buf + chunk).slice(-64000);
+
+    // Line-buffered, because a chunk from a pipe is not a line: compose
+    // writes its progress in fragments, and forwarding raw chunks to a
+    // watching client puts half-written words on screen.
+    const partial = { out: '', err: '' };
+    const emit = (which, text) => {
+      if (!onLine) return;
+      partial[which] += text;
+      const lines = partial[which].split('\n');
+      partial[which] = lines.pop();
+      for (const line of lines) onLine(line, which === 'err');
+    };
+
+    child.stdout.on('data', (c) => { const t = c.toString(); stdout = cap(stdout, t); emit('out', t); });
+    child.stderr.on('data', (c) => { const t = c.toString(); stderr = cap(stderr, t); emit('err', t); });
+
+    const timer = setTimeout(() => {
+      child.kill('SIGKILL');
+      reject(new ComposeError(`${command} timed out after ${Math.round(timeout / 1000)}s`, { stdout, stderr }));
+    }, timeout);
+    timer.unref();
+
+    child.on('error', (err) => {
+      clearTimeout(timer);
+      reject(new ComposeError(`${command} could not be run: ${err.message}`, { stdout, stderr }));
+    });
+    child.on('close', (code) => {
+      clearTimeout(timer);
+      // A last line with no trailing newline would otherwise never be sent.
+      if (onLine) {
+        if (partial.out) onLine(partial.out, false);
+        if (partial.err) onLine(partial.err, true);
+      }
+      if (code === 0) return resolve({ stdout, stderr });
+      reject(new ComposeError(`${command} exited ${code}`, { code, stdout, stderr }));
+    });
+  });
+}
+
+function composeArgs(id, rest) {
+  const args = ['compose', '-p', `homebox-${id}`, '-f', moduleFile(id)];
+  // A version chosen from the dashboard is a second -f, never an edit to the
+  // tracked file above — see lib/pins.js. It must be on EVERY compose call,
+  // not just the updating one: an override applied by `up` and forgotten by
+  // `restart` would silently put the shipped version back.
+  const override = path.join(ROOT, 'state', 'overrides', `${id}.yml`);
+  if (fs.existsSync(override)) args.push('-f', override);
+  if (fs.existsSync(ENV_FILE)) args.push('--env-file', ENV_FILE);
+  return args.concat(rest);
+}
+
+const compose = (id, rest, options) => run('docker', composeArgs(id, rest), options);
+
+/**
+ * `.env` as an object, for handing to a child process.
+ *
+ * Deliberately the same shape compose gets from `--env-file`: a setup script
+ * should see exactly what the services it is preparing will see.
+ */
+function envFileVars() {
+  const out = {};
+  try {
+    for (const line of fs.readFileSync(ENV_FILE, 'utf8').split(/\r?\n/)) {
+      const m = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
+      if (m) out[m[1]] = m[2].replace(/^["']|["']$/g, '');
+    }
+  } catch { /* no .env yet — a first install has nothing to pass */ }
+  return out;
+}
+
+/**
+ * A module may ship setup.sh to seed config an image will not create itself
+ * (File Browser's config.yaml, the media pool's directory layout, the
+ * qBittorrent web UI account). It runs before the first start and must be
+ * safe to re-run.
+ *
+ * `.env` is passed in explicitly, and that is not a detail.
+ *
+ * This process's own environment is the DASHBOARD CONTAINER's environment,
+ * which holds the two variables its compose file happens to declare — TZ and
+ * HB_HOST_ADDRESS — and nothing else. A setup script reading HB_QBIT_PASS
+ * from it got an empty string and quietly skipped its work, every time
+ * anyone installed from the UI. The script was right; it was being handed
+ * an environment that could not answer.
+ */
+async function runSetup(id, { onLine = null } = {}) {
+  const script = path.join(MODULES_DIR, id, 'setup.sh');
+  if (!fs.existsSync(script)) return null;
+  return run('bash', [script], { timeout: 120000, onLine, env: envFileVars() });
+}
+
+/** Full install: seed, pull, start. Returns the combined transcript. */
+async function install(id, { onLine = null } = {}) {
+  const log = [];
+  if (onLine) onLine(`==> Preparing ${id}`, false);
+
+  // Before setup.sh, because a setup script reads .env: install.sh only
+  // sweeps declared secrets when the BOX is built, so a module that arrived
+  // in a later `git pull` would otherwise start on whatever default its
+  // compose file names. See lib/secrets.js.
+  const made = await secrets.ensureFor(id);
+  if (made.length && onLine) onLine(`==> Generated ${made.join(', ')}`, false);
+
+  const setup = await runSetup(id, { onLine });
+  if (setup) log.push(`# setup.sh\n${setup.stdout}${setup.stderr}`);
+
+  // A failed pull is not fatal: an image already present locally still
+  // starts, and a registry hiccup should not block bringing a module back up.
+  try {
+    if (onLine) onLine(`==> Pulling images for ${id}`, false);
+    const pull = await compose(id, ['pull'], { timeout: 900000, onLine });
+    log.push(`# pull\n${pull.stdout}${pull.stderr}`);
+  } catch (err) {
+    log.push(`# pull (continuing anyway)\n${err.stderr || err.message}`);
+    if (onLine) onLine('==> Pull failed — trying with the images already on this box', true);
+  }
+
+  // --build matters for any module with a `build:` section — the dashboard is
+  // one. `up` alone builds only when the image is MISSING, so once a stale
+  // `homebox-dashboard:local` exists it is reused forever and an install
+  // silently runs old code. Compose says so in a warning nobody reads:
+  // "Some service image(s) must be built from source". Harmless for the
+  // image-only modules, which have nothing to build.
+  if (onLine) onLine(`==> Building and starting ${id}`, false);
+  const up = await compose(id, ['up', '-d', '--build', '--remove-orphans'], { timeout: 900000, onLine });
+  log.push(`# up\n${up.stdout}${up.stderr}`);
+  return log.join('\n');
+}
+
+/**
+ * Uninstall: remove the containers but keep modules/<id>/config, so
+ * reinstalling brings the app back with its settings and history intact.
+ */
+const down = (id, { onLine = null } = {}) => compose(id, ['down', '--remove-orphans'], { onLine });
+
+/**
+ * Uninstall and erase. Deletes the module's config directory, which is where
+ * an app's database and settings live — this is the one operation here that
+ * cannot be undone, so it is a separate verb rather than a flag on `down`.
+ */
+async function purge(id, { onLine = null } = {}) {
+  const result = await compose(id, ['down', '--remove-orphans', '--volumes'], { onLine });
+  // Recompute the path through moduleFile() so a bad id cannot reach rm.
+  const dir = path.join(path.dirname(moduleFile(id)), 'config');
+  await fsp.rm(dir, { recursive: true, force: true });
+  // The keys that protected what was just deleted. Leaving them behind is a
+  // wipe with the locks still on the wall, and it makes a reinstall reuse a
+  // secret whose data is gone.
+  const forgotten = await secrets.forgetFor(id);
+  const noted = forgotten.length ? 'forgot ' + forgotten.join(', ') : '';
+  const trail = [result.stdout, "removed " + dir, noted, ""].filter(Boolean).join(String.fromCharCode(10));
+  return { stdout: trail, stderr: result.stderr };
+}
+
+const start = (id, { onLine = null } = {}) => compose(id, ['up', '-d', '--remove-orphans'], { onLine });
+const stop = (id, { onLine = null } = {}) => compose(id, ['stop'], { onLine });
+const restart = (id, { onLine = null } = {}) => compose(id, ['restart'], { onLine });
+const pull = (id, { onLine = null } = {}) => compose(id, ['pull'], { timeout: 900000, onLine });
+
+async function update(id, { onLine = null } = {}) {
+  if (onLine) onLine(`==> Pulling newer images for ${id}`, false);
+  // A module built from source has no image in any registry, so the pull ends
+  // in "pull access denied" and rejects — which used to abort the update
+  // before the rebuild below ever ran. A failed pull is not fatal here: the
+  // build is what actually produces the new image.
+  try {
+    await pull(id, { onLine });
+  } catch (err) {
+    if (onLine) onLine('==> Nothing to pull — this module builds from source', false);
+  }
+  if (onLine) onLine(`==> Rebuilding and recreating ${id}`, false);
+  // Same reason as install(): without --build, updating a module that builds
+  // from source pulls new base layers and then runs the old image anyway.
+  return compose(id, ['up', '-d', '--build', '--remove-orphans'], { timeout: 900000, onLine });
+}
+
+// A compose service name, for the same reason module ids are validated: it
+// reaches an argv slot, and nothing that is not a service name belongs there.
+const SERVICE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/;
+
+function checkService(name) {
+  if (!SERVICE_PATTERN.test(name)) throw new ComposeError(`invalid service name: ${name}`);
+  return name;
+}
+
+/**
+ * Pull one service's image, without touching the rest of the module.
+ *
+ * The Updates page works service by service on purpose: a module like `media`
+ * runs six containers, and a rebuild of Bazarr is no reason to recreate
+ * Sonarr mid-download.
+ */
+const pullService = (id, service, { onLine = null } = {}) =>
+  compose(id, ['pull', checkService(service)], { timeout: 900000, onLine });
+
+/**
+ * Recreate one service against whatever image its tag now points at.
+ *
+ * `--no-deps` is the important flag: without it compose brings the service's
+ * dependencies up too, which on a module with a database means restarting the
+ * database to update the web front end.
+ */
+/**
+ * Restart one service, leaving the rest of its module running.
+ *
+ * NOT `up -d`: compose recreates a container only when the compose SPEC
+ * changes, so after editing a config file on a bind mount it reports
+ * "up-to-date" and leaves the old process running with the old config in
+ * memory. An app that reads its config at startup needs an actual restart.
+ */
+const restartService = (id, service, { onLine = null } = {}) =>
+  compose(id, ['restart', checkService(service)], { timeout: 180000, onLine });
+
+/** Stop one service, leaving the rest of its module running. */
+const stopService = (id, service, { onLine = null } = {}) =>
+  compose(id, ['stop', checkService(service)], { timeout: 120000, onLine });
+
+const upService = (id, service, { onLine = null } = {}) =>
+  compose(id, ['up', '-d', '--no-deps', checkService(service)], { timeout: 900000, onLine });
+
+/**
+ * Point a tag back at an image that is still on disk.
+ *
+ * This is the rollback. A pull does not delete what it replaced — it only
+ * moves the tag — so the previous image is still here by id, and re-tagging
+ * it and recreating the service puts the box back exactly where it was. That
+ * is why the update flow records the old image id BEFORE pulling; without it
+ * a failed update leaves you on a broken new version with no way back that
+ * does not involve the registry.
+ */
+function retag(imageId, ref) {
+  if (!/^sha256:[a-f0-9]{64}$/.test(String(imageId || ''))) {
+    throw new ComposeError(`invalid image id: ${imageId}`);
+  }
+  if (!/^[A-Za-z0-9][A-Za-z0-9_.\-/:]{0,255}$/.test(String(ref || ''))) {
+    throw new ComposeError(`invalid image reference: ${ref}`);
+  }
+  return run('docker', ['tag', imageId, ref], { timeout: 60000 });
+}
+
+/**
+ * Recreate the dashboard itself, from outside the dashboard.
+ *
+ * A settings change the dashboard reads — TZ, the paths, the LAN address —
+ * means its container has to be replaced like any other, because a container
+ * keeps the environment it was created with. It cannot do that by running
+ * `compose up -d` itself: the first thing compose does is STOP the container,
+ * which kills the process running compose, so the create half never gets
+ * sent. The result is a dashboard that takes itself down and does not come
+ * back. Measured, on a live box, the hard way — a delay does not help, since
+ * the problem is not timing but that the process dies mid-command.
+ *
+ * So the work is handed to a container that outlives us: a detached, throwaway
+ * sibling running the same image (guaranteed present — we are running it),
+ * holding the Docker socket and the HomeBox tree, whose only job is that one
+ * compose command. Docker keeps it alive after this container is gone.
+ *
+ * Returns once the helper has been STARTED, not once the recreate is done —
+ * by then this process is being stopped, so there is nothing left to wait
+ * with.
+ */
+async function selfRecreate(image) {
+  if (!/^[A-Za-z0-9][A-Za-z0-9_.\-/:]{0,255}$/.test(String(image || ''))) {
+    throw new ComposeError(`refusing to run a helper from a suspicious image: ${image}`);
+  }
+  const args = [
+    'run', '--detach', '--rm',
+    '-v', '/var/run/docker.sock:/var/run/docker.sock',
+    '-v', `${ROOT}:${ROOT}`,
+    '-w', ROOT,
+    '--entrypoint', 'docker',
+    image,
+    'compose', '-p', 'homebox-dashboard', '-f', moduleFile('dashboard'),
+  ];
+  if (fs.existsSync(ENV_FILE)) args.push('--env-file', ENV_FILE);
+  args.push('up', '-d', '--remove-orphans');
+  return run('docker', args, { timeout: 60000 });
+}
+
+/**
+ * Per-container lifecycle, for the Running list's Logs / Restart / Pause
+ * buttons. It goes through the docker CLI rather than the Engine API so that
+ * every write on this box lands in one file — and through the same argv-only
+ * runner, so a container name can never become shell syntax.
+ *
+ * "Pause" in the UI is `docker stop`: it keeps the container and its data and
+ * is what a person means by pausing an app. Docker's own `pause` (SIGSTOP)
+ * leaves a frozen process holding its ports, which is not that.
+ */
+const CONTAINER_ACTIONS = { restart: 'restart', stop: 'stop', start: 'start' };
+const NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/;
+
+function containerAction(name, action) {
+  if (!NAME_PATTERN.test(name)) throw new ComposeError(`invalid container name: ${name}`);
+  const verb = CONTAINER_ACTIONS[action];
+  if (!verb) throw new ComposeError(`unknown container action: ${action}`);
+  return run('docker', [verb, name], { timeout: 120000 });
+}
+
+/** True when `docker compose` is usable from inside this container. */
+async function available() {
+  try {
+    await run('docker', ['compose', 'version'], { timeout: 10000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+module.exports = {
+  install, start, stop, restart, down, purge, update, pull, available, runSetup,
+  pullService, upService, stopService, restartService, retag, selfRecreate,
+  // The argv-only runner itself, for lib/storage.js — it drives `docker run`
+  // rather than `docker compose`, and reimplementing the line buffering and
+  // the timeout a second time is how the two drift apart.
+  run,
+  containerAction, CONTAINER_ACTIONS, ComposeError, ID_PATTERN,
+};

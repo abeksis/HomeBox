@@ -1,0 +1,342 @@
+{
+  "tagline": {
+    "en": "your own apps, on your own box",
+    "he": "האפליקציות שלך, על השרת שלך"
+  },
+  "meta_description": {
+    "en": "HomeBox installs and runs self-hosted apps on your own Linux box — photos, media, passwords, remote access — with one command, safe updates and encrypted backups.",
+    "he": "HomeBox מתקינה ומריצה אפליקציות על שרת לינוקס משלך — תמונות, מדיה, סיסמאות, גישה מרחוק — בפקודה אחת, עם עדכונים בטוחים וגיבויים מוצפנים."
+  },
+  "lang_name": {
+    "en": "English",
+    "he": "עברית"
+  },
+  "nav_label": {
+    "en": "Main",
+    "he": "ראשי"
+  },
+  "nav_apps": {
+    "en": "Apps",
+    "he": "אפליקציות"
+  },
+  "nav_guides": {
+    "en": "Guides",
+    "he": "מדריכים"
+  },
+  "nav_changelog": {
+    "en": "Changelog",
+    "he": "יומן שינויים"
+  },
+  "skip": {
+    "en": "Skip to content",
+    "he": "דלג לתוכן"
+  },
+  "footer": {
+    "en": "HomeBox is open source. Nothing about you leaves your box.",
+    "he": "HomeBox בקוד פתוח. שום מידע עליך לא יוצא מהשרת."
+  },
+  "source": {
+    "en": "Source on GitHub",
+    "he": "הקוד ב-GitHub"
+  },
+  "copy": {
+    "en": "Copy",
+    "he": "העתק"
+  },
+  "copied": {
+    "en": "Copied",
+    "he": "הועתק"
+  },
+  "eyebrow": {
+    "en": "Open-source home server platform",
+    "he": "פלטפורמת קוד פתוח לשרת ביתי"
+  },
+  "hero_title": {
+    "en": "Your own apps, on your own box.",
+    "he": "האפליקציות שלך, על השרת שלך."
+  },
+  "hero_lead": {
+    "en": "One command turns a Debian or Ubuntu machine into a home server with a dashboard. Pick apps from a catalog, and HomeBox pulls them, starts them, and tells you where to log in.",
+    "he": "פקודה אחת הופכת מכונת Debian או Ubuntu לשרת ביתי עם לוח בקרה. בוחרים אפליקציות מקטלוג, ו-HomeBox מורידה אותן, מפעילה אותן, ואומרת לך איפה להתחבר."
+  },
+  "requirements": {
+    "en": "Debian or Ubuntu · x86-64 or ARM64 · about 3 minutes",
+    "he": "Debian או Ubuntu · x86-64 או ARM64 · כ-3 דקות"
+  },
+  "install_guide_link": {
+    "en": "Installation guide",
+    "he": "מדריך התקנה"
+  },
+  "features_title": {
+    "en": "What you get",
+    "he": "מה מקבלים"
+  },
+  "f_one_title": {
+    "en": "One command, then a dashboard",
+    "he": "פקודה אחת, ואז לוח בקרה"
+  },
+  "f_one_body": {
+    "en": "Docker, the reverse proxy, generated passwords and the dashboard are set up for you. After that it is point and click — install an app, open it, read its logs.",
+    "he": "Docker, ה-reverse proxy, סיסמאות שנוצרות אוטומטית ולוח הבקרה מוגדרים בשבילך. מכאן הכל בלחיצות — מתקינים אפליקציה, פותחים אותה, קוראים את הלוגים שלה."
+  },
+  "f_updates_title": {
+    "en": "Updates with a way back",
+    "he": "עדכונים עם דרך חזרה"
+  },
+  "f_updates_body": {
+    "en": "HomeBox checks for new releases in the background and puts a red dot on Updates. One button updates it — and if the new version does not come up healthy, it puts the previous one back by itself.",
+    "he": "HomeBox בודקת ברקע אם יש גרסה חדשה ומסמנת נקודה אדומה ליד Updates. כפתור אחד מעדכן — ואם הגרסה החדשה לא עולה תקינה, היא מחזירה את הקודמת לבד."
+  },
+  "f_backups_title": {
+    "en": "Encrypted, proportionate backups",
+    "he": "גיבויים מוצפנים ובגודל הגיוני"
+  },
+  "f_backups_body": {
+    "en": "Scheduled encrypted backups of every app's settings and databases. Updating one app backs up that app only, and skips artwork and logs the app can fetch again.",
+    "he": "גיבויים מוצפנים מתוזמנים של ההגדרות ומסדי הנתונים של כל אפליקציה. עדכון אפליקציה אחת מגבה רק אותה, ומדלג על תמונות ולוגים שהאפליקציה יודעת להוריד שוב."
+  },
+  "f_remote_title": {
+    "en": "Reach it from anywhere",
+    "he": "גישה מכל מקום"
+  },
+  "f_remote_body": {
+    "en": "Tailscale, your own Headscale server, a WireGuard VPN or a Cloudflare Tunnel — each is one module, with a guide on which to pick.",
+    "he": "Tailscale, שרת Headscale משלך, VPN של WireGuard או Cloudflare Tunnel — כל אחד מהם מודול אחד, עם מדריך איזה לבחור."
+  },
+  "f_logs_title": {
+    "en": "See what is happening",
+    "he": "רואים מה קורה"
+  },
+  "f_logs_body": {
+    "en": "Live logs for every app in your own timezone, host CPU, memory and disk, and a single health line that says whether anything needs you.",
+    "he": "לוגים חיים לכל אפליקציה באזור הזמן שלך, מעבד, זיכרון ודיסק של השרת, ושורת מצב אחת שאומרת אם משהו צריך אותך."
+  },
+  "f_yours_title": {
+    "en": "Yours, and only yours",
+    "he": "שלך, ורק שלך"
+  },
+  "f_yours_body": {
+    "en": "No account and no cloud in the middle — only an anonymous count of installs and versions, which you can switch off. Every app is the real upstream project, and your data stays on your disk.",
+    "he": "בלי חשבון ובלי ענן באמצע — רק ספירה אנונימית של התקנות וגרסאות, שאפשר לכבות. כל אפליקציה היא הפרויקט המקורי, והנתונים שלך נשארים על הדיסק שלך."
+  },
+  "screens_title": {
+    "en": "The dashboard",
+    "he": "לוח הבקרה"
+  },
+  "apps_title": {
+    "en": "{n} apps in the catalog",
+    "he": "{n} אפליקציות בקטלוג"
+  },
+  "apps_lead": {
+    "en": "Every app installs from the dashboard with one click, or from a terminal with one command.",
+    "he": "כל אפליקציה מותקנת מלוח הבקרה בלחיצה אחת, או מהטרמינל בפקודה אחת."
+  },
+  "all_apps": {
+    "en": "All apps →",
+    "he": "כל האפליקציות ←"
+  },
+  "all": {
+    "en": "All",
+    "he": "הכל"
+  },
+  "search_apps": {
+    "en": "Search apps",
+    "he": "חיפוש אפליקציה"
+  },
+  "no_match": {
+    "en": "No app matches.",
+    "he": "אין אפליקציה שתואמת."
+  },
+  "cat_core": {
+    "en": "Core",
+    "he": "ליבה"
+  },
+  "cat_media": {
+    "en": "Media",
+    "he": "מדיה"
+  },
+  "cat_photos": {
+    "en": "Photos",
+    "he": "תמונות"
+  },
+  "cat_files": {
+    "en": "Files",
+    "he": "קבצים"
+  },
+  "cat_security": {
+    "en": "Security",
+    "he": "אבטחה"
+  },
+  "cat_network": {
+    "en": "Network",
+    "he": "רשת"
+  },
+  "cat_productivity": {
+    "en": "Productivity",
+    "he": "פרודוקטיביות"
+  },
+  "cat_system": {
+    "en": "System",
+    "he": "מערכת"
+  },
+  "cat_other": {
+    "en": "Games & other",
+    "he": "משחקים ועוד"
+  },
+  "category": {
+    "en": "Category",
+    "he": "קטגוריה"
+  },
+  "memory": {
+    "en": "Memory",
+    "he": "זיכרון"
+  },
+  "module_id": {
+    "en": "Module",
+    "he": "מודול"
+  },
+  "how_install": {
+    "en": "Installing it",
+    "he": "התקנה"
+  },
+  "how_install_body": {
+    "en": "Open the dashboard, go to Apps, press Add on it and apply the change. Or from a terminal on the box:",
+    "he": "פותחים את לוח הבקרה, נכנסים ל-Apps, לוחצים Add על האפליקציה ומאשרים את השינוי. או מטרמינל על השרת:"
+  },
+  "where_to_open": {
+    "en": "Where to open it",
+    "he": "איפה פותחים אותה"
+  },
+  "service": {
+    "en": "Service",
+    "he": "שירות"
+  },
+  "port": {
+    "en": "Port",
+    "he": "פורט"
+  },
+  "first_login": {
+    "en": "First login",
+    "he": "התחברות ראשונה"
+  },
+  "port_note": {
+    "en": "Open it at your box's address with that port — the dashboard links to it directly once it is running.",
+    "he": "פותחים בכתובת של השרת עם הפורט הזה — לוח הבקרה מקשר אליה ישירות ברגע שהיא רצה."
+  },
+  "tips": {
+    "en": "Good to know",
+    "he": "כדאי לדעת"
+  },
+  "tips_in_english": {
+    "en": "",
+    "he": "הטיפים הבאים מופיעים באנגלית, כפי שהם כתובים במודול."
+  },
+  "text_in_english": {
+    "en": "",
+    "he": "התיאור של האפליקציה הזאת עודכן לאחרונה, והתרגום לעברית עוד לא — לכן הוא מוצג באנגלית."
+  },
+  "view_definition": {
+    "en": "View this app's definition on GitHub",
+    "he": "ההגדרה של האפליקציה ב-GitHub"
+  },
+  "guides_title": {
+    "en": "Guides",
+    "he": "מדריכים"
+  },
+  "guides_lead": {
+    "en": "From a blank machine to a box you can reach from anywhere.",
+    "he": "ממכונה ריקה לשרת שאפשר להגיע אליו מכל מקום."
+  },
+  "all_guides": {
+    "en": "All guides →",
+    "he": "כל המדריכים ←"
+  },
+  "changelog_lead": {
+    "en": "Every HomeBox release, newest first.",
+    "he": "כל הגרסאות של HomeBox, מהחדשה לישנה."
+  },
+  "changelog_english": {
+    "en": "",
+    "he": "הערות הגרסה נכתבות באנגלית."
+  },
+  "see_tags": {
+    "en": "See the releases on GitHub",
+    "he": "הגרסאות ב-GitHub"
+  },
+  "hero_title_a": {
+    "en": "Your own apps,",
+    "he": "האפליקציות שלך,"
+  },
+  "hero_title_b": {
+    "en": "on your own box.",
+    "he": "על השרת שלך."
+  },
+  "install_label": {
+    "en": "Install on Debian or Ubuntu",
+    "he": "התקנה על Debian או Ubuntu"
+  },
+  "install_copy": {
+    "en": "Copy",
+    "he": "העתק"
+  },
+  "stat_apps": {
+    "en": "apps in the catalog",
+    "he": "אפליקציות בקטלוג"
+  },
+  "stat_guides": {
+    "en": "step-by-step guides",
+    "he": "מדריכים צעד אחר צעד"
+  },
+  "stat_releases": {
+    "en": "releases shipped",
+    "he": "גרסאות שפורסמו"
+  },
+  "stat_accounts": {
+    "en": "accounts or personal data",
+    "he": "חשבונות או מידע אישי"
+  },
+  "features_eyebrow": {
+    "en": "Built in",
+    "he": "מובנה"
+  },
+  "features_heading": {
+    "en": "Everything around the apps, handled.",
+    "he": "כל מה שמסביב לאפליקציות — מטופל."
+  },
+  "features_side": {
+    "en": "Everything around the apps — the proxy, passwords, updates, backups and a way in from outside — comes with the box.",
+    "he": "כל מה שמסביב לאפליקציות — ה-proxy, הסיסמאות, העדכונים, הגיבויים והגישה מבחוץ — מגיע עם השרת."
+  },
+  "apps_eyebrow": {
+    "en": "The catalog",
+    "he": "הקטלוג"
+  },
+  "apps_heading": {
+    "en": "Pick what you need. Leave the rest.",
+    "he": "בוחרים מה שצריך. משאירים את השאר."
+  },
+  "apps_side": {
+    "en": "Each app is a module HomeBox knows how to install, update, back up and remove — photo libraries, media servers, password vaults, home automation and more.",
+    "he": "כל אפליקציה היא מודול ש-HomeBox יודעת להתקין, לעדכן, לגבות ולהסיר — ספריות תמונות, שרתי מדיה, כספות סיסמאות, בית חכם ועוד."
+  },
+  "more_in_catalog": {
+    "en": "Browse all {n} apps",
+    "he": "לכל {n} האפליקציות"
+  },
+  "guides_eyebrow": {
+    "en": "Guides",
+    "he": "מדריכים"
+  },
+  "guides_heading": {
+    "en": "Start here",
+    "he": "מתחילים כאן"
+  },
+  "nav_install": {
+    "en": "Install",
+    "he": "התקנה"
+  },
+  "cta_heading": {
+    "en": "Ready when your box is.",
+    "he": "מוכן כשהשרת שלך מוכן."
+  }
+}
