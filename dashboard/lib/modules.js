@@ -187,8 +187,8 @@ async function loadAll() {
  * "1/2 running · partial" forever — HomeBox reporting itself as half broken.
  *
  * Excluded here, at the one place module membership is decided, so the card,
- * the counts and the Running list all agree. It stays visible in the
- * Containers table and the Logs picker, which is the reason it is kept.
+ * the counts and Your apps all agree. It stays visible in the Logs picker,
+ * which is the reason it is kept.
  */
 const PLATFORM_CONTAINERS = new Set(['homebox-self-update']);
 

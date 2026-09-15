@@ -29,8 +29,6 @@ const state = {
   bookmarkMax: 60,
   // Card clicks queue here instead of firing; the apply bar commits the set.
   pending: new Map(),
-  containerFilter: 'all',
-  containerQuery: '',
   busy: new Set(),
   // App cards whose setup notes are unfolded. The catalog is rebuilt on every
   // module refresh, which would otherwise fold them back under the reader.
@@ -256,7 +254,7 @@ const STATUS_LABEL = {
 
 /* --------------------------------------------------------------- routing */
 
-const PAGES = ['home', 'apps', 'containers', 'logs', 'updates', 'settings'];
+const PAGES = ['home', 'apps', 'logs', 'updates', 'settings'];
 
 function show(page) {
   const target = PAGES.includes(page) ? page : 'home';
@@ -620,11 +618,34 @@ function actionText(entry) {
 
 /* ------------------------------------------------------------- apps page */
 
+// Line glyphs for the category tiles, drawn on a 24-unit grid. A category the
+// list does not know gets the generic box rather than nothing.
+const CATEGORY_GLYPHS = {
+  all: '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>',
+  core: '<path d="M12 3 20 7.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/>',
+  media: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m10 9 5 3-5 3z"/>',
+  photos: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-9 8"/>',
+  files: '<path d="M3.5 7a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>',
+  security: '<path d="M12 3 19 6v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="m9 12 2 2 4-4"/>',
+  network: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.5 3.5 5.5 3.5 8.5s-1 6-3.5 8.5c-2.5-2.5-3.5-5.5-3.5-8.5s1-6 3.5-8.5z"/>',
+  productivity: '<rect x="4" y="4" width="16" height="17" rx="2"/><path d="M8 3v3M16 3v3M4 9h16M8 13h3M8 17h6"/>',
+  system: '<rect x="3.5" y="4" width="17" height="12" rx="2"/><path d="M8 20h8M12 16v4M7 12l3-3 2 2 4-4"/>',
+  other: '<circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/>',
+};
+
 function renderCategories() {
   const used = new Set(state.modules.map((m) => m.category));
-  const chips = [{ id: 'all', label: 'All' }, ...state.categories.filter((c) => used.has(c.id))];
-  $('#category-chips').innerHTML = chips.map((c) => `
-    <button type="button" class="chip${state.category === c.id ? ' is-on' : ''}" data-category="${escapeHtml(c.id)}">${escapeHtml(c.label)}</button>`).join('');
+  const tiles = [{ id: 'all', label: 'All' }, ...state.categories.filter((c) => used.has(c.id))];
+  $('#category-chips').innerHTML = tiles.map((c) => {
+    const mods = c.id === 'all' ? state.modules : state.modules.filter((m) => m.category === c.id);
+    const installed = mods.filter((m) => m.installed).length;
+    const on = state.category === c.id;
+    return `<button type="button" class="category-tile${on ? ' is-on' : ''}" data-category="${escapeHtml(c.id)}" aria-pressed="${on}">
+      <svg viewBox="0 0 24 24" aria-hidden="true">${CATEGORY_GLYPHS[c.id] || CATEGORY_GLYPHS.core}</svg>
+      <span class="category-tile-name">${escapeHtml(c.label)}</span>
+      <span class="category-tile-count">${mods.length} app${mods.length === 1 ? '' : 's'}${installed ? ` · <b>${installed} on</b>` : ''}</span>
+    </button>`;
+  }).join('');
 }
 
 function matchesQuery(mod, query) {
@@ -831,48 +852,6 @@ function renderApps() {
   }
 }
 
-/* -------------------------------------------------------- containers page */
-
-const CONTAINER_FILTERS = [
-  { id: 'all', label: 'All' },
-  { id: 'running', label: 'Running' },
-  { id: 'stopped', label: 'Stopped' },
-  { id: 'unhealthy', label: 'Needs attention' },
-];
-
-function renderContainerChips() {
-  $('#container-chips').innerHTML = CONTAINER_FILTERS.map((f) => `
-    <button type="button" class="chip${state.containerFilter === f.id ? ' is-on' : ''}" data-cfilter="${escapeHtml(f.id)}">${escapeHtml(f.label)}</button>`).join('');
-}
-
-function moduleForContainer(c) {
-  if (!c.project) return null;
-  const mod = state.modules.find((m) => `homebox-${m.id}` === c.project);
-  return mod ? mod.title : null;
-}
-
-function renderContainers() {
-  const query = state.containerQuery.trim().toLowerCase();
-  const rows = state.containers
-    .filter((c) => {
-      if (state.containerFilter === 'running') return c.state !== 'stopped';
-      if (state.containerFilter === 'stopped') return c.state === 'stopped';
-      if (state.containerFilter === 'unhealthy') return c.state === 'unhealthy' || c.state === 'starting';
-      return true;
-    })
-    .filter((c) => !query || `${c.name} ${c.image}`.toLowerCase().includes(query))
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  $('#containers-body').innerHTML = rows.map((c) => `
-    <tr>
-      <td><span class="state-pill" data-state="${escapeHtml(c.state)}">${escapeHtml(c.state)}</span></td>
-      <td class="cell-strong">${escapeHtml(c.name)}</td>
-      <td class="cell-muted mono">${escapeHtml(c.image)}</td>
-      <td class="cell-muted mono">${c.ports.length ? escapeHtml(c.ports.join(', ')) : '—'}</td>
-      <td class="cell-muted">${escapeHtml(moduleForContainer(c) || '—')}</td>
-      <td><button type="button" class="linkish" data-log-for="${escapeHtml(c.name)}">logs</button></td>
-    </tr>`).join('') || '<tr><td colspan="6" class="cell-muted">No container matches that.</td></tr>';
-}
 
 /* ------------------------------------------------------------- logs page */
 
@@ -2208,8 +2187,8 @@ function openModule(id) {
             <span class="sheet-row-desc">${escapeHtml(c.status)}</span>
           </span>
           <span class="state-pill" data-state="${escapeHtml(c.state)}">${escapeHtml(c.state)}</span>
-          <button type="button" class="linkish" data-log-for="${escapeHtml(c.name)}">logs</button>
-        </div>`).join('')}` : ''}
+        </div>
+        <div class="sheet-row-actions">${containerActions(c, c.state !== 'stopped')}</div>`).join('')}` : ''}
 
     ${mod.tips.length ? `<h3>Setup notes</h3><ul class="sheet-tips">${mod.tips.map((t) => `<li>${escapeHtml(t)}</li>`).join('')}</ul>` : ''}
 
@@ -2381,8 +2360,6 @@ function loadModules(force = false) {
       state.containers = state.modules.flatMap((m) => m.containers).concat(state.unclaimed);
       renderCategories();
       renderApps();
-      renderContainerChips();
-      renderContainers();
       renderLogPicker();
       renderLauncher(state.modules);
       renderModuleErrors(data.errors || []);
@@ -4190,13 +4167,6 @@ document.addEventListener('click', async (event) => {
     renderApps();
     return;
   }
-  const cfilter = event.target.closest('[data-cfilter]');
-  if (cfilter) {
-    state.containerFilter = cfilter.dataset.cfilter;
-    renderContainerChips();
-    renderContainers();
-    return;
-  }
   if (event.target.closest('#config-save')) return saveConfig();
 
   const showBtn = event.target.closest('[data-config-show]');
@@ -4391,10 +4361,6 @@ $('#store-order').addEventListener('change', (e) => {
   state.appSort = e.target.value;
   renderApps();
 });
-$('#container-search').addEventListener('input', (e) => {
-  state.containerQuery = e.target.value;
-  renderContainers();
-});
 $('#schedule-on').addEventListener('change', (e) => {
   $('#schedule-options').hidden = !e.target.checked;
 });
@@ -4462,10 +4428,9 @@ $('#log-tail').addEventListener('change', () => loadLogs());
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') closeSheet();
   if (event.key === '/' && !/^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) {
-    const box = currentPage() === 'containers' ? $('#container-search') : $('#store-query');
-    if (currentPage() !== 'containers') location.hash = '#apps';
+    location.hash = '#apps';
     event.preventDefault();
-    box.focus();
+    $('#store-query').focus();
   }
 });
 

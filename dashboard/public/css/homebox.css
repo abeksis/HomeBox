@@ -522,7 +522,27 @@ textarea.input { resize: vertical; min-height: 5rem; }
   .memory-grid i { aspect-ratio: 1; }
 }
 
-.store-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0.7rem; margin-bottom: 1rem; }
+.store-tools { display: flex; flex-direction: column; gap: 0.7rem; margin-bottom: 1rem; }
+.searchbox.store-search { flex: none; padding-right: 0.3rem; }
+.store-order {
+  flex: none; border: 0; border-left: 1px solid var(--line-strong); background: transparent;
+  color: var(--text-2); font: inherit; font-size: 0.84rem; padding: 0.35rem 0.5rem 0.35rem 0.75rem; cursor: pointer;
+}
+.store-order:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.store-order option { background: var(--surface); color: var(--text); }
+.category-tiles { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+.category-tile {
+  flex: 1 1 96px; display: flex; flex-direction: column; align-items: flex-start; gap: 0.15rem; min-width: 0;
+  padding: 0.6rem 0.7rem; border-radius: var(--radius); cursor: pointer; text-align: left;
+  background: var(--surface); border: 1px solid var(--line); color: var(--text); font: inherit;
+}
+.category-tile svg { width: 20px; height: 20px; fill: none; stroke: var(--text-2); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; margin-bottom: 0.25rem; }
+.category-tile-name { font-size: 0.88rem; font-weight: 600; }
+.category-tile-count { font-size: 0.7rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.category-tile-count b { color: var(--accent-text); font-weight: 600; }
+.category-tile:hover { border-color: var(--line-strong); }
+.category-tile.is-on { border-color: var(--accent); background: var(--accent-soft); }
+.category-tile.is-on svg { stroke: var(--accent-text); }
 .searchbox {
   flex: 1 1 280px; display: flex; align-items: center; gap: 0.5rem;
   background: var(--well); border: 1px solid var(--line-strong); border-radius: var(--radius-s); padding: 0 0.6rem;
@@ -531,7 +551,6 @@ textarea.input { resize: vertical; min-height: 5rem; }
 .searchbox-glyph { fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; flex: none; }
 .searchbox-input { flex: 1; min-width: 0; min-height: 36px; border: 0; background: none; color: var(--text); font: inherit; outline: none; }
 .searchbox-clear { border: 0; background: none; color: var(--muted); font-size: 1.2rem; cursor: pointer; }
-.sorter { display: flex; align-items: center; gap: 0.4rem; color: var(--muted); font-size: 0.86rem; }
 
 .catalog { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 0.9rem; align-items: start; }
 .module-card {
@@ -824,6 +843,7 @@ textarea.input { resize: vertical; min-height: 5rem; }
 .sheet-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .sheet-row-name { font-weight: 600; font-size: 0.9rem; }
 .sheet-row-desc { color: var(--muted); font-size: 0.8rem; }
+.sheet-row-actions { display: flex; gap: 0.3rem; justify-content: flex-end; padding-bottom: 0.45rem; }
 .sheet-note { color: var(--text-2); font-size: 0.84rem; background: var(--well); border-radius: var(--radius-s); padding: 0.45rem 0.6rem; margin: 0.1rem 0 0.4rem 2.2rem; }
 .sheet-tips { margin: 0; padding-left: 1.1rem; color: var(--text-2); font-size: 0.86rem; }
 .sheet-tips li { margin: 0.25rem 0; }

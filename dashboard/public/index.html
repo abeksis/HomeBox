@@ -67,10 +67,6 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>
       <span>Apps</span>
     </a>
-    <a href="#containers" data-page="containers" class="nav-item">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg>
-      <span>Containers</span>
-    </a>
     <a href="#logs" data-page="logs" class="nav-item">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14M5 10h14M5 15h9M5 20h6"/></svg>
       <span>Logs</span>
@@ -226,24 +222,22 @@
       <div class="memory-grid" id="memory-grid" role="img" aria-label="Memory requested, one square per percent"></div>
     </section>
 
+    <!-- Search with the order menu inside it, then one tile per category. -->
     <div class="store-tools">
-      <label class="searchbox">
+      <div class="searchbox store-search">
         <svg class="searchbox-glyph" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
           <circle cx="11" cy="11" r="6.5"/><path d="m20 20-4-4"/>
         </svg>
         <input type="text" id="store-query" class="searchbox-input"
                placeholder="Find an app by name or what it does" autocomplete="off" aria-label="Find an app">
         <button type="button" id="store-clear" class="searchbox-clear" hidden aria-label="Clear">&times;</button>
-      </label>
-      <div class="filter-chips" id="category-chips"></div>
-      <label class="sorter">
-        <span>Order</span>
-        <select id="store-order" class="select">
+        <select id="store-order" class="store-order" aria-label="Order">
           <option value="status">Installed first</option>
           <option value="name">A to Z</option>
           <option value="ram">Most memory</option>
         </select>
-      </label>
+      </div>
+      <div class="category-tiles" id="category-chips" role="group" aria-label="Categories"></div>
     </div>
 
     <div class="catalog" id="catalog-grid"></div>
@@ -258,25 +252,6 @@
     </section>
   </section>
 
-  <!-- ==================== CONTAINERS ==================== -->
-  <section id="screen-containers" class="screen">
-    <header class="screen-head">
-      <h1>Containers</h1>
-      <p>Everything Docker runs here, and which HomeBox module owns it. A container with no module was started some other way.</p>
-    </header>
-    <div class="table-tools">
-      <input type="text" class="input" id="container-search" placeholder="Filter by name or image" autocomplete="off" aria-label="Filter containers">
-      <div class="filter-chips" id="container-chips"></div>
-    </div>
-    <div class="scroll-x">
-      <table class="grid-table" id="containers-table">
-        <thead>
-          <tr><th>State</th><th>Name</th><th>Image</th><th>Ports</th><th>Module</th><th></th></tr>
-        </thead>
-        <tbody id="containers-body"></tbody>
-      </table>
-    </div>
-  </section>
 
   <!-- ==================== LOGS ==================== -->
   <section id="screen-logs" class="screen">
