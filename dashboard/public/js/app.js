@@ -365,8 +365,10 @@ function renderLauncher(modules) {
         // An app with one page is charged for everything it runs — Immich is
         // its server, its ML worker and its database, not just the web half.
         // With several pages each shows only its own container, or the same
-        // database would be counted once per tile.
-        load: appLoad(open.length === 1 ? mod.containers : [svc.container]),
+        // database would be counted once per tile. `svc.container` is only a
+        // name and a state, so the figures come from the module's full list.
+        load: appLoad(open.length === 1 ? mod.containers
+          : mod.containers.filter((c) => svc.container && c.name === svc.container.name)),
       });
     }
   }
