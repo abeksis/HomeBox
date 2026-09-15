@@ -355,12 +355,19 @@ function renderLauncher(modules) {
   const tiles = [];
   for (const mod of modules) {
     if (!mod.installed) continue;
-    for (const svc of mod.services) {
-      if (svc.internal || !svc.url) continue;
+    const open = mod.services.filter((svc) => !svc.internal && svc.url);
+    for (const svc of open) {
       const key = tileKey(mod.id, svc.name);
       if (hidden.has(key)) continue;
       const over = prefs.overrides[key] || {};
-      tiles.push({ ...svc, module: mod, friendly_name: over.name || svc.friendly_name, customIcon: over.icon || null });
+      tiles.push({
+        ...svc, module: mod, friendly_name: over.name || svc.friendly_name, customIcon: over.icon || null,
+        // An app with one page is charged for everything it runs — Immich is
+        // its server, its ML worker and its database, not just the web half.
+        // With several pages each shows only its own container, or the same
+        // database would be counted once per tile.
+        load: appLoad(open.length === 1 ? mod.containers : [svc.container]),
+      });
     }
   }
   // Personal links sit in their own group at the end: they are not apps on
@@ -399,19 +406,45 @@ function renderLauncher(modules) {
     (a, b) => (order.indexOf(a[0]) + 1 || 99) - (order.indexOf(b[0]) + 1 || 99)
   );
 
+  // Bars are measured against the hungriest app on the box, not against total
+  // memory: next to 12GB nearly every app is a sliver and the board says nothing.
+  const peak = Math.max(1, ...tiles.map((t) => (t.load && t.load.memory) || 0));
+  const byMemory = (a, b) => ((b.load && b.load.memory) || 0) - ((a.load && a.load.memory) || 0);
+
   $('#dock').innerHTML = sorted.map(([category, items]) => `
     <div class="dock-group">
-      <div class="dock-label">${escapeHtml(label[category] || category)}</div>
-      <div class="dock-grid">${items.map(launchTile).join('')}</div>
+      <div class="dock-label">${escapeHtml(label[category] || category)}<span>${items.length}</span></div>
+      <div class="dock-grid">${items.sort(byMemory).map((t) => launchTile(t, peak)).join('')}</div>
     </div>`).join('');
 }
 
-/** One app on the Overview: its icon on a light tile, its name, and a state dot. */
-function launchTile(tile) {
+/** Memory and CPU summed over a set of containers; nulls when none reported. */
+function appLoad(containers) {
+  const live = (containers || []).filter((c) => c && c.memory != null);
+  if (!live.length) return null;
+  return {
+    memory: live.reduce((sum, c) => sum + c.memory, 0),
+    cpu: live.some((c) => c.cpu != null) ? live.reduce((sum, c) => sum + (c.cpu || 0), 0) : null,
+  };
+}
+
+/** One app on the Overview: icon, name, state, and how much it is using. */
+function launchTile(tile, peak) {
   const st = tile.container ? tile.container.state : null;
   const down = st === 'stopped' || st === 'unhealthy';
   const color = tile.color || (tile.module.theme && tile.module.theme.color) || null;
-  const pip = st ? `<span class="dock-state" data-state="${escapeHtml(st)}" title="${escapeHtml(st)}"></span>` : '';
+  const pip = st ? `<span class="dot ${down ? 'is-off' : 'is-on'}" data-state="${escapeHtml(st)}" title="${escapeHtml(st)}"></span>` : '';
+  const load = tile.load;
+  let usage;
+  if (!tile.container) {
+    usage = '<div class="dock-usage"><span>Link</span></div>';
+  } else if (down) {
+    usage = `<div class="dock-usage"><span>${st === 'stopped' ? 'Stopped' : 'Unhealthy'}</span><b>--</b></div><div class="dock-bar"></div>`;
+  } else {
+    const pct = load ? Math.max(2, Math.round((load.memory / peak) * 100)) : 0;
+    usage = `<div class="dock-usage"><span>Memory${load && load.cpu != null ? ` · CPU ${load.cpu}%` : ''}</span><b>${load ? bytes(load.memory) : '--'}</b></div>
+      <div class="dock-bar"><i style="width:${pct}%"></i></div>`;
+  }
 
   // A per-browser override wins, then the service's own icon, then the
   // module's emoji — a user-added module has no icon file to point at, so the
@@ -453,8 +486,12 @@ function launchTile(tile) {
 
   return `<a class="dock-tile${down ? ' is-down' : ''}" href="${escapeHtml(tile.url)}" target="_blank" rel="noopener noreferrer"${first}
       title="${escapeHtml(tile.description || tile.friendly_name)}">
-      <span class="dock-art">${art}${pip}</span>
-      <span class="dock-name">${escapeHtml(tile.friendly_name)}</span>
+      <span class="dock-head">
+        <span class="dock-art">${art}</span>
+        <span class="dock-name">${escapeHtml(tile.friendly_name)}</span>
+        ${pip}
+      </span>
+      ${usage}
     </a>`;
 }
 
