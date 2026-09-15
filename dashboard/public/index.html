@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="dark" data-accent="orange">
+<html lang="en" data-theme="dim" data-accent="orange">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -201,16 +201,18 @@
           <h2 class="panel-title">Addresses</h2>
           <span class="panel-note mono" id="net-address"></span>
         </div>
-        <div class="facts" id="net-facts"></div>
+        <div class="address-list" id="net-facts"></div>
       </section>
 
-      <!-- SAFETY NET — what would be lost, and whether anything copies it -->
-      <section class="panel area-safety">
+      <!-- SAFETY NET — one plain answer about backups, and the button for it -->
+      <section class="panel area-safety safety" id="safety" data-level="unknown">
         <div class="panel-head">
           <h2 class="panel-title">Backups</h2>
           <span class="panel-note mono" id="safety-count"></span>
         </div>
-        <div class="stat-rows" id="safety-facts"></div>
+        <strong class="safety-answer" id="safety-answer">--</strong>
+        <p class="safety-detail" id="safety-detail"></p>
+        <div class="safety-actions" id="safety-actions"></div>
       </section>
     </div>
   </section>

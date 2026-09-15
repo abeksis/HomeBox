@@ -338,5 +338,125 @@
   "cta_heading": {
     "en": "Ready when your box is.",
     "he": "מוכן כשהשרת שלך מוכן."
+  },
+  "nav_home": {
+    "en": "Home",
+    "he": "בית"
+  },
+  "hero_b_title_a": {
+    "en": "A home server that tells you",
+    "he": "שרת ביתי שאומר לך"
+  },
+  "hero_b_title_b": {
+    "en": "how it is doing.",
+    "he": "מה שלומו."
+  },
+  "hero_b_lead": {
+    "en": "One command turns a Debian or Ubuntu machine into HomeBox. Then you install apps, watch what they use, update them and back them up — from one page.",
+    "he": "פקודה אחת הופכת מכונת Debian או Ubuntu ל-HomeBox. משם מתקינים אפליקציות, רואים כמה הן צורכות, מעדכנים ומגבים — מדף אחד."
+  },
+  "hero_b_meta": {
+    "en": "no account",
+    "he": "בלי חשבון"
+  },
+  "preview_label": {
+    "en": "Overview",
+    "he": "סקירה"
+  },
+  "preview_note": {
+    "en": "The dashboard you get, with example figures.",
+    "he": "לוח הבקרה שתקבל, עם מספרים לדוגמה."
+  },
+  "pv_status": {
+    "en": "Status",
+    "he": "סטטוס"
+  },
+  "pv_all_running": {
+    "en": "All running",
+    "he": "הכול רץ"
+  },
+  "pv_apps": {
+    "en": "Apps",
+    "he": "אפליקציות"
+  },
+  "pv_containers": {
+    "en": "Containers",
+    "he": "קונטיינרים"
+  },
+  "pv_up": {
+    "en": "{n} up",
+    "he": "{n} פעילים"
+  },
+  "pv_updates": {
+    "en": "Updates",
+    "he": "עדכונים"
+  },
+  "pv_waiting": {
+    "en": "{n} waiting",
+    "he": "{n} ממתינים"
+  },
+  "pv_memory": {
+    "en": "Memory",
+    "he": "זיכרון"
+  },
+  "panels_heading": {
+    "en": "Everything around the apps",
+    "he": "כל מה שמסביב לאפליקציות"
+  },
+  "panels_side": {
+    "en": "These are the panels from the dashboard itself.",
+    "he": "אלה הפאנלים מתוך לוח הבקרה עצמו."
+  },
+  "pn_updates_note": {
+    "en": "checks every 6 hours",
+    "he": "בודק כל 6 שעות"
+  },
+  "pn_new_version": {
+    "en": "new version",
+    "he": "גרסה חדשה"
+  },
+  "pn_rebuild": {
+    "en": "security rebuild",
+    "he": "עדכון אבטחה"
+  },
+  "pn_upgrade": {
+    "en": "Upgrade",
+    "he": "שדרוג"
+  },
+  "pn_update": {
+    "en": "Update",
+    "he": "עדכון"
+  },
+  "pn_same_version": {
+    "en": "same version, patched",
+    "he": "אותה גרסה, עם תיקונים"
+  },
+  "pn_backed_up": {
+    "en": "Backed up 6 hours ago",
+    "he": "גובה לפני 6 שעות"
+  },
+  "pn_backups_note": {
+    "en": "encrypted",
+    "he": "מוצפן"
+  },
+  "groups_heading": {
+    "en": "{n} apps, grouped like on your box",
+    "he": "{n} אפליקציות, מקובצות כמו אצלך בשרת"
+  },
+  "grp_media": {
+    "en": "Photos and media",
+    "he": "תמונות ומדיה"
+  },
+  "grp_home": {
+    "en": "Home and privacy",
+    "he": "בית ופרטיות"
+  },
+  "grp_work": {
+    "en": "Files and work",
+    "he": "קבצים ועבודה"
+  },
+  "apps_count": {
+    "en": "{n} apps",
+    "he": "{n} אפליקציות"
   }
 }

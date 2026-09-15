@@ -193,6 +193,7 @@ function layout({ lang, pagePath, title, description, body, current }) {
   const dir = lang === 'he' ? 'rtl' : 'ltr';
   const fullTitle = title ? `${title} · HomeBox` : `HomeBox — ${t(lang, 'tagline')}`;
   const nav = [
+    ['home', '', t(lang, 'nav_home')],
     ['apps', 'apps/', t(lang, 'nav_apps')],
     ['guides', 'guides/', t(lang, 'nav_guides')],
     ['changelog', 'changelog/', t(lang, 'nav_changelog')],
@@ -248,24 +249,6 @@ const installBlock = (lang, id = 'install-cmd') => `
   <button type="button" class="copy" data-copy="#${id}" data-done="${esc(t(lang, 'copied'))}">${esc(t(lang, 'copy'))}</button>
 </div>`;
 
-// The hero's install card: the command in a terminal line, one big copy button.
-const installCard = (lang) => `
-<div class="install-card">
-  <p class="install-label">${esc(t(lang, 'install_label'))}</p>
-  ${installBlock(lang, 'hero-cmd')}
-  <p class="install-meta">${esc(t(lang, 'requirements'))} · <a href="${href(lang, 'guides/install/')}">${esc(t(lang, 'install_guide_link'))}</a></p>
-</div>`;
-
-// Section header in the house style: small mono label, big heading, and a line of context beside it.
-const sectionHead = (eyebrow, heading, side) => `
-  <div class="band-head">
-    <div class="band-title">
-      <p class="eyebrow">${esc(eyebrow)}</p>
-      <h2>${esc(heading)}</h2>
-    </div>
-    ${side ? `<p class="band-side">${esc(side)}</p>` : ''}
-  </div>`;
-
 function iconHtml(m, size = 40) {
   if (m.icon) return `<img class="app-icon" src="/icons/${esc(m.icon)}" alt="" width="${size}" height="${size}" loading="lazy">`;
   const emoji = (m.theme && m.theme.emoji) || '📦';
@@ -317,6 +300,20 @@ function appCard(card, lang, cats) {
 }
 
 
+// The dashboard's category glyphs (dashboard/public/js/app.js), on a 24-unit grid.
+const CATEGORY_GLYPHS = {
+  all: '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>',
+  core: '<path d="M12 3 20 7.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/>',
+  media: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m10 9 5 3-5 3z"/>',
+  photos: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-9 8"/>',
+  files: '<path d="M3.5 7a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>',
+  security: '<path d="M12 3 19 6v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="m9 12 2 2 4-4"/>',
+  network: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.5 3.5 5.5 3.5 8.5s-1 6-3.5 8.5c-2.5-2.5-3.5-5.5-3.5-8.5s1-6 3.5-8.5z"/>',
+  productivity: '<rect x="4" y="4" width="16" height="17" rx="2"/><path d="M8 3v3M16 3v3M4 9h16M8 13h3M8 17h6"/>',
+  system: '<rect x="3.5" y="4" width="17" height="12" rx="2"/><path d="M8 20h8M12 16v4M7 12l3-3 2 2 4-4"/>',
+  other: '<circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/>',
+};
+
 const catLabel = (cat, lang) => (cat ? t(lang, `cat_${cat.id}`) : '');
 
 /* ----------------------------------------------------------------- pages */
@@ -324,101 +321,148 @@ const catLabel = (cat, lang) => (cat ? t(lang, `cat_${cat.id}`) : '');
 // Everything installable. The dashboard is HomeBox itself, not an app in its catalog.
 const catalogOf = (modules) => modules.filter((m) => m.id !== 'dashboard');
 
-// The tiles on the home page, in this order: the apps people come looking for.
-const FEATURED = [
-  'photos', 'jellyfin', 'cloud', 'passwords', 'pi-hole', 'homeassistant', 'frigate',
-  'paperless', 'media/sonarr', 'media/radarr', 'media/prowlarr', 'media/bazarr', 'media/qbittorrent', 'navidrome',
-  'automation', 'headscale',
-];
+/*
+ * The home page is built from the dashboard's own pieces — the Overview's four
+ * numbers, an app tile with its memory bar, the Updates and Backups panels —
+ * so the site and the thing it installs look like one product. The figures in
+ * those pieces are examples and the preview says so.
+ */
 
-function homePage(lang, modules, cats, guides, releases) {
+const byId = (modules, id) => modules.find((m) => m.id === id);
+
+/** A dashboard-style app tile: icon, name, state dot, memory and a bar. */
+function previewTile(lang, m, memory, pct, cpu) {
+  if (!m) return '';
+  return `<div class="dtile">
+    <div class="dtile-head">${iconHtml(m, 20)}<b>${esc(m.title)}</b><span class="dot"></span></div>
+    <div class="dtile-use"><span>${esc(t(lang, 'pv_memory'))}${cpu ? ` · CPU ${cpu}%` : ''}</span><b>${esc(memory)}</b></div>
+    <div class="dbar"><i style="width:${pct}%"></i></div>
+  </div>`;
+}
+
+function overviewPreview(lang, modules) {
+  const stat = (label, value, extra = '') => `<div class="dstat${extra}"><span>${esc(label)}</span><b>${esc(value)}</b></div>`;
+  return `<div class="preview" aria-label="${esc(t(lang, 'preview_note'))}">
+    <div class="preview-bar"><i></i><i></i><i></i><span>${esc(t(lang, 'preview_label'))}</span></div>
+    <div class="dstats">
+      ${stat(t(lang, 'pv_status'), t(lang, 'pv_all_running'), ' is-good')}
+      ${stat(t(lang, 'pv_apps'), '11')}
+      ${stat(t(lang, 'pv_containers'), t(lang, 'pv_up').replace('{n}', 23))}
+      ${stat(t(lang, 'pv_updates'), t(lang, 'pv_waiting').replace('{n}', 2), ' is-waiting')}
+    </div>
+    <div class="dgroup">
+      <div class="dgroup-label">${esc(t(lang, 'cat_media'))} <span>3</span></div>
+      <div class="dtiles">
+        ${previewTile(lang, byId(modules, 'photos'), '1.4GB', 100, 6)}
+        ${previewTile(lang, byId(modules, 'jellyfin'), '459MB', 33, 3)}
+        ${previewTile(lang, byId(modules, 'audiobookshelf'), '140MB', 10)}
+      </div>
+    </div>
+    <p class="preview-note">${esc(t(lang, 'preview_note'))}</p>
+  </div>`;
+}
+
+/** One row of a dashboard list: icon, name with a kind badge, a mono line, a button. */
+function panelRow(m, name, badge, line, action, prose = false) {
+  if (!m) return '';
+  return `<div class="prow">${iconHtml(m, 22)}
+    <div class="prow-main"><div>${esc(name)}${badge}</div><div class="prow-line${prose ? ' is-prose' : ''}"${prose ? '' : ' dir="ltr"'}>${esc(line)}</div></div>
+    ${action ? `<span class="pbtn">${esc(action)}</span>` : ''}
+  </div>`;
+}
+
+function homePage(lang, modules, cats, guides) {
   // The same cards the Apps page lists, so the two counts cannot disagree.
   const cards = catalogCards(modules);
-  const featured = FEATURED.map((key) => cards.find((c) => c.key === key)).filter(Boolean);
-  if (featured.length !== FEATURED.length) warnings.push('home: a featured app key no longer matches a catalog card');
-  const features = ['one', 'updates', 'backups', 'remote', 'logs', 'yours'].map((k, i) => `
-    <div class="feature">
-      <span class="mono-label">${String(i + 1).padStart(2, '0')}</span>
-      <h3>${esc(t(lang, `f_${k}_title`))}</h3>
-      <p>${esc(t(lang, `f_${k}_body`))}</p>
-    </div>`).join('');
-  const stats = [
-    [cards.length, t(lang, 'stat_apps')],
-    [guides[lang].length, t(lang, 'stat_guides')],
-    [releases.length || '—', t(lang, 'stat_releases')],
-    [0, t(lang, 'stat_accounts')],
-  ].map(([n, label]) => `<div class="stat"><strong>${esc(n)}</strong><span>${esc(label)}</span></div>`).join('');
-  const screens = screenshotsHtml(lang);
+  const kind = (cls, key) => `<span class="kind ${cls}">${esc(t(lang, key))}</span>`;
+
+  const updates = `<div class="dpanel">
+      <div class="dpanel-head"><h3>${esc(t(lang, 'f_updates_title'))}</h3><small>${esc(t(lang, 'pn_updates_note'))}</small></div>
+      ${panelRow(byId(modules, 'bookmarks'), 'linkding', kind('v', 'pn_new_version'), '1.46.2 → 1.47.0', t(lang, 'pn_upgrade'))}
+      ${panelRow(byId(modules, 'passwords'), 'Vaultwarden', kind('r', 'pn_rebuild'), t(lang, 'pn_same_version'), t(lang, 'pn_update'))}
+      <p class="dpanel-body">${esc(t(lang, 'f_updates_body'))}</p>
+    </div>`;
+  const backups = `<div class="dpanel is-good">
+      <div class="dpanel-head"><h3>${esc(t(lang, 'f_backups_title'))}</h3><small>${esc(t(lang, 'pn_backups_note'))}</small></div>
+      <p class="dpanel-answer">${esc(t(lang, 'pn_backed_up'))}</p>
+      <p class="dpanel-body">${esc(t(lang, 'f_backups_body'))}</p>
+    </div>`;
+  const remote = `<div class="dpanel">
+      <div class="dpanel-head"><h3>${esc(t(lang, 'f_remote_title'))}</h3></div>
+      ${['tailscale', 'headscale', 'vpn', 'tunnel'].map((id) => {
+        const m = byId(modules, id);
+        return m ? panelRow(m, m.title, '', moduleText(m, lang).tagline, '', true) : '';
+      }).join('')}
+    </div>`;
+
+  // Three shelves of apps people come looking for, like "Your apps" on a box.
+  const groups = [
+    ['grp_media', ['photos', 'jellyfin', 'audiobookshelf']],
+    ['grp_home', ['homeassistant', 'pi-hole', 'frigate']],
+    ['grp_work', ['cloud', 'paperless', 'passwords']],
+  ].map(([key, ids]) => {
+    const rows = ids.map((id) => byId(modules, id)).filter(Boolean);
+    if (rows.length !== ids.length) warnings.push(`home: a group app id no longer matches a module (${key})`);
+    return `<div class="dgroup">
+      <div class="dgroup-label">${esc(t(lang, key))}</div>
+      <div class="dlist">${rows.map((m) => `<a class="dtile is-row" href="${href(lang, `apps/${m.id}/`)}">
+        <div class="dtile-head">${iconHtml(m, 20)}<b>${esc(m.title)}</b><span class="dtile-tag">${esc(moduleText(m, lang).tagline)}</span></div>
+      </a>`).join('')}</div>
+    </div>`;
+  }).join('');
 
   return layout({
     lang, pagePath: '', current: 'home',
     body: `
-<section class="hero band">
+<section class="hero">
   <div class="wrap hero-in">
     <div class="hero-text">
-      <p class="pill">${esc(t(lang, 'eyebrow'))}</p>
-      <h1>${esc(t(lang, 'hero_title_a'))} <span class="accent">${esc(t(lang, 'hero_title_b'))}</span></h1>
-      <p class="lead">${esc(t(lang, 'hero_lead'))}</p>
+      <p class="eyebrow">${esc(t(lang, 'eyebrow'))}</p>
+      <h1>${esc(t(lang, 'hero_b_title_a'))} <span class="accent">${esc(t(lang, 'hero_b_title_b'))}</span></h1>
+      <p class="lead">${esc(t(lang, 'hero_b_lead'))}</p>
+      ${installBlock(lang, 'hero-cmd')}
+      <p class="install-meta">${esc(t(lang, 'requirements'))} · ${esc(t(lang, 'hero_b_meta'))} · <a href="${href(lang, 'guides/install/')}">${esc(t(lang, 'install_guide_link'))}</a></p>
     </div>
-    ${installCard(lang)}
+    ${overviewPreview(lang, modules)}
   </div>
 </section>
-
-<section class="stats-band">
-  <div class="wrap stats">${stats}</div>
-</section>
-
-<section class="band" id="apps-preview">
-  <div class="wrap">
-    ${sectionHead(t(lang, 'apps_eyebrow'), t(lang, 'apps_heading').replace('{n}', cards.length), t(lang, 'apps_side'))}
-    <div class="app-grid tiles">${featured.map((c) => appCard(c, lang, cats)).join('')}</div>
-    <p class="more-line"><a class="btn-ghost" href="${href(lang, 'apps/')}">${esc(t(lang, 'more_in_catalog').replace('{n}', cards.length))}</a></p>
-  </div>
-</section>
-
-<section class="band alt">
-  <div class="wrap">
-    ${sectionHead(t(lang, 'features_eyebrow'), t(lang, 'features_heading'), t(lang, 'features_side'))}
-    <div class="features">${features}</div>
-  </div>
-</section>
-
-${screens}
 
 <section class="band">
   <div class="wrap">
-    ${sectionHead(t(lang, 'guides_eyebrow'), t(lang, 'guides_heading'), '')}
-    <div class="guide-grid">${guides[lang].slice(0, 6).map((g, i) => guideCard(g, lang, i)).join('')}</div>
-    <p class="more-line"><a href="${href(lang, 'guides/')}">${esc(t(lang, 'all_guides'))}</a></p>
+    <div class="band-head"><div><h2>${esc(t(lang, 'panels_heading'))}</h2><p class="band-side">${esc(t(lang, 'panels_side'))}</p></div></div>
+    <div class="dpanels">${updates}${backups}${remote}</div>
   </div>
 </section>
 
-<section class="band cta">
-  <div class="wrap cta-in">
-    <h2>${esc(t(lang, 'cta_heading'))}</h2>
-    ${installBlock(lang, 'cta-cmd')}
+<section class="band">
+  <div class="wrap">
+    <div class="band-head"><div><h2>${esc(t(lang, 'groups_heading').replace('{n}', cards.length))}</h2><p class="band-side">${esc(t(lang, 'apps_side'))}</p></div>
+      <a class="btn-ghost" href="${href(lang, 'apps/')}">${esc(t(lang, 'more_in_catalog').replace('{n}', cards.length))}</a></div>
+    <div class="dgroups">${groups}</div>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap">
+    <div class="band-head"><div><h2>${esc(t(lang, 'guides_heading'))}</h2></div><a class="btn-ghost no-arrow" href="${href(lang, 'guides/')}">${esc(t(lang, 'all_guides'))}</a></div>
+    <div class="guide-grid">${guides[lang].slice(0, 6).map((g, i) => guideCard(g, lang, i)).join('')}</div>
   </div>
 </section>
 `,
   });
 }
 
-function screenshotsHtml(lang) {
-  const dir = path.join(SITE, 'static', 'screens');
-  if (!fs.existsSync(dir)) return '';
-  const shots = fs.readdirSync(dir).filter((f) => /\.(png|jpe?g|webp)$/i.test(f)).sort();
-  if (!shots.length) return '';
-  return `<section class="band wrap">
-  <h2>${esc(t(lang, 'screens_title'))}</h2>
-  <div class="shots">${shots.map((f) => `<figure><img src="/screens/${esc(f)}" alt="" loading="lazy"></figure>`).join('')}</div>
-</section>`;
-}
-
 function appsPage(lang, modules, cats) {
   const listed = catalogCards(modules);
   const usedCats = cats.filter((c) => listed.some((card) => card.module.category === c.id));
-  const chips = [`<button type="button" class="chip" aria-pressed="true" data-filter="">${esc(t(lang, 'all'))} <span>${listed.length}</span></button>`]
-    .concat(usedCats.map((c) => `<button type="button" class="chip" aria-pressed="false" data-filter="${esc(c.id)}">${esc(catLabel(c, lang))} <span>${listed.filter((card) => card.module.category === c.id).length}</span></button>`))
+  // Category tiles, as on the dashboard's Apps screen: a line glyph, the name, a count.
+  const tile = (id, label, n, on) => `<button type="button" class="cat-tile" aria-pressed="${on}" data-filter="${esc(id)}">
+      <svg viewBox="0 0 24 24" aria-hidden="true">${CATEGORY_GLYPHS[id || 'all'] || CATEGORY_GLYPHS.core}</svg>
+      <span class="cat-name">${esc(label)}</span>
+      <span class="cat-count">${esc(t(lang, 'apps_count').replace('{n}', n))}</span>
+    </button>`;
+  const chips = [tile('', t(lang, 'all'), listed.length, true)]
+    .concat(usedCats.map((c) => tile(c.id, catLabel(c, lang), listed.filter((card) => card.module.category === c.id).length, false)))
     .join('');
   return layout({
     lang, pagePath: 'apps/', current: 'apps', title: t(lang, 'nav_apps'),
@@ -432,7 +476,7 @@ function appsPage(lang, modules, cats) {
   </div>
   <div class="filters">
     <input type="search" class="search" placeholder="${esc(t(lang, 'search_apps'))}" aria-label="${esc(t(lang, 'search_apps'))}">
-    <div class="chips" role="group">${chips}</div>
+    <div class="cat-tiles" role="group">${chips}</div>
   </div>
   <div class="app-grid tiles store" id="apps">${listed.map((c) => appCard(c, lang, cats)).join('')}</div>
   <p class="empty" hidden>${esc(t(lang, 'no_match'))}</p>

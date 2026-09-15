@@ -85,7 +85,7 @@ const VERSION = readVersion();
 
 // Appearance. These lists are the contract with public/css/homebox.css — a
 // name here must have a matching [data-theme=...] or [data-accent=...] block.
-const THEMES = ['dark', 'dim', 'light'];
+const THEMES = ['dim', 'dark', 'light'];
 const ACCENTS = ['orange', 'blue', 'violet', 'teal', 'green', 'amber', 'rose'];
 
 // Which parts the "Right now" panel shows. Defaults to on: the panel hides
@@ -93,7 +93,7 @@ const ACCENTS = ['orange', 'blue', 'violet', 'teal', 'green', 'amber', 'rose'];
 // it and a box with them gets the numbers without looking for a switch.
 const INSIGHT_PANELS = ['transfers', 'queues', 'upcoming'];
 const DEFAULT_PREFS = {
-  theme: 'dark',
+  theme: 'dim',
   accent: 'orange',
   insights: { enabled: true, transfers: true, queues: true, upcoming: true },
 };
@@ -317,14 +317,16 @@ function networkInfo(modules, networks) {
   return {
     dashboard: `http://${HOST_ADDRESS}:${PORT}`,
     proxy: proxyUp ? `http://${HOST_ADDRESS} · admin :81` : 'core not running',
+    // A real URL for the card's open and copy buttons; the line above is prose.
+    proxyAdmin: proxyUp ? `http://${HOST_ADDRESS}:81` : null,
     networks: ours.length ? ours.join(', ') : 'none',
   };
 }
 
 /**
- * Backups. HomeBox does not take any yet, and saying so plainly is more
- * useful than a card that implies it does — so this reports what WOULD be
- * lost and where it lives.
+ * Backups, for the Overview card: whether archives exist, whether a schedule
+ * runs, and whether one can be written at all (no key, no archive), so the
+ * card's button is only offered when pressing it can work.
  */
 async function backupInfo(modules, metrics) {
   const withConfig = modules.filter((m) => {
@@ -336,7 +338,7 @@ async function backupInfo(modules, metrics) {
   }).length;
   // Real figures from the Backup Center rather than a stub, so the home card
   // cannot claim nothing is set up while archives sit on disk.
-  let center = { count: 0, latest: null, schedule: { enabled: false } };
+  let center = { count: 0, latest: null, schedule: { enabled: false }, hasKey: false, running: false };
   try {
     center = await backup.status();
   } catch {
@@ -345,6 +347,9 @@ async function backupInfo(modules, metrics) {
   return {
     configured: center.count > 0 || center.schedule.enabled,
     scheduled: center.schedule.enabled,
+    nextRun: center.schedule.nextRun || null,
+    hasKey: !!center.hasKey,
+    running: !!center.running,
     count: center.count,
     latest: center.latest,
     appConfigs: withConfig,

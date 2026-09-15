@@ -24,7 +24,7 @@
   const grid = document.getElementById('apps');
   if (!grid) return;
   const search = document.querySelector('.search');
-  const chips = [...document.querySelectorAll('.chip')];
+  const chips = [...document.querySelectorAll('[data-filter]')];
   const empty = document.querySelector('.empty');
   let cat = '';
 

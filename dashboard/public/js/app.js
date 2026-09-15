@@ -36,7 +36,7 @@ const state = {
   // Mirrors DEFAULT_PREFS in server.js. Only ever seen for the moment before
   // /api/prefs answers, but a mismatch here is a visible flash of the wrong
   // background on every load.
-  prefs: { theme: 'dark', accent: 'orange' },
+  prefs: { theme: 'dim', accent: 'orange' },
 };
 
 /* ------------------------------------------------------------- utilities */
@@ -568,32 +568,92 @@ function renderNetwork(summary) {
   const n = summary.network || {};
   $('#net-address').textContent = summary.host.address;
   $('#net-facts').innerHTML = [
-    ['Hostname', summary.host.name],
-    ['Dashboard', n.dashboard],
-    ['Proxy', n.proxy],
-    ['Docker networks', n.networks],
-  ].map(([label, value]) => factHtml(label, value == null ? '—' : value)).join('');
+    addressRow('Dashboard', n.dashboard, { open: true }),
+    addressRow('Proxy admin', n.proxyAdmin || 'core not running', { open: !!n.proxyAdmin, copy: !!n.proxyAdmin }),
+    addressRow('Hostname', summary.host.name),
+    addressRow('Networks', n.networks, { copy: false }),
+  ].join('');
 }
 
-/** A label over a value, in the Addresses grids. */
+/** One line of Addresses: label, value, and copy / open where they make sense. */
+function addressRow(label, value, { open = false, copy = true } = {}) {
+  const v = value == null ? '—' : String(value);
+  const buttons = [
+    copy && value ? `<button type="button" class="button is-small copy-btn" data-copy="${escapeHtml(v)}">Copy</button>` : '',
+    open && value ? `<a class="button is-small" href="${escapeHtml(v)}" target="_blank" rel="noopener noreferrer">Open ↗</a>` : '',
+  ].join('');
+  return `<div class="address-row">
+      <span class="address-key">${escapeHtml(label)}</span>
+      <span class="address-val mono">${escapeHtml(v)}</span>
+      <span class="address-actions">${buttons}</span>
+    </div>`;
+}
+
+/**
+ * Backups on the Overview: one answer in words, the facts behind it, and the
+ * button that changes the answer. The button runs a config backup — the
+ * small, quick kind; a full one, with the data pool, stays a choice made on
+ * the Backups settings page.
+ */
+function renderBackupCard(summary) {
+  const b = summary.backups || {};
+  const card = $('#safety');
+  $('#safety-count').textContent = b.count ? `${b.count} archive${b.count === 1 ? '' : 's'}` : '';
+
+  let level;
+  let answer;
+  if (!b.hasKey) { level = 'bad'; answer = 'Backups cannot run: no encryption key'; }
+  else if (!b.latest) { level = 'warn'; answer = 'Nothing is backed up yet'; }
+  else if (Date.now() - b.latest.created > 7 * 86400000) { level = 'warn'; answer = `Last backup ${ago(b.latest.created)} ago`; }
+  else { level = 'good'; answer = `Backed up ${ago(b.latest.created)} ago`; }
+  card.dataset.level = level;
+  $('#safety-answer').textContent = answer;
+
+  const facts = [
+    b.hasKey ? null : 'add HB_BACKUP_KEY to .env and restart the dashboard',
+    b.scheduled
+      ? (b.nextRun ? `next automatic run in ${duration(Math.max(0, Math.round((b.nextRun - Date.now()) / 1000)))}` : 'on a schedule')
+      : 'no schedule',
+    `${b.appConfigs} app${b.appConfigs === 1 ? ' has' : 's have'} settings worth keeping`,
+    b.diskFree != null ? `${bytes(b.diskFree)} free` : null,
+  ].filter(Boolean);
+  $('#safety-detail').textContent = facts.join(' · ');
+
+  $('#safety-actions').innerHTML = [
+    b.hasKey ? `<button type="button" class="button is-small is-primary" id="safety-backup"${b.running ? ' disabled' : ''}>${b.running ? 'Backing up…' : 'Back up now'}</button>` : '',
+    `<a class="button is-small" href="#settings" data-page="settings" data-stab="backup">${b.scheduled ? 'Backup settings' : 'Set a schedule'}</a>`,
+  ].join('');
+}
+
+/** "Back up now" on the Overview card: a config archive, then a fresh summary. */
+async function backupFromOverview(button) {
+  button.disabled = true;
+  button.textContent = 'Backing up…';
+  try {
+    const res = await fetch('api/backup/create', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ kind: 'config' }),
+    });
+    const data = await res.json();
+    if (!data.ok) toast(`Backup failed: ${data.error}${data.hint ? ` — ${data.hint}` : ''}`, 'error', 12000);
+    else toast(`Backup written: ${data.name || 'archive created'}. Keep the encryption key somewhere else.`, 'success', 7000);
+  } catch (err) {
+    toast(`Backup failed: ${err.message}`, 'error', 8000);
+  } finally {
+    // The live summary redraws this card with the new archive a moment
+    // later; until then, give the button back rather than leave it spinning.
+    button.disabled = false;
+    button.textContent = 'Back up now';
+  }
+}
+
+/** A label over a value, in the Settings fact grids. */
 function factHtml(label, value) {
   return `<div class="fact">
       <div class="fact-key">${escapeHtml(label)}</div>
       <div class="fact-val mono">${escapeHtml(value)}</div>
     </div>`;
-}
-
-function renderBackupCard(summary) {
-  const b = summary.backups || {};
-  $('#safety-count').textContent = b.count ? `${b.count}` : '';
-  $('#safety-facts').innerHTML = `
-    ${statRow('Archives', b.count || 'none', b.count ? 'good' : 'warn')}
-    ${statRow('Latest', b.latest ? `${ago(b.latest.created)} ago` : 'never', b.latest ? 'good' : 'warn')}
-    ${statRow('On a schedule', b.scheduled ? 'yes' : 'no', b.scheduled ? 'good' : '')}
-    ${statRow('Apps with settings', b.appConfigs)}
-    ${statRow('Free disk', bytes(b.diskFree))}
-    <p class="small-note">Archives are encrypted and kept on this disk. Make one under
-      Settings &rarr; Backups; keeping a copy on another machine is up to you.</p>`;
 }
 
 function renderActivity(entries) {
@@ -2452,8 +2512,8 @@ function connect() {
 /* The Appearance choices. Each id has a matching [data-theme] or
    [data-accent] block in css/homebox.css, and server.js accepts only these. */
 const THEMES = [
-  { id: 'dark', label: 'Dark' },
   { id: 'dim', label: 'Dim' },
+  { id: 'dark', label: 'Dark' },
   { id: 'light', label: 'Light' },
 ];
 
@@ -4201,6 +4261,8 @@ document.addEventListener('click', async (event) => {
   }
 
   if (event.target.closest('#backup-now')) return createBackup();
+  const overviewBackup = event.target.closest('#safety-backup');
+  if (overviewBackup) return backupFromOverview(overviewBackup);
 
   if (event.target.closest('#key-reveal')) {
     return backupCall('key', {}, (data) => {

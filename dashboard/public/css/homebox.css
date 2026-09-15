@@ -333,8 +333,8 @@ a.stat:hover { border-color: var(--accent-line); text-decoration: none; }
 .area-dock { grid-column: span 8; grid-row: span 2; }
 .area-host { grid-column: span 4; }
 .area-wide { grid-column: 1 / -1; }
-.area-net { grid-column: span 7; }
-.area-safety { grid-column: span 5; }
+.area-net { grid-column: span 7; align-self: stretch; }
+.area-safety { grid-column: span 5; align-self: stretch; }
 
 /* Your apps */
 /* Each category is its own box, and the boxes flow side by side: a category
@@ -479,6 +479,25 @@ a.stat:hover { border-color: var(--accent-line); text-decoration: none; }
 }
 
 /* Addresses and backups */
+.address-list { display: flex; flex-direction: column; }
+.address-row { display: grid; grid-template-columns: 7rem minmax(0, 1fr) auto; align-items: center; gap: 0.3rem 0.8rem; padding: 0.45rem 0; border-top: 1px solid var(--line); }
+.address-row:first-child { border-top: 0; }
+.address-key { color: var(--muted); font-size: 0.82rem; }
+.address-val { font-size: 0.86rem; overflow-wrap: anywhere; }
+.address-actions { display: flex; gap: 0.3rem; }
+@media (max-width: 560px) {
+  .address-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .address-key { grid-column: 1 / -1; }
+}
+.safety { border-left: 4px solid var(--line-strong); display: flex; flex-direction: column; }
+.safety[data-level="good"] { border-left-color: var(--good); }
+.safety[data-level="warn"] { border-left-color: var(--warn); }
+.safety[data-level="bad"] { border-left-color: var(--bad); }
+.safety-answer { display: block; font-size: 1.1rem; font-weight: 650; }
+.safety[data-level="warn"] .safety-answer { color: var(--warn); }
+.safety[data-level="bad"] .safety-answer { color: var(--bad); }
+.safety-detail { color: var(--muted); font-size: 0.84rem; margin: 0.3rem 0 0.8rem; }
+.safety-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: auto; }
 .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.5rem; }
 .fact { background: var(--well); border: 1px solid var(--line); border-radius: var(--radius-s); padding: 0.5rem 0.7rem; min-width: 0; }
 .fact-key { color: var(--muted); font-size: 0.76rem; }
