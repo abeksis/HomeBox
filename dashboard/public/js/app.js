@@ -314,16 +314,27 @@ function renderSideMeters(summary) {
   $('#side-version').textContent = `v${summary.version}`;
 }
 
-/** One of the Overview's host meters: value, bar, and a detail line under it. */
-function renderMeter(prefix, percent, detail) {
-  const meter = $(`#meter-${prefix}`);
-  const pct = percent == null ? 0 : Math.max(0, Math.min(100, percent));
-  $(`#fill-${prefix}`).style.width = `${pct}%`;
-  $(`#val-${prefix}`).textContent = percent == null ? '--' : `${percent}%`;
-  const lv = level(percent);
-  if (lv) meter.dataset.level = lv;
-  else delete meter.dataset.level;
-  if (detail != null) $(`#detail-${prefix}`).textContent = detail;
+/**
+ * The "This box" facts on the Overview. No bars: the sidebar already draws
+ * processor, memory and disk as percentages, so these give the absolute
+ * figures behind them instead, coloured when the percentage runs high.
+ */
+function renderBoxFacts(m) {
+  const mark = (id, pct) => {
+    const lv = level(pct);
+    if (lv) $(id).dataset.level = lv;
+    else delete $(id).dataset.level;
+  };
+  $('#val-uptime').textContent = duration(m.uptime);
+  $('#sub-uptime').textContent = 'since the last boot';
+  $('#val-load').textContent = m.load[0].toFixed(2);
+  $('#sub-load').textContent = `${m.cores} cores`;
+  $('#val-ram').textContent = bytes(m.memory.used);
+  $('#sub-ram').textContent = `of ${bytes(m.memory.total)}`;
+  $('#val-disk').textContent = m.disk.total ? bytes(m.disk.free) : '--';
+  $('#sub-disk').textContent = m.disk.total ? `of ${bytes(m.disk.total)}` : '';
+  mark('#fact-ram', m.memory.percent);
+  mark('#fact-disk', m.disk.percent);
 }
 
 function renderHealth(summary) {
@@ -486,71 +497,23 @@ function launchTile(tile, peak) {
     }
   } catch { /* localStorage blocked: show it, which is the safe direction */ }
 
-  return `<a class="dock-tile${down ? ' is-down' : ''}" href="${escapeHtml(tile.url)}" target="_blank" rel="noopener noreferrer"${first}
-      title="${escapeHtml(tile.description || tile.friendly_name)}">
-      <span class="dock-head">
-        <span class="dock-art">${art}</span>
-        <span class="dock-name">${escapeHtml(tile.friendly_name)}</span>
-        ${pip}
-      </span>
-      ${usage}
-    </a>`;
+  // The link covers the name and figures; the buttons sit outside it, since a
+  // button inside an <a> is invalid and its click would also open the app.
+  return `<div class="dock-tile${down ? ' is-down' : ''}">
+      <a class="dock-open" href="${escapeHtml(tile.url)}" target="_blank" rel="noopener noreferrer"${first}
+        title="${escapeHtml(tile.description || tile.friendly_name)}">
+        <span class="dock-head">
+          <span class="dock-art">${art}</span>
+          <span class="dock-name">${escapeHtml(tile.friendly_name)}</span>
+          ${pip}
+        </span>
+        ${usage}
+      </a>
+      ${tile.container ? `<div class="dock-actions">${containerActions(tile.container, st !== 'stopped')}</div>` : ''}
+    </div>`;
 }
 
 /* ------------------------------------------------- network & maintenance */
-
-/**
- * Every container HomeBox owns, with the app it implements and where to
- * reach it. This is the "what is actually running" answer that the module
- * cards only summarise.
- */
-function renderRunning(modules) {
-  const rows = [];
-  for (const mod of modules) {
-    if (!mod.installed) continue;
-    for (const container of mod.containers) {
-      const svc = mod.services.find((x) => x.name === container.service);
-      rows.push({ container, svc, mod });
-    }
-  }
-  rows.sort((a, b) => a.container.name.localeCompare(b.container.name));
-
-  $('#proc-count').textContent = rows.length
-    ? `${rows.filter((r) => r.container.state !== 'stopped').length}/${rows.length} up`
-    : '';
-
-  $('#proc-list').innerHTML = rows.map(runningRow).join('')
-    || '<p class="empty">No containers yet.</p>';
-}
-
-function runningRow({ container, svc, mod }) {
-  const name = svc ? svc.friendly_name : container.name;
-  const icon = (svc && svc.icon) || mod.icon;
-  const color = (svc && svc.color) || (mod.theme && mod.theme.color) || null;
-  const on = container.state !== 'stopped';
-  const art = iconArt(icon || (mod.theme && mod.theme.emoji), monogram(name, color));
-
-  const flag = container.state === 'unhealthy' ? '<span class="tag tag-bad">unhealthy</span>'
-    : container.state === 'starting' ? '<span class="tag tag-muted">starting</span>'
-      : '';
-  const core = mod.required ? '<span class="tag tag-core">base</span>' : '';
-
-  return `<div class="proc${on ? '' : ' is-stopped'}">
-    <span class="proc-art">${art}</span>
-    <span class="proc-main">
-      <span class="proc-name">${escapeHtml(name)}${core}${flag}</span>
-      <span class="proc-status">
-        <span class="dot ${on ? 'is-on' : 'is-off'}"></span>
-        ${escapeHtml(container.status || container.state)}
-      </span>
-    </span>
-    <span class="proc-nums">
-      <span class="proc-num"><b>${container.cpu == null ? '--' : `${container.cpu}%`}</b><small>cpu</small></span>
-      <span class="proc-num"><b>${container.memory == null ? '--' : bytes(container.memory)}</b><small>memory</small></span>
-    </span>
-    <span class="proc-actions">${containerActions(container, on)}</span>
-  </div>`;
-}
 
 /** A hex brand colour as a low-opacity tint, for the icon's backing square. */
 function tint(color) {
@@ -2422,7 +2385,6 @@ function loadModules(force = false) {
       renderContainers();
       renderLogPicker();
       renderLauncher(state.modules);
-      renderRunning(state.modules);
       renderModuleErrors(data.errors || []);
       updatePortainerAction();
       renderSettings();
@@ -2464,12 +2426,7 @@ function applySummary(summary) {
   state.busy = new Set(summary.busy || []);
   renderSideMeters(summary);
   renderHealth(summary);
-  const m = summary.metrics;
-  renderMeter('cpu', m.cpu, `${m.cores} cores`);
-  renderMeter('ram', m.memory.percent, `${bytes(m.memory.used)} / ${bytes(m.memory.total)}`);
-  renderMeter('disk', m.disk.percent, m.disk.total ? `${bytes(m.disk.free)} free` : '');
-  $('#val-uptime').textContent = duration(m.uptime);
-  $('#detail-load').textContent = `load ${m.load[0].toFixed(2)}`;
+  renderBoxFacts(summary.metrics);
   if (state.modules.length) renderStoreStats();
   renderSettings();
   renderNetwork(summary);
@@ -2983,7 +2940,7 @@ async function firstLoginDialog(svc, mod) {
  * rebinding per tile would lose the handler on every refresh.
  */
 document.addEventListener('click', async (event) => {
-  const link = event.target.closest('.dock-tile[data-first-login]');
+  const link = event.target.closest('.dock-open[data-first-login]');
   if (!link) return;
   event.preventDefault();
 

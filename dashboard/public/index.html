@@ -130,32 +130,18 @@
         <div class="dock" id="dock"></div>
       </section>
 
-      <!-- HOST — the numbers that matter, as meters -->
+      <!-- THIS BOX — the facts the sidebar meters do not already show, the
+           everyday actions, and what the box did while nobody was looking. -->
       <section class="panel area-host">
         <div class="panel-head">
-          <h2 class="panel-title">This server</h2>
+          <h2 class="panel-title">This box</h2>
           <span class="panel-note mono" id="host-state">live</span>
         </div>
-        <div class="meters">
-          <div class="meter" id="meter-cpu">
-            <div class="meter-top"><span class="meter-name">Processor</span><span class="meter-value mono" id="val-cpu">--</span></div>
-            <div class="meter-track"><span class="meter-fill" id="fill-cpu"></span></div>
-            <div class="meter-sub mono" id="detail-cpu"></div>
-          </div>
-          <div class="meter" id="meter-ram">
-            <div class="meter-top"><span class="meter-name">Memory</span><span class="meter-value mono" id="val-ram">--</span></div>
-            <div class="meter-track"><span class="meter-fill" id="fill-ram"></span></div>
-            <div class="meter-sub mono" id="detail-ram"></div>
-          </div>
-          <div class="meter" id="meter-disk">
-            <div class="meter-top"><span class="meter-name">Disk</span><span class="meter-value mono" id="val-disk">--</span></div>
-            <div class="meter-track"><span class="meter-fill" id="fill-disk"></span></div>
-            <div class="meter-sub mono" id="detail-disk"></div>
-          </div>
-          <div class="meter meter-plain">
-            <div class="meter-top"><span class="meter-name">Up for</span><span class="meter-value mono" id="val-uptime">--</span></div>
-            <div class="meter-sub mono" id="detail-load"></div>
-          </div>
+        <div class="box-facts">
+          <div class="box-fact"><span>Up for</span><b class="mono" id="val-uptime">--</b><small id="sub-uptime"></small></div>
+          <div class="box-fact"><span>Load</span><b class="mono" id="val-load">--</b><small id="sub-load"></small></div>
+          <div class="box-fact" id="fact-ram"><span>Memory used</span><b class="mono" id="val-ram">--</b><small id="sub-ram"></small></div>
+          <div class="box-fact" id="fact-disk"><span>Disk free</span><b class="mono" id="val-disk">--</b><small id="sub-disk"></small></div>
         </div>
         <div class="shortcuts">
           <button type="button" class="shortcut" id="restart-all" title="Restart every installed app">
@@ -171,12 +157,9 @@
             <span class="shortcut-glyph" aria-hidden="true">&#8801;</span><span class="shortcut-text">Logs</span>
           </a>
         </div>
-      </section>
 
-      <!-- EVENTS — what the box did while nobody was looking -->
-      <section class="panel area-feed">
-        <div class="panel-head">
-          <h2 class="panel-title">Events</h2>
+        <div class="panel-head box-events-head">
+          <h3 class="panel-title">Events</h3>
           <span class="panel-note mono" id="feed-count">live</span>
         </div>
         <ul class="feed" id="feed-list">
@@ -201,15 +184,6 @@
           <button type="button" class="panel-note mono linkish" id="pulse-time" title="Ask the apps again"></button>
         </div>
         <div class="pulse" id="pulse-body"></div>
-      </section>
-
-      <!-- CONTAINERS — every container HomeBox owns, with controls -->
-      <section class="panel area-wide">
-        <div class="panel-head">
-          <h2 class="panel-title">Running containers</h2>
-          <span class="panel-note mono" id="proc-count"></span>
-        </div>
-        <div class="proc-list" id="proc-list"></div>
       </section>
 
       <!-- ADDRESSES — how to reach this box -->
