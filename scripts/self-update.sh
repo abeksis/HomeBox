@@ -23,7 +23,11 @@
 # Usage: self-update.sh <version>        e.g. self-update.sh 0.2.0
 set -uo pipefail
 
-HB_ROOT="${HB_ROOT:-/opt/homebox}"
+# A box installed before 0.6.0 still lives at /opt/homebox until its
+# migration moves it, so look there when the new default is absent.
+if [ -z "${HB_ROOT:-}" ]; then
+  if [ -d /opt/podhouse ]; then HB_ROOT=/opt/podhouse; else HB_ROOT=/opt/homebox; fi
+fi
 
 # ---------------------------------------------------------------------------
 # RUN FROM A COPY. This is not tidiness, it is correctness.
@@ -360,6 +364,10 @@ fi
 # ----------------------------------------------------------------- 6. install
 
 phase installing "Rebuilding"
+# A migration may have moved the tree (0.6.0: /opt/homebox → /opt/podhouse,
+# old name left as a symlink). Carry on from the real path.
+if [ -L "$HB_ROOT" ]; then HB_ROOT="$(readlink -f "$HB_ROOT")"; fi
+export HB_ROOT
 if ! bash "$HB_ROOT/install.sh" >/tmp/homebox-self-update.log 2>&1; then
   rollback "install.sh failed — see /tmp/homebox-self-update.log"
 fi

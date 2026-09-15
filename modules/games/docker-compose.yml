@@ -42,11 +42,11 @@ services:
     ports:
       - "8447:8443"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/games/config/backups:/crafty/backups
-      - ${HB_ROOT:-/opt/homebox}/modules/games/config/logs:/crafty/logs
-      - ${HB_ROOT:-/opt/homebox}/modules/games/config/servers:/crafty/servers
-      - ${HB_ROOT:-/opt/homebox}/modules/games/config/config:/crafty/app/config
-      - ${HB_ROOT:-/opt/homebox}/modules/games/config/import:/crafty/import
+      - ${HB_ROOT:-/opt/podhouse}/modules/games/config/backups:/crafty/backups
+      - ${HB_ROOT:-/opt/podhouse}/modules/games/config/logs:/crafty/logs
+      - ${HB_ROOT:-/opt/podhouse}/modules/games/config/servers:/crafty/servers
+      - ${HB_ROOT:-/opt/podhouse}/modules/games/config/config:/crafty/app/config
+      - ${HB_ROOT:-/opt/podhouse}/modules/games/config/import:/crafty/import
     networks:
       - homebox_proxy
     deploy:

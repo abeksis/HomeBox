@@ -47,7 +47,7 @@ services:
     environment:
       - TZ=${TZ:-UTC}
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/homeassistant/config/homeassistant:/config
+      - ${HB_ROOT:-/opt/podhouse}/modules/homeassistant/config/homeassistant:/config
       - /etc/localtime:/etc/localtime:ro
       # Bluetooth, for the integrations that use it.
       - /run/dbus:/run/dbus:ro

@@ -42,9 +42,9 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/tunarr/config/tunarr:/config/tunarr
+      - ${HB_ROOT:-/opt/podhouse}/modules/tunarr/config/tunarr:/config/tunarr
       # Read-only: Tunarr schedules the library, it never writes to it.
-      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/data:ro
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/podhouse}/data}}:/data:ro
     networks:
       - homebox_proxy
     deploy:

@@ -40,7 +40,7 @@ services:
     environment:
       - TZ=${TZ:-UTC}
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/monitoring/config/uptime-kuma:/app/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/monitoring/config/uptime-kuma:/app/data
     networks:
       - homebox_proxy
     deploy:

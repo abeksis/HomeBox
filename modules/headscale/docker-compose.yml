@@ -59,8 +59,8 @@ services:
     environment:
       - TZ=${TZ:-UTC}
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/headscale/config/config.yaml:/etc/headscale/config.yaml:ro
-      - ${HB_ROOT:-/opt/homebox}/modules/headscale/config/data:/var/lib/headscale
+      - ${HB_ROOT:-/opt/podhouse}/modules/headscale/config/config.yaml:/etc/headscale/config.yaml:ro
+      - ${HB_ROOT:-/opt/podhouse}/modules/headscale/config/data:/var/lib/headscale
     networks:
       - homebox_internal
     deploy:
@@ -105,8 +105,8 @@ services:
     ports:
       - "8091:8080"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/headscale/config/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ${HB_ROOT:-/opt/homebox}/modules/headscale/config/custom-patch.js:/etc/nginx/custom-patch.js:ro
+      - ${HB_ROOT:-/opt/podhouse}/modules/headscale/config/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ${HB_ROOT:-/opt/podhouse}/modules/headscale/config/custom-patch.js:/etc/nginx/custom-patch.js:ro
     networks:
       - homebox_proxy
       - homebox_internal

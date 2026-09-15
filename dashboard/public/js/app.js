@@ -1348,7 +1348,7 @@ function renderBackups() {
   if (!b.hasKey) {
     noKey.innerHTML = '<strong>No encryption key.</strong>'
       + '<p class="help">An archive contains <code class="mono">.env</code>, so Podhouse will not write one unencrypted. '
-      + 'Add <code class="mono">HB_BACKUP_KEY</code> to <code class="mono">/opt/homebox/.env</code> (or re-run <code class="mono">install.sh</code>) and restart the dashboard.</p>';
+      + 'Add <code class="mono">HB_BACKUP_KEY</code> to <code class="mono">/opt/podhouse/.env</code> (or re-run <code class="mono">install.sh</code>) and restart the dashboard.</p>';
   }
   $('#backup-now').disabled = !b.hasKey || b.running;
   $('#key-reveal').disabled = !b.hasKey;

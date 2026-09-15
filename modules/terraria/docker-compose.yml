@@ -38,7 +38,7 @@ services:
     ports:
       - "7777:7777"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/terraria/config/terraria:/root/.local/share/Terraria/Worlds
+      - ${HB_ROOT:-/opt/podhouse}/modules/terraria/config/terraria:/root/.local/share/Terraria/Worlds
     stdin_open: true
     tty: true
     networks:

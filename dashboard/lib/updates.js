@@ -381,7 +381,7 @@ const BACKUPS_KEPT = 10;
  *
  * This process runs as root inside its container so it can open the Docker
  * socket, so everything it writes into the bind-mounted state directory lands
- * root-owned — and the account that owns /opt/homebox can then neither read
+ * root-owned — and the account that owns /opt/podhouse can then neither read
  * nor delete its own pre-update backups. lib/state-store.js does the same for
  * the JSON it writes, for the same reason.
  */

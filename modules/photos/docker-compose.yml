@@ -66,7 +66,7 @@ services:
     volumes:
       # Immich owns its library outright and never hardlinks into the *arr
       # pool, so it takes just its own folder rather than the whole root.
-      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}/${HB_MEDIA_PHOTOS:-photos}:/data
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/podhouse}/data}}/${HB_MEDIA_PHOTOS:-photos}:/data
       - /etc/localtime:/etc/localtime:ro
     ports:
       - "2283:2283"
@@ -143,7 +143,7 @@ services:
       - POSTGRES_DB=immich
       - POSTGRES_INITDB_ARGS=--data-checksums
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/photos/config/postgres:/var/lib/postgresql/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/photos/config/postgres:/var/lib/postgresql/data
     shm_size: 128mb
     networks:
       - homebox_internal

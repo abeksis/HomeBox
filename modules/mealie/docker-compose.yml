@@ -52,7 +52,7 @@ services:
     ports:
       - "9925:9000"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/mealie/config/mealie:/app/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/mealie/config/mealie:/app/data
     networks:
       - homebox_proxy
     deploy:

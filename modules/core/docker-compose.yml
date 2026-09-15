@@ -65,8 +65,8 @@ services:
       - INITIAL_ADMIN_EMAIL=${NPM_ADMIN_EMAIL:-admin@homebox.local}
       - INITIAL_ADMIN_PASSWORD=${NPM_ADMIN_PASSWORD:-}
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/core/config/npm/data:/data
-      - ${HB_ROOT:-/opt/homebox}/modules/core/config/npm/letsencrypt:/etc/letsencrypt
+      - ${HB_ROOT:-/opt/podhouse}/modules/core/config/npm/data:/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/core/config/npm/letsencrypt:/etc/letsencrypt
     networks:
       - homebox_proxy
     deploy:
@@ -101,8 +101,8 @@ services:
       - TZ=${TZ:-UTC}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${HB_ROOT:-/opt/homebox}/modules/core/config/portainer:/data
-      - ${HB_ROOT:-/opt/homebox}/modules/core/config/portainer-admin-password:/run/secrets/portainer_admin_password:ro
+      - ${HB_ROOT:-/opt/podhouse}/modules/core/config/portainer:/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/core/config/portainer-admin-password:/run/secrets/portainer_admin_password:ro
     networks:
       - homebox_proxy
     deploy:

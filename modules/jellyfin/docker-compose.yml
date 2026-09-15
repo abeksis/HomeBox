@@ -52,10 +52,10 @@ services:
     ports:
       - "8096:8096"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/jellyfin/config/jellyfin:/config
+      - ${HB_ROOT:-/opt/podhouse}/modules/jellyfin/config/jellyfin:/config
       # The same single pool mount the media module uses, so Jellyfin reads
       # exactly the files Sonarr and Radarr wrote, at the same paths.
-      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/data:ro
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/podhouse}/data}}:/data:ro
     # Hardware transcoding: uncomment on a box with an Intel/AMD GPU. Left
     # commented because a hardcoded device makes Docker refuse to start the
     # container on a VM that has no /dev/dri at all.

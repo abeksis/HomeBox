@@ -23,7 +23,7 @@ would mean nobody could log in at all — the flag appears automatically behind
 a TLS proxy, which is the case where it does something.
 
 Lost the password? There is no reset by email, because there is no email.
-`sudo rm /opt/homebox/state/auth.json` on the server unclaims the box, then
+`sudo rm /opt/podhouse/state/auth.json` on the server unclaims the box, then
 `homebox bootstrap-token` prints a fresh token. That requires shell access,
 which is the right bar for it.
 

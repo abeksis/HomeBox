@@ -70,7 +70,7 @@ services:
     ports:
       - "8222:80"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/passwords/config/vaultwarden:/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/passwords/config/vaultwarden:/data
     networks:
       - homebox_proxy
     deploy:

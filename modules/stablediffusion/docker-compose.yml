@@ -44,10 +44,10 @@ services:
     ports:
       - "7860:7860"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/stablediffusion/config/data:/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/stablediffusion/config/data:/data
       # Generated images land on the pool rather than the system disk, which
       # a few hundred outputs would otherwise fill.
-      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}/${HB_SD_OUTPUT_DIR:-ai-images}:/output
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/podhouse}/data}}/${HB_SD_OUTPUT_DIR:-ai-images}:/output
     networks:
       - homebox_proxy
     deploy:

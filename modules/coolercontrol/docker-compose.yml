@@ -45,7 +45,7 @@ services:
     environment:
       - TZ=${TZ:-UTC}
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/coolercontrol/config/coolercontrol:/etc/coolercontrol
+      - ${HB_ROOT:-/opt/podhouse}/modules/coolercontrol/config/coolercontrol:/etc/coolercontrol
       - /sys:/sys
       - /run/udev:/run/udev:ro
       - /etc/localtime:/etc/localtime:ro

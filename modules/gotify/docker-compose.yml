@@ -49,7 +49,7 @@ services:
     ports:
       - "8880:80"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/gotify/config/gotify:/app/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/gotify/config/gotify:/app/data
     networks:
       - homebox_proxy
     deploy:

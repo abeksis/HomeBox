@@ -77,7 +77,7 @@ services:
     ports:
       - "9091:9091"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/authelia/config/authelia:/config
+      - ${HB_ROOT:-/opt/podhouse}/modules/authelia/config/authelia:/config
     networks:
       - homebox_proxy
     deploy:

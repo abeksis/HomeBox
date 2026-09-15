@@ -57,8 +57,8 @@ services:
     ports:
       - "8445:443"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/cloud/config/nextcloud:/config
-      - ${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}/nextcloud:/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/cloud/config/nextcloud:/config
+      - ${HB_DATA_DIR:-${HB_ROOT:-/opt/podhouse}/data}/nextcloud:/data
     depends_on:
       - nextcloud-db
       - nextcloud-redis
@@ -89,7 +89,7 @@ services:
       - MARIADB_PASSWORD=${NEXTCLOUD_DB_PASSWORD:-}
       - MARIADB_AUTO_UPGRADE=1
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/cloud/config/mariadb:/var/lib/mysql
+      - ${HB_ROOT:-/opt/podhouse}/modules/cloud/config/mariadb:/var/lib/mysql
     networks:
       - homebox_internal
     deploy:
@@ -111,7 +111,7 @@ services:
       - TZ=${TZ:-UTC}
     command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/cloud/config/redis:/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/cloud/config/redis:/data
     networks:
       - homebox_internal
     deploy:

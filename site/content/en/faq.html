@@ -9,24 +9,24 @@ order: 7
 <h2>Does Podhouse send anything about me anywhere?</h2>
 <p>No account, and nothing about you, your files or the apps you run. Podhouse does make two kinds of request on its own: it checks for a new Podhouse release, and it asks container registries whether your apps have updates. Apps you install may contact their own services, as they would anywhere.</p>
 <p>Two things are counted, anonymously, so the project knows whether a release reached anyone: each run of the install script adds one to a daily count per country, and the release check sends the HomeBox version your box is on. Neither stores an IP address or anything that identifies you or your box — a running box is recognised for one day only, by a salted hash that cannot be followed to the next day, and those rows are reduced to plain per-version totals within two days. The code is in <a href="https://github.com/abeksis/Podhouse/tree/main/infra/get-worker">infra/get-worker</a>.</p>
-<p>To opt out, add <code>HB_ANONYMOUS_STATS=off</code> to <code>/opt/homebox/.env</code> and run <code>sudo homebox up dashboard --yes</code>. The box then checks GitHub directly.</p>
+<p>To opt out, add <code>HB_ANONYMOUS_STATS=off</code> to <code>/opt/podhouse/.env</code> and run <code>sudo homebox up dashboard --yes</code>. The box then checks GitHub directly.</p>
 
 <h2>Is it free?</h2>
 <p>Yes. Podhouse is open source, and every app in the catalog is the real upstream project.</p>
 
 <h2>Where is my data?</h2>
 <ul>
-  <li><strong>App settings and databases:</strong> <code>/opt/homebox/modules/&lt;app&gt;/config</code></li>
-  <li><strong>Generated passwords:</strong> <code>/opt/homebox/.env</code></li>
-  <li><strong>Shared files, media and downloads:</strong> the data pool, <code>/opt/homebox/data</code> by default</li>
+  <li><strong>App settings and databases:</strong> <code>/opt/podhouse/modules/&lt;app&gt;/config</code></li>
+  <li><strong>Generated passwords:</strong> <code>/opt/podhouse/.env</code></li>
+  <li><strong>Shared files, media and downloads:</strong> the data pool, <code>/opt/podhouse/data</code> by default</li>
 </ul>
 
 <h2>Can my media live on a NAS?</h2>
-<p>Yes. Point the media folder at a NAS mount and the media apps, File Browser and the rest read and write there. Uninstalling Podhouse never touches storage outside <code>/opt/homebox</code>.</p>
+<p>Yes. Point the media folder at a NAS mount and the media apps, File Browser and the rest read and write there. Uninstalling Podhouse never touches storage outside <code>/opt/podhouse</code>.</p>
 
 <h2>I forgot the dashboard password.</h2>
 <p>Remove the account and claim the box again from a terminal on it:</p>
-<pre><code>sudo rm /opt/homebox/state/auth.json
+<pre><code>sudo rm /opt/podhouse/state/auth.json
 homebox bootstrap-token</code></pre>
 <p>Too many wrong attempts lock sign-in for fifteen minutes. To clear that immediately:</p>
 <pre><code>homebox unlock</code></pre>

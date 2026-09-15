@@ -53,8 +53,8 @@ services:
       - "16261:16261/udp"
       - "16262:16262/udp"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/zomboid/config/data:/home/steam/ZomboidDedicatedServer
-      - ${HB_ROOT:-/opt/homebox}/modules/zomboid/config/zomboid:/home/steam/Zomboid
+      - ${HB_ROOT:-/opt/podhouse}/modules/zomboid/config/data:/home/steam/ZomboidDedicatedServer
+      - ${HB_ROOT:-/opt/podhouse}/modules/zomboid/config/zomboid:/home/steam/Zomboid
     stop_grace_period: 2m
     networks:
       - homebox_proxy

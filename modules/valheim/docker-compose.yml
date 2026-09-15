@@ -61,8 +61,8 @@ services:
       - "2457:2457/udp"
       - "2458:2458/udp"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/valheim/config/data:/config
-      - ${HB_ROOT:-/opt/homebox}/modules/valheim/config/server:/opt/valheim
+      - ${HB_ROOT:-/opt/podhouse}/modules/valheim/config/data:/config
+      - ${HB_ROOT:-/opt/podhouse}/modules/valheim/config/server:/opt/valheim
     cap_add:
       - sys_nice
     stop_grace_period: 2m

@@ -40,7 +40,7 @@ services:
     ports:
       - "34197:34197/udp"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/factorio/config/factorio:/factorio
+      - ${HB_ROOT:-/opt/podhouse}/modules/factorio/config/factorio:/factorio
     networks:
       - homebox_proxy
     deploy:

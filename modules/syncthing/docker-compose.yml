@@ -49,8 +49,8 @@ services:
       - "22000:22000/udp"
       - "21027:21027/udp"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/syncthing/config/syncthing:/config
-      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/syncthing/config/syncthing:/config
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/podhouse}/data}}:/data
     networks:
       - homebox_proxy
     deploy:

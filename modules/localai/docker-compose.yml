@@ -53,7 +53,7 @@ services:
       # Not 8090: that is Beszel's.
       - "8181:8080"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/localai/config/open-webui:/app/backend/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/localai/config/open-webui:/app/backend/data
     depends_on:
       - ollama
     networks:
@@ -79,7 +79,7 @@ services:
       - OLLAMA_KEEP_ALIVE=5m
     volumes:
       # Where downloaded models live. Gigabytes each, on the system disk.
-      - ${HB_ROOT:-/opt/homebox}/modules/localai/config/ollama:/root/.ollama
+      - ${HB_ROOT:-/opt/podhouse}/modules/localai/config/ollama:/root/.ollama
     # No published port: the only thing that needs to reach Ollama is the UI
     # beside it, and an open inference endpoint on the LAN is a way to hand
     # someone else your CPU.

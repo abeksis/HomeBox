@@ -44,10 +44,10 @@ services:
     ports:
       - "4533:4533"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/navidrome/config/navidrome:/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/navidrome/config/navidrome:/data
       # Read-only on purpose: a music server has no business writing to the
       # library, and tags are edited by whatever put the files there.
-      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}/${HB_MEDIA_MUSIC:-music}:/music:ro
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/podhouse}/data}}/${HB_MEDIA_MUSIC:-music}:/music:ro
     networks:
       - homebox_proxy
     deploy:

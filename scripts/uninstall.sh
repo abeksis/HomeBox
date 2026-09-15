@@ -2,14 +2,14 @@
 # ==========================================================================
 # Remove Podhouse from this machine.
 #
-#   sudo bash /opt/homebox/scripts/uninstall.sh              # asks first
+#   sudo bash /opt/podhouse/scripts/uninstall.sh              # asks first
 #   curl -fsSL https://get.podhouse.dev/uninstall.sh | sudo bash   # same, asks first
-#   sudo bash /opt/homebox/scripts/uninstall.sh --yes        # no questions
-#   sudo bash /opt/homebox/scripts/uninstall.sh --keep-data  # keep data/ + backups/
+#   sudo bash /opt/podhouse/scripts/uninstall.sh --yes        # no questions
+#   sudo bash /opt/podhouse/scripts/uninstall.sh --keep-data  # keep data/ + backups/
 #
 # For starting over on a test box, and for getting a machine back to how it
 # was. It removes the containers Podhouse created, its networks, and the tree
-# at /opt/homebox. Docker itself stays — it was probably wanted anyway, and
+# at /opt/podhouse. Docker itself stays — it was probably wanted anyway, and
 # uninstalling it would take other people's containers with it.
 #
 # What it will NOT do, ever:
@@ -21,7 +21,12 @@
 # ==========================================================================
 set -euo pipefail
 
-HB_ROOT="${HB_ROOT:-/opt/homebox}"
+if [ -z "${HB_ROOT:-}" ]; then
+  if [ -d /opt/podhouse ]; then HB_ROOT=/opt/podhouse; else HB_ROOT=/opt/homebox; fi
+fi
+# Remove the real tree, never through a symlink (rm -rf on a link removes
+# only the link and leaves every file behind).
+if [ -L "$HB_ROOT" ]; then HB_ROOT="$(readlink -f "$HB_ROOT")"; fi
 ASSUME_YES=0
 KEEP_DATA=0
 KEEP_IMAGES=0
@@ -231,6 +236,9 @@ if [ -d "$HB_ROOT" ]; then
     printf '  removed\n'
   fi
 fi
+# The name a box moved from in 0.6.0, left behind as a link to the tree.
+# Removing a symlink never touches what it pointed at.
+if [ -L /opt/homebox ]; then rm -f /opt/homebox; fi
 
 # ------------------------------------------------- 4. the last of the debris
 #

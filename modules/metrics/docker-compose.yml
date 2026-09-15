@@ -56,7 +56,7 @@ services:
     volumes:
       # PocketBase underneath, so this one directory IS the hub: systems,
       # history, alerts and the SSH key it authenticates agents with.
-      - ${HB_ROOT:-/opt/homebox}/modules/metrics/config/beszel:/beszel_data
+      - ${HB_ROOT:-/opt/podhouse}/modules/metrics/config/beszel:/beszel_data
     networks:
       - homebox_proxy
     deploy:

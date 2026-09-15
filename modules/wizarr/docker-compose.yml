@@ -51,7 +51,7 @@ services:
       # the thing that hands out accounts to your media server.
       - "${WIZARR_BIND_IP:-127.0.0.1}:5690:5690"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/wizarr/config/wizarr:/data/database
+      - ${HB_ROOT:-/opt/podhouse}/modules/wizarr/config/wizarr:/data/database
     networks:
       - homebox_proxy
     deploy:

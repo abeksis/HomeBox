@@ -77,13 +77,13 @@ services:
     ports:
       - "8010:8000"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/paperless/config/data:/usr/src/paperless/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/paperless/config/data:/usr/src/paperless/data
       # The archive itself — original plus the OCR'd copy of every document.
       # This is the half that matters in a backup.
-      - ${HB_ROOT:-/opt/homebox}/modules/paperless/config/media:/usr/src/paperless/media
-      - ${HB_ROOT:-/opt/homebox}/modules/paperless/config/export:/usr/src/paperless/export
+      - ${HB_ROOT:-/opt/podhouse}/modules/paperless/config/media:/usr/src/paperless/media
+      - ${HB_ROOT:-/opt/podhouse}/modules/paperless/config/export:/usr/src/paperless/export
       # Watched folder. A file dropped here is imported and removed.
-      - ${HB_ROOT:-/opt/homebox}/modules/paperless/config/consume:/usr/src/paperless/consume
+      - ${HB_ROOT:-/opt/podhouse}/modules/paperless/config/consume:/usr/src/paperless/consume
     depends_on:
       - paperless-db
       - paperless-redis
@@ -112,7 +112,7 @@ services:
       - POSTGRES_DB=paperless
       - POSTGRES_INITDB_ARGS=--data-checksums
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/paperless/config/postgres:/var/lib/postgresql/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/paperless/config/postgres:/var/lib/postgresql/data
     shm_size: 128mb
     networks:
       - homebox_internal
@@ -139,7 +139,7 @@ services:
     environment:
       - TZ=${TZ:-UTC}
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/paperless/config/redis:/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/paperless/config/redis:/data
     networks:
       - homebox_internal
     deploy:

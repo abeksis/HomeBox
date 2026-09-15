@@ -55,7 +55,7 @@ services:
     ports:
       - "8081:80"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/wordpress/config/html:/var/www/html
+      - ${HB_ROOT:-/opt/podhouse}/modules/wordpress/config/html:/var/www/html
     depends_on:
       - wordpress-db
     networks:
@@ -83,7 +83,7 @@ services:
       - MARIADB_USER=wordpress
       - MARIADB_PASSWORD=${WORDPRESS_DB_PASSWORD:-wordpress}
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/wordpress/config/mariadb:/var/lib/mysql
+      - ${HB_ROOT:-/opt/podhouse}/modules/wordpress/config/mariadb:/var/lib/mysql
     networks:
       - homebox_internal
     healthcheck:

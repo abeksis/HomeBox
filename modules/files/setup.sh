@@ -7,7 +7,7 @@
 # only writes the file when it is missing.
 set -euo pipefail
 
-HB_ROOT="${HB_ROOT:-/opt/homebox}"
+HB_ROOT="${HB_ROOT:-/opt/podhouse}"
 CONFIG_DIR="$HB_ROOT/modules/files/config/filebrowser"
 CONFIG="$CONFIG_DIR/config.yaml"
 

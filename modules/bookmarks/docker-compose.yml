@@ -46,7 +46,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/bookmarks/config/linkding:/etc/linkding/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/bookmarks/config/linkding:/etc/linkding/data
     networks:
       - homebox_proxy
     deploy:

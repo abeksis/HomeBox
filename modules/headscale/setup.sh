@@ -17,7 +17,7 @@
 # device a stranger.
 set -euo pipefail
 
-HB_ROOT="${HB_ROOT:-/opt/homebox}"
+HB_ROOT="${HB_ROOT:-/opt/podhouse}"
 CONF="$HB_ROOT/modules/headscale/config"
 
 mkdir -p "$CONF/data"

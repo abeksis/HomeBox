@@ -61,7 +61,7 @@ services:
     ports:
       - "8765:80"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/speedtest/config/speedtest:/config
+      - ${HB_ROOT:-/opt/podhouse}/modules/speedtest/config/speedtest:/config
     networks:
       - homebox_proxy
     deploy:

@@ -17,7 +17,7 @@
 # start. Safe to re-run: chown on an already-correct directory is a no-op.
 set -euo pipefail
 
-HB_ROOT="${HB_ROOT:-/opt/homebox}"
+HB_ROOT="${HB_ROOT:-/opt/podhouse}"
 DATA_DIR="$HB_ROOT/modules/navidrome/config/navidrome"
 
 mkdir -p "$DATA_DIR"

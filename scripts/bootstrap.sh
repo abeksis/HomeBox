@@ -10,7 +10,7 @@
 #
 # This is the piece install.sh cannot be: install.sh configures a tree that is
 # already on disk, and something has to put it there first. This downloads the
-# repository, unpacks it to /opt/homebox, and hands over.
+# repository, unpacks it to /opt/podhouse, and hands over.
 #
 # GitHub is the single source. An earlier version had every running Podhouse
 # serve its own copy over the LAN, which was removed on purpose: a box that had
@@ -90,7 +90,7 @@ case "$HB_REF" in
   *)       HB_REF_NS="refs/heads" ;;
 esac
 HB_TARBALL="${HB_TARBALL:-https://codeload.github.com/${HB_REPO}/tar.gz/${HB_REF_NS}/${HB_REF}}"
-HB_ROOT="${HB_ROOT:-/opt/homebox}"
+HB_ROOT="${HB_ROOT:-/opt/podhouse}"
 HB_USER="${HB_USER:-${SUDO_USER:-$(id -un)}}"
 
 if [ -t 1 ]; then
@@ -146,6 +146,14 @@ done
 # An existing install has .env in it — every generated password on that box.
 # Unpacking over it would not delete the file, but this is not an upgrade path
 # and pretending it is would be how someone loses a working box.
+# A box from before 0.6.0 lives at /opt/homebox. The default moved, so
+# without this check the one-liner would quietly install a second Podhouse
+# beside it, fighting over the same ports and networks.
+if [ -e /opt/homebox/.env ] && [ ! -L /opt/homebox ] && [ "$HB_ROOT" != /opt/homebox ]; then
+  die "/opt/homebox is already a Podhouse install (from before it moved to /opt/podhouse).
+Update it in place instead:  sudo /opt/homebox/homebox self-update
+It moves itself to /opt/podhouse as part of that update."
+fi
 if [ -e "$HB_ROOT/.env" ]; then
   die "$HB_ROOT is already a Podhouse install.
 To update it in place:      cd $HB_ROOT && git pull && sudo bash install.sh
@@ -157,7 +165,7 @@ fi
 
 # A clone, not a tarball download.
 #
-# The documented way to update a box is `cd /opt/homebox && git pull`, and a
+# The documented way to update a box is `cd /opt/podhouse && git pull`, and a
 # tarball makes that a lie — the first install left no .git, so the command in
 # the README failed with "not a repository" on a box that was working fine.
 # Cloning costs one apt package and makes updating, checking what version is

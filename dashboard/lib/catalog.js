@@ -203,7 +203,7 @@ services:
       - PUID=\${PUID:-1000}
       - PGID=\${PGID:-1000}
     volumes:
-      - \${HB_ROOT:-/opt/homebox}/modules/${app.slug}/config:/config
+      - \${HB_ROOT:-/opt/podhouse}/modules/${app.slug}/config:/config
     ports:
       - "${app.port}:${app.containerPort}"
     networks:

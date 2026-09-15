@@ -62,7 +62,7 @@ services:
     ports:
       - "3110:3000"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/jellystat/config/backup:/app/backend/backup-data
+      - ${HB_ROOT:-/opt/podhouse}/modules/jellystat/config/backup:/app/backend/backup-data
     depends_on:
       - jellystat-db
     networks:
@@ -92,7 +92,7 @@ services:
       - POSTGRES_DB=jfstat
       - POSTGRES_INITDB_ARGS=--data-checksums
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/jellystat/config/postgres:/var/lib/postgresql/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/jellystat/config/postgres:/var/lib/postgresql/data
     shm_size: 128mb
     # No published port: nothing outside this module needs the history.
     networks:

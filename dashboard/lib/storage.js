@@ -197,7 +197,7 @@ function validate(input) {
     throw new StorageError('the mountpoint has to be an absolute path, e.g. /mnt/media_disk');
   }
   // Mounting over something that matters is not a mistake to allow.
-  for (const forbidden of ['/', '/etc', '/usr', '/var', '/boot', '/home', '/root', '/opt', '/opt/homebox']) {
+  for (const forbidden of ['/', '/etc', '/usr', '/var', '/boot', '/home', '/root', '/opt', '/opt/podhouse', '/opt/homebox']) {
     if (mountpoint === forbidden) throw new StorageError(`refusing to mount over ${mountpoint}`);
   }
 

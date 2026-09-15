@@ -4,7 +4,7 @@
 #
 #   curl -fsSL .../install.sh | bash      (or just: sudo bash install.sh)
 #
-# It installs Docker, lays out /opt/homebox, generates the secrets every
+# It installs Docker, lays out /opt/podhouse, generates the secrets every
 # module needs, creates the networks, and brings up core + dashboard. It is
 # idempotent: run it again after an upgrade and it repairs what is missing
 # without touching what already works.
@@ -17,7 +17,12 @@ set -euo pipefail
 # Noninteractive — which looks like something went wrong on a first install.
 export DEBIAN_FRONTEND=noninteractive
 
-HB_ROOT="${HB_ROOT:-/opt/homebox}"
+HB_ROOT="${HB_ROOT:-/opt/podhouse}"
+# A box moved from /opt/homebox keeps that name as a symlink to the new tree.
+# Resolve it, so compose, .env and the dashboard mount all see one real path
+# rather than whichever name the caller happened to use.
+if [ -L "$HB_ROOT" ]; then HB_ROOT="$(readlink -f "$HB_ROOT")"; fi
+export HB_ROOT
 # Who this box belongs to.
 #
 # On an EXISTING install the answer is already on disk: whoever owns the tree.
@@ -29,7 +34,7 @@ HB_ROOT="${HB_ROOT:-/opt/homebox}"
 # install.sh hands the entire tree — including .git — to root. The box keeps
 # working, and its owner can no longer run git in their own install:
 #
-#   fatal: detected dubious ownership in repository at '/opt/homebox'
+#   fatal: detected dubious ownership in repository at '/opt/podhouse'
 #
 # Every update through the button did this. The CLI never did, because sudo
 # sets SUDO_USER, which is exactly the kind of difference between two paths
@@ -515,7 +520,7 @@ step "Starting core and dashboard"
 # claim it appears. Printed last so it is the thing still on screen.
 # HOMEBOX_ROOT, not just argv: auth.js finds state/ through state-store, which
 # reads that variable. Passing the path only as an argument meant a non-default
-# HB_ROOT wrote the token into /opt/homebox instead of the install being made.
+# HB_ROOT wrote the token into /opt/podhouse instead of the install being made.
 BOOTSTRAP="$(HOMEBOX_ROOT="$HB_ROOT" node -e '
   require(process.argv[1] + "/dashboard/lib/auth.js").bootstrapToken()
     .then((t) => process.stdout.write(t || ""))

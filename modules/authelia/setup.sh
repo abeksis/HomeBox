@@ -22,7 +22,7 @@
 # exactly as it is, so edits you make by hand survive a reinstall.
 set -euo pipefail
 
-HB_ROOT="${HB_ROOT:-/opt/homebox}"
+HB_ROOT="${HB_ROOT:-/opt/podhouse}"
 CONFIG_DIR="$HB_ROOT/modules/authelia/config/authelia"
 CONFIG="$CONFIG_DIR/configuration.yml"
 USERS="$CONFIG_DIR/users_database.yml"

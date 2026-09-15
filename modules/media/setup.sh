@@ -8,7 +8,7 @@
 # with the categories as folders inside it.
 set -euo pipefail
 
-HB_ROOT="${HB_ROOT:-/opt/homebox}"
+HB_ROOT="${HB_ROOT:-/opt/podhouse}"
 DATA_DIR="${HB_DATA_DIR:-$HB_ROOT/data}"
 MEDIA_ROOT="${HB_MEDIA_ROOT:-$DATA_DIR}"
 PUID="${PUID:-1000}"

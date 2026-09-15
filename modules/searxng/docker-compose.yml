@@ -57,7 +57,7 @@ services:
     ports:
       - "8088:8080"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/searxng/config/searxng:/etc/searxng
+      - ${HB_ROOT:-/opt/podhouse}/modules/searxng/config/searxng:/etc/searxng
     cap_drop:
       - ALL
     cap_add:

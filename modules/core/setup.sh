@@ -7,7 +7,7 @@
 # itself a few minutes later — leaving an install nobody can log into.
 set -euo pipefail
 
-HB_ROOT="${HB_ROOT:-/opt/homebox}"
+HB_ROOT="${HB_ROOT:-/opt/podhouse}"
 CONFIG_DIR="$HB_ROOT/modules/core/config"
 PASSWORD_FILE="$CONFIG_DIR/portainer-admin-password"
 

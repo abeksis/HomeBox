@@ -45,8 +45,8 @@ services:
     volumes:
       # OCR language data, which is what makes the first OCR run slow and
       # every one after it fast.
-      - ${HB_ROOT:-/opt/homebox}/modules/stirling-pdf/config/training:/usr/share/tessdata
-      - ${HB_ROOT:-/opt/homebox}/modules/stirling-pdf/config/configs:/configs
+      - ${HB_ROOT:-/opt/podhouse}/modules/stirling-pdf/config/training:/usr/share/tessdata
+      - ${HB_ROOT:-/opt/podhouse}/modules/stirling-pdf/config/configs:/configs
     networks:
       - homebox_proxy
     deploy:

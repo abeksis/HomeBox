@@ -41,7 +41,7 @@ services:
     ports:
       - "5006:5006"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/budget/config/actual:/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/budget/config/actual:/data
     networks:
       - homebox_proxy
     deploy:

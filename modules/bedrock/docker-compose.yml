@@ -65,7 +65,7 @@ services:
       # router is the usual reason nobody can connect.
       - "19132:19132/udp"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/bedrock/config/data:/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/bedrock/config/data:/data
     stdin_open: true
     tty: true
     networks:

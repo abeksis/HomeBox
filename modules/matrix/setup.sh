@@ -17,7 +17,7 @@
 # in; a wrong one is not a setting you change later, it is a rebuild.
 set -euo pipefail
 
-HB_ROOT="${HB_ROOT:-/opt/homebox}"
+HB_ROOT="${HB_ROOT:-/opt/podhouse}"
 CONFIG_DIR="$HB_ROOT/modules/matrix/config"
 SYNAPSE_DIR="$CONFIG_DIR/synapse"
 ELEMENT_CONFIG="$CONFIG_DIR/element/config.json"

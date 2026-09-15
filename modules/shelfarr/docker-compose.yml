@@ -52,9 +52,9 @@ services:
     ports:
       - "${SHELFARR_BIND_IP:-127.0.0.1}:5056:80"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/shelfarr/config/shelfarr:/config
+      - ${HB_ROOT:-/opt/podhouse}/modules/shelfarr/config/shelfarr:/config
       # One mount over the pool, so a grab lands where the readers look.
-      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/data
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/podhouse}/data}}:/data
     networks:
       - homebox_proxy
     deploy:

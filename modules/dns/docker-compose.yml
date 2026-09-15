@@ -45,8 +45,8 @@ services:
     environment:
       - TZ=${TZ:-UTC}
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/dns/config/adguard/work:/opt/adguardhome/work
-      - ${HB_ROOT:-/opt/homebox}/modules/dns/config/adguard/conf:/opt/adguardhome/conf
+      - ${HB_ROOT:-/opt/podhouse}/modules/dns/config/adguard/work:/opt/adguardhome/work
+      - ${HB_ROOT:-/opt/podhouse}/modules/dns/config/adguard/conf:/opt/adguardhome/conf
     networks:
       - homebox_proxy
     deploy:

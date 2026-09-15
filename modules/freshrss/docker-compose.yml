@@ -44,8 +44,8 @@ services:
     ports:
       - "8070:80"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/freshrss/config/data:/var/www/FreshRSS/data
-      - ${HB_ROOT:-/opt/homebox}/modules/freshrss/config/extensions:/var/www/FreshRSS/extensions
+      - ${HB_ROOT:-/opt/podhouse}/modules/freshrss/config/data:/var/www/FreshRSS/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/freshrss/config/extensions:/var/www/FreshRSS/extensions
     networks:
       - homebox_proxy
     deploy:

@@ -12,7 +12,7 @@
 # the module itself — so the thing that defines the format generates it.
 set -euo pipefail
 
-HB_ROOT="${HB_ROOT:-/opt/homebox}"
+HB_ROOT="${HB_ROOT:-/opt/podhouse}"
 ENV_FILE="$HB_ROOT/.env"
 IMAGE="$(grep -oE 'ghcr\.io/wg-easy/wg-easy:[A-Za-z0-9._-]+' "$HB_ROOT/modules/vpn/docker-compose.yml" | head -1)"
 IMAGE="${IMAGE:-ghcr.io/wg-easy/wg-easy:14}"

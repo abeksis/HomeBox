@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==========================================================================
-# homebox — install and run the apps defined in /opt/homebox/modules
+# homebox — install and run the apps defined in /opt/podhouse/modules
 #
 # One compose project per module (homebox-<id>), so a broken module can be
 # rebuilt without touching anything else, and Docker's own project label is
@@ -9,7 +9,7 @@
 # ==========================================================================
 set -euo pipefail
 
-HB_ROOT="${HB_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+HB_ROOT="${HB_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)}"
 MODULES_DIR="$HB_ROOT/modules"
 STATE_DIR="$HB_ROOT/state"
 ENV_FILE="$HB_ROOT/.env"

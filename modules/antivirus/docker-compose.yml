@@ -45,13 +45,13 @@ services:
     volumes:
       # Read-write, and it is the one thing here that needs to be: moving a
       # hit out of the way is the useful half of finding it.
-      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}/${HB_DOWNLOADS:-torrents}:/scan/downloads
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/podhouse}/data}}/${HB_DOWNLOADS:-torrents}:/scan/downloads
       # Deliberately a sibling of downloads, not a child, and dot-prefixed:
       # inside it, the *arr import scanners would find quarantined files and
       # try to import them, which is precisely the outcome being prevented.
-      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}/.quarantine:/scan/quarantine
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/podhouse}/data}}/.quarantine:/scan/quarantine
       # Signature database, so a restart does not re-download 1.5GB.
-      - ${HB_ROOT:-/opt/homebox}/modules/antivirus/config/clamav:/var/lib/clamav
+      - ${HB_ROOT:-/opt/podhouse}/modules/antivirus/config/clamav:/var/lib/clamav
     networks:
       - homebox_internal
     healthcheck:

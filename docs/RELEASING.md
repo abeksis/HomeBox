@@ -58,7 +58,7 @@ When a release changes `scripts/self-update.sh` in a way that matters, say so in
 notes and expect boxes to need one hop by hand:
 
 ```bash
-cd /opt/homebox && sudo git fetch --tags && sudo git checkout v0.2.3 && sudo bash install.sh
+cd /opt/podhouse && sudo git fetch --tags && sudo git checkout v0.2.3 && sudo bash install.sh
 ```
 
 Then raise `min_from_version` past the broken release, so a box below it is told to do

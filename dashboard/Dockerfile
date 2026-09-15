@@ -20,7 +20,7 @@ COPY public ./public
 
 ENV NODE_ENV=production \
     PORT=8443 \
-    HOMEBOX_ROOT=/opt/homebox
+    HOMEBOX_ROOT=/opt/podhouse
 
 EXPOSE 8443
 

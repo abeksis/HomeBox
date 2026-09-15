@@ -20,7 +20,7 @@
 # Never overwrites: once you have configured cameras, this file is yours.
 set -euo pipefail
 
-HB_ROOT="${HB_ROOT:-/opt/homebox}"
+HB_ROOT="${HB_ROOT:-/opt/podhouse}"
 CONFIG_DIR="$HB_ROOT/modules/frigate/config/frigate"
 CONFIG="$CONFIG_DIR/config.yml"
 

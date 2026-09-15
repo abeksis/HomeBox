@@ -8,7 +8,7 @@
  * Reimplementing a fraction of that is how a dashboard ends up disagreeing
  * with the CLI about what is installed.
  *
- * Because /opt/homebox is mounted at the same path inside this container as
+ * Because /opt/podhouse is mounted at the same path inside this container as
  * on the host, the bind mounts in a module file resolve identically whether
  * compose is run from here or from an SSH session.
  */
@@ -20,7 +20,7 @@ const path = require('path');
 
 const secrets = require('./secrets');
 
-const ROOT = process.env.HOMEBOX_ROOT || '/opt/homebox';
+const ROOT = process.env.HOMEBOX_ROOT || '/opt/podhouse';
 const MODULES_DIR = path.join(ROOT, 'modules');
 const ENV_FILE = path.join(ROOT, '.env');
 

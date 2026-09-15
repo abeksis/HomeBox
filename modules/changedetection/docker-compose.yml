@@ -52,7 +52,7 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/changedetection/config/datastore:/datastore
+      - ${HB_ROOT:-/opt/podhouse}/modules/changedetection/config/datastore:/datastore
     depends_on:
       - changedetection-browser
     networks:

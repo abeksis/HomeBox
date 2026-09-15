@@ -13,7 +13,7 @@
 # that silently does nothing for everyone who uses the interface.
 set -euo pipefail
 
-HB_ROOT="${HB_ROOT:-/opt/homebox}"
+HB_ROOT="${HB_ROOT:-/opt/podhouse}"
 ENV_FILE="$HB_ROOT/.env"
 HUB_DATA="$HB_ROOT/modules/metrics/config/beszel"
 HUB_KEY="$HUB_DATA/id_ed25519"

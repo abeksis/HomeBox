@@ -111,7 +111,7 @@ services:
       - "28745:28745/tcp"
       - "28745:28745/udp"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/media/config/qbittorrent:/config
+      - ${HB_ROOT:-/opt/podhouse}/modules/media/config/qbittorrent:/config
       # ONE mount for the whole pool, and it has to stay one.
       #
       # Binding downloads and the library separately makes them two vfsmounts,
@@ -124,7 +124,7 @@ services:
       # So the HOST side is a single root and the categories are names inside
       # it. Compose has no conditionals, which is the other reason: there is
       # no way to express "bind these three only if they share a parent".
-      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/data
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/podhouse}/data}}:/data
     networks:
       - homebox_proxy
     deploy:
@@ -149,9 +149,9 @@ services:
     ports:
       - "7878:7878"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/media/config/radarr:/config
+      - ${HB_ROOT:-/opt/podhouse}/modules/media/config/radarr:/config
       # One mount, for the hardlink reason above.
-      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/data
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/podhouse}/data}}:/data
     networks:
       - homebox_proxy
     deploy:
@@ -176,9 +176,9 @@ services:
     ports:
       - "8989:8989"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/media/config/sonarr:/config
+      - ${HB_ROOT:-/opt/podhouse}/modules/media/config/sonarr:/config
       # One mount, for the hardlink reason above.
-      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/data
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/podhouse}/data}}:/data
     networks:
       - homebox_proxy
     deploy:
@@ -203,7 +203,7 @@ services:
     ports:
       - "9696:9696"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/media/config/prowlarr:/config
+      - ${HB_ROOT:-/opt/podhouse}/modules/media/config/prowlarr:/config
     networks:
       - homebox_proxy
     deploy:
@@ -228,9 +228,9 @@ services:
     ports:
       - "6767:6767"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/media/config/bazarr:/config
+      - ${HB_ROOT:-/opt/podhouse}/modules/media/config/bazarr:/config
       # One mount, for the hardlink reason above.
-      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/data
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/podhouse}/data}}:/data
     networks:
       - homebox_proxy
     deploy:

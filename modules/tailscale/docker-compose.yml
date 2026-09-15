@@ -67,7 +67,7 @@ services:
       - TS_USERSPACE=false
       - TS_EXTRA_ARGS=${TAILSCALE_EXTRA_ARGS:-}
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/tailscale/config/tailscale:/var/lib/tailscale
+      - ${HB_ROOT:-/opt/podhouse}/modules/tailscale/config/tailscale:/var/lib/tailscale
     deploy:
       resources:
         limits:

@@ -14,7 +14,7 @@ On a clean Debian or Ubuntu box:
 curl -fsSL https://get.podhouse.dev/install.sh | sudo bash
 ```
 
-It downloads this repository, unpacks it to `/opt/homebox`, then runs
+It downloads this repository, unpacks it to `/opt/podhouse`, then runs
 `install.sh` — Docker, Node, the tree, this machine's own generated secrets,
 the networks, and core + dashboard. About three minutes on a fresh VM.
 
@@ -68,7 +68,7 @@ and the tag, which is how you tell a box that is mid-update from one that is not
 The manual path still works and is the escape hatch when the dashboard is what broke:
 
 ```bash
-cd /opt/homebox && sudo git fetch --tags && sudo git checkout v0.2.0 && sudo bash install.sh
+cd /opt/podhouse && sudo git fetch --tags && sudo git checkout v0.2.0 && sudo bash install.sh
 ```
 
 `install.sh` is idempotent: it repairs what is missing and never regenerates a secret
@@ -109,7 +109,7 @@ migration, not an image swap.
 ### Uninstalling
 
 ```bash
-sudo bash /opt/homebox/scripts/uninstall.sh
+sudo bash /opt/podhouse/scripts/uninstall.sh
 ```
 
 Or without anything on the box to run it from — it asks exactly the same way:
@@ -119,7 +119,7 @@ curl -fsSL https://get.podhouse.dev/uninstall.sh | sudo bash
 ```
 
 It prints an inventory of exactly what will go — containers, networks, images
-built here, and the size of each thing under `/opt/homebox` — then asks you to
+built here, and the size of each thing under `/opt/podhouse` — then asks you to
 type `remove`. Options:
 
 | | |
@@ -137,7 +137,7 @@ curl -fsSL https://get.podhouse.dev/uninstall.sh | sudo bash -s -- --yes
 **Docker is left installed.** It was probably wanted anyway, and removing it
 would take any other containers on the machine with it.
 
-**Storage that is not under `/opt/homebox` is never touched.** If `HB_DATA_DIR`
+**Storage that is not under `/opt/podhouse` is never touched.** If `HB_DATA_DIR`
 or `HB_MEDIA_ROOT` points somewhere else — a NAS mount, say — the script says
 so and leaves it completely alone. Uninstalling the dashboard must not mean
 deleting the media. For the same reason the systemd mount units written by
@@ -153,7 +153,7 @@ records what was done to one particular box, which is exactly the thing that
 should not follow the code around.
 
 ```
-/opt/homebox
+/opt/podhouse
 ├── install.sh                  # clean Debian → running Podhouse
 ├── homebox                     # the CLI
 ├── .env                        # generated secrets, mode 600

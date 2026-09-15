@@ -1,6 +1,6 @@
 'use strict';
 /**
- * Small JSON files under /opt/homebox/state, written atomically.
+ * Small JSON files under /opt/podhouse/state, written atomically.
  *
  * Everything here is dashboard-owned state (UI preferences, activity log).
  * The enabled-module list lives in state/modules.conf as plain lines so the
@@ -12,7 +12,7 @@ const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
 
-const ROOT = process.env.HOMEBOX_ROOT || '/opt/homebox';
+const ROOT = process.env.HOMEBOX_ROOT || '/opt/podhouse';
 const STATE_DIR = path.join(ROOT, 'state');
 
 function ensureDir() {
@@ -63,7 +63,7 @@ async function writeJson(name, value) {
 /**
  * The dashboard runs as root inside its container so it can open the Docker
  * socket, which means anything it writes into the bind-mounted state
- * directory lands root-owned — and the account that owns /opt/homebox can no
+ * directory lands root-owned — and the account that owns /opt/podhouse can no
  * longer edit or delete its own files. Hand each file back to whoever owns
  * the directory.
  */

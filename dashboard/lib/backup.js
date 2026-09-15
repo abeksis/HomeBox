@@ -81,7 +81,7 @@ function requireSecret() {
   if (!secret) {
     throw new BackupError(
       'No backup encryption key is set',
-      'Add HB_BACKUP_KEY to /opt/homebox/.env (or re-run install.sh, which generates one) and restart the dashboard.'
+      'Add HB_BACKUP_KEY to /opt/podhouse/.env (or re-run install.sh, which generates one) and restart the dashboard.'
     );
   }
   return secret;
@@ -269,7 +269,7 @@ async function create({ kind = 'config' } = {}) {
 
 /**
  * The dashboard runs as root in its container, so anything it writes into the
- * bind-mounted tree lands root-owned and the account that owns /opt/homebox
+ * bind-mounted tree lands root-owned and the account that owns /opt/podhouse
  * cannot copy or delete its own backups.
  */
 async function matchOwner(file) {

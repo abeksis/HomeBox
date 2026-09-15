@@ -137,8 +137,8 @@ else
   warn "could not set the immutable bit on $MOUNTPOINT — a container starting before the mount could still bind an empty directory"
 fi
 
-PUID="$(grep -E '^PUID=' /opt/homebox/.env 2>/dev/null | cut -d= -f2)"; PUID="${PUID:-1000}"
-PGID="$(grep -E '^PGID=' /opt/homebox/.env 2>/dev/null | cut -d= -f2)"; PGID="${PGID:-1000}"
+PUID="$(grep -E '^PUID=' /opt/podhouse/.env 2>/dev/null | cut -d= -f2)"; PUID="${PUID:-1000}"
+PGID="$(grep -E '^PGID=' /opt/podhouse/.env 2>/dev/null | cut -d= -f2)"; PGID="${PGID:-1000}"
 
 if [ "$KIND" = nfs ]; then
   WHAT="$REMOTE"

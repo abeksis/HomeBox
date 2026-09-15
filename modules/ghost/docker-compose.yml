@@ -62,7 +62,7 @@ services:
     ports:
       - "2368:2368"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/ghost/config/content:/var/lib/ghost/content
+      - ${HB_ROOT:-/opt/podhouse}/modules/ghost/config/content:/var/lib/ghost/content
     depends_on:
       - ghost-db
     networks:
@@ -90,7 +90,7 @@ services:
       - MYSQL_USER=ghost
       - MYSQL_PASSWORD=${GHOST_DB_PASSWORD:-ghost}
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/ghost/config/mysql:/var/lib/mysql
+      - ${HB_ROOT:-/opt/podhouse}/modules/ghost/config/mysql:/var/lib/mysql
     networks:
       - homebox_internal
     healthcheck:

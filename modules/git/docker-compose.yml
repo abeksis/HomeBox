@@ -47,7 +47,7 @@ services:
       - "3030:3000"
       - "2222:22"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/git/config/gitea:/data
+      - ${HB_ROOT:-/opt/podhouse}/modules/git/config/gitea:/data
       # Only /etc/localtime: on a systemd host /etc/timezone does not exist,
       # and bind-mounting a missing path makes Docker create a directory there.
       - /etc/localtime:/etc/localtime:ro

@@ -51,13 +51,13 @@ services:
       - "8265:8265"
       - "8266:8266"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/tdarr/config/server:/app/server
-      - ${HB_ROOT:-/opt/homebox}/modules/tdarr/config/configs:/app/configs
-      - ${HB_ROOT:-/opt/homebox}/modules/tdarr/config/logs:/app/logs
+      - ${HB_ROOT:-/opt/podhouse}/modules/tdarr/config/server:/app/server
+      - ${HB_ROOT:-/opt/podhouse}/modules/tdarr/config/configs:/app/configs
+      - ${HB_ROOT:-/opt/podhouse}/modules/tdarr/config/logs:/app/logs
       # Scratch space for a transcode in progress. On the system disk rather
       # than the pool, so a run in flight does not churn the NAS.
-      - ${HB_ROOT:-/opt/homebox}/modules/tdarr/config/transcode:/temp
-      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/media
+      - ${HB_ROOT:-/opt/podhouse}/modules/tdarr/config/transcode:/temp
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/podhouse}/data}}:/media
     networks:
       - homebox_proxy
     deploy:

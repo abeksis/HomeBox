@@ -53,7 +53,7 @@ services:
     ports:
       - "5678:5678"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/automation/config/n8n:/home/node/.n8n
+      - ${HB_ROOT:-/opt/podhouse}/modules/automation/config/n8n:/home/node/.n8n
     networks:
       - homebox_proxy
     deploy:

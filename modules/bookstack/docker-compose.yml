@@ -64,7 +64,7 @@ services:
     ports:
       - "6875:80"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/bookstack/config/bookstack:/config
+      - ${HB_ROOT:-/opt/podhouse}/modules/bookstack/config/bookstack:/config
     depends_on:
       - bookstack-db
     networks:
@@ -94,7 +94,7 @@ services:
       - MYSQL_USER=bookstack
       - MYSQL_PASSWORD=${BOOKSTACK_DB_PASSWORD:-bookstack}
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/bookstack/config/mariadb:/config
+      - ${HB_ROOT:-/opt/podhouse}/modules/bookstack/config/mariadb:/config
     networks:
       - homebox_internal
     deploy:

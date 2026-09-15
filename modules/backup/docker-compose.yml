@@ -50,14 +50,14 @@ services:
     ports:
       - "8200:8200"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/backup/config/duplicati:/config
+      - ${HB_ROOT:-/opt/podhouse}/modules/backup/config/duplicati:/config
       # What it can back up. Read-only: a backup tool has no reason to write
       # to the originals, and a misconfigured restore should not be able to.
-      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}:/source/pool:ro
-      - ${HB_ROOT:-/opt/homebox}/modules:/source/module-config:ro
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/podhouse}/data}}:/source/pool:ro
+      - ${HB_ROOT:-/opt/podhouse}/modules:/source/module-config:ro
       # Where a restore is written. Separate and writable, so nothing can be
       # restored over a live original by accident.
-      - ${HB_ROOT:-/opt/homebox}/modules/backup/config/restore:/restore
+      - ${HB_ROOT:-/opt/podhouse}/modules/backup/config/restore:/restore
     networks:
       - homebox_proxy
     deploy:

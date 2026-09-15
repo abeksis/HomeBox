@@ -20,7 +20,7 @@ x-homebox:
     bg: "rgba(139,92,246,0.12)"
   tips:
     - "It holds a read-write Docker socket because installing an app means creating containers — that is root on this box, so keep it off the internet"
-    - "/opt/homebox is mounted at the same path inside the container so compose bind mounts resolve identically on both sides"
+    - "/opt/podhouse is mounted at the same path inside the container so compose bind mounts resolve identically on both sides"
     - "Reachable at http://<box>:8443 even before DNS points a hostname here"
   services:
     dashboard:
@@ -34,14 +34,15 @@ x-homebox:
 services:
   dashboard:
     build:
-      context: ${HB_ROOT:-/opt/homebox}/dashboard
+      context: ${HB_ROOT:-/opt/podhouse}/dashboard
     image: homebox-dashboard:${HB_VERSION:-local}
     container_name: dashboard
     ports:
       - "8443:8443"
     environment:
       - TZ=${TZ:-UTC}
-      - HOMEBOX_ROOT=/opt/homebox
+      # Whatever HB_ROOT is, the same path inside — see the volume below.
+      - HOMEBOX_ROOT=${HB_ROOT:-/opt/podhouse}
       - PORT=8443
       # Passed in rather than read from .env: the dashboard builds app links
       # from this, and has no other reason to open a file full of secrets.
@@ -50,9 +51,11 @@ services:
       # GitHub and not be counted among running boxes (lib/platform.js).
       - HB_ANONYMOUS_STATS=${HB_ANONYMOUS_STATS:-on}
     volumes:
-      # Same path inside and out: `docker compose -f /opt/homebox/modules/...`
+      # Same path inside and out: `docker compose -f /opt/podhouse/modules/...`
       # run from in here produces bind mounts the host daemon can resolve.
-      - ${HB_ROOT:-/opt/homebox}:/opt/homebox
+      # Both sides follow HB_ROOT: a fixed path on the right broke the rule the
+      # moment a box lived anywhere else.
+      - ${HB_ROOT:-/opt/podhouse}:${HB_ROOT:-/opt/podhouse}
       # Read-write on purpose — installing a module creates containers.
       - /var/run/docker.sock:/var/run/docker.sock
       # The host root, for a real disk figure rather than the image layer's.
@@ -73,7 +76,7 @@ services:
       # The image still ships its own copy, so a container started without
       # this mount is not broken. HB_ROOT always holds the source here; the
       # dashboard is built from it.
-      - ${HB_ROOT:-/opt/homebox}/dashboard/public:/app/public:ro
+      - ${HB_ROOT:-/opt/podhouse}/dashboard/public:/app/public:ro
     networks:
       - homebox_proxy
     deploy:

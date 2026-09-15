@@ -4,19 +4,19 @@ summary: הסרה נקייה של Podhouse — היא מציגה בדיוק מה
 order: 6
 -->
 <h2>מהשרת</h2>
-<pre><code>sudo bash /opt/homebox/scripts/uninstall.sh</code></pre>
+<pre><code>sudo bash /opt/podhouse/scripts/uninstall.sh</code></pre>
 <p>או, אם הקבצים על השרת כבר נמחקו או נשברו:</p>
 <pre><code>curl -fsSL https://get.podhouse.dev/uninstall.sh | sudo bash</code></pre>
-<p>שתי הדרכים מציגות רשימה מדויקת של מה שיימחק — קונטיינרים, רשתות, אימג'ים, והגודל של כל מה שתחת <code>/opt/homebox</code> — ואז מבקשות להקליד <code>remove</code>. כל דבר אחר, או Ctrl+C, משאיר את השרת כמו שהיה.</p>
+<p>שתי הדרכים מציגות רשימה מדויקת של מה שיימחק — קונטיינרים, רשתות, אימג'ים, והגודל של כל מה שתחת <code>/opt/podhouse</code> — ואז מבקשות להקליד <code>remove</code>. כל דבר אחר, או Ctrl+C, משאיר את השרת כמו שהיה.</p>
 
 <h2>מה נשאר</h2>
 <ul>
   <li><strong>Docker.</strong> כנראה שרצית אותו בכל מקרה, והסרתו הייתה לוקחת איתה גם קונטיינרים אחרים שרצים על המכונה.</li>
-  <li><strong>אחסון מחוץ ל-<code>/opt/homebox</code>.</strong> ספריית מדיה על NAS או על דיסק אחר לא נוגעים בה לעולם. הסרת לוח הבקרה אסור שתהיה מחיקת הסרטים.</li>
+  <li><strong>אחסון מחוץ ל-<code>/opt/podhouse</code>.</strong> ספריית מדיה על NAS או על דיסק אחר לא נוגעים בה לעולם. הסרת לוח הבקרה אסור שתהיה מחיקת הסרטים.</li>
 </ul>
 
 <div class="callout warn">
-  <p>כל מה שתחת <code>/opt/homebox</code> נמחק — כולל הסיסמאות שנוצרו, ההגדרות של האפליקציות והגיבויים ששמורים שם. אם ייתכן שתצטרך אותם, הורד גיבוי קודם.</p>
+  <p>כל מה שתחת <code>/opt/podhouse</code> נמחק — כולל הסיסמאות שנוצרו, ההגדרות של האפליקציות והגיבויים ששמורים שם. אם ייתכן שתצטרך אותם, הורד גיבוי קודם.</p>
 </div>
 
 <h2>אפשרויות</h2>
@@ -27,4 +27,4 @@ order: 6
     <tr><td><code>--yes</code></td><td>מדלג על השאלה. לסקריפטים בלבד.</td></tr>
   </tbody>
 </table></div>
-<pre><code>sudo bash /opt/homebox/scripts/uninstall.sh --keep-data</code></pre>
+<pre><code>sudo bash /opt/podhouse/scripts/uninstall.sh --keep-data</code></pre>

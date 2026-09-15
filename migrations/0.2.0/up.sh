@@ -19,7 +19,7 @@
 # migration ought to be one whose effect is easy to see.
 set -euo pipefail
 
-HB_ROOT="${HB_ROOT:-/opt/homebox}"
+HB_ROOT="${HB_ROOT:-/opt/podhouse}"
 ENV_FILE="$HB_ROOT/.env"
 VERSION="$(cat "$HB_ROOT/VERSION" 2>/dev/null || echo 0.0.0)"
 

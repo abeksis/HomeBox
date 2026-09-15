@@ -52,8 +52,8 @@ services:
     ports:
       - "8083:8083"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/ebooks/config/calibre-web:/config
-      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}/${HB_MEDIA_BOOKS:-books}:/books
+      - ${HB_ROOT:-/opt/podhouse}/modules/ebooks/config/calibre-web:/config
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/podhouse}/data}}/${HB_MEDIA_BOOKS:-books}:/books
     networks:
       - homebox_proxy
     deploy:
@@ -78,8 +78,8 @@ services:
       # leaving free.
       - "5002:5000"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/ebooks/config/kavita:/kavita/config
-      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/homebox}/data}}/${HB_MEDIA_BOOKS:-books}:/books
+      - ${HB_ROOT:-/opt/podhouse}/modules/ebooks/config/kavita:/kavita/config
+      - ${HB_MEDIA_ROOT:-${HB_DATA_DIR:-${HB_ROOT:-/opt/podhouse}/data}}/${HB_MEDIA_BOOKS:-books}:/books
     networks:
       - homebox_proxy
     deploy:

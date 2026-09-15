@@ -70,7 +70,7 @@ services:
       - "51820:51820/udp"
       - "51821:51821/tcp"
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/vpn/config/wg-easy:/etc/wireguard
+      - ${HB_ROOT:-/opt/podhouse}/modules/vpn/config/wg-easy:/etc/wireguard
     # WireGuard is a kernel network interface: it needs to create one and
     # write routing rules, which no unprivileged container can do.
     cap_add:

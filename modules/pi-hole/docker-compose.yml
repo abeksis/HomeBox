@@ -59,8 +59,8 @@ services:
       # the container's own subnet, which makes it look broken from a phone.
       - FTLCONF_dns_listeningMode=all
     volumes:
-      - ${HB_ROOT:-/opt/homebox}/modules/pi-hole/config/pihole:/etc/pihole
-      - ${HB_ROOT:-/opt/homebox}/modules/pi-hole/config/dnsmasq.d:/etc/dnsmasq.d
+      - ${HB_ROOT:-/opt/podhouse}/modules/pi-hole/config/pihole:/etc/pihole
+      - ${HB_ROOT:-/opt/podhouse}/modules/pi-hole/config/dnsmasq.d:/etc/dnsmasq.d
     networks:
       - homebox_proxy
     deploy:
