@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * Builds homebox.abeksis.net into site/dist.
+ * Builds podhouse.abeksis.net into site/dist.
  *
  *   node site/build.js
  *
@@ -25,9 +25,9 @@ const { execFileSync } = require('child_process');
 const SITE = __dirname;
 const ROOT = path.resolve(SITE, '..');
 const DIST = path.join(SITE, 'dist');
-const DOMAIN = 'homebox.abeksis.net';
+const DOMAIN = 'podhouse.abeksis.net';
 const INSTALL = 'curl -fsSL https://get.abeksis.net/install.sh | sudo bash';
-const REPO = 'https://github.com/abeksis/HomeBox';
+const REPO = 'https://github.com/abeksis/Podhouse';
 
 // The module loader resolves everything from HOMEBOX_ROOT, read at require time.
 process.env.HOMEBOX_ROOT = ROOT;

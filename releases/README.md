@@ -3,7 +3,7 @@
 `manifest.json` is the control plane for every Podhouse install in existence.
 
 Boxes fetch it from
-`https://raw.githubusercontent.com/abeksis/HomeBox/main/releases/manifest.json`
+`https://raw.githubusercontent.com/abeksis/Podhouse/main/releases/manifest.json`
 every six hours. It is deliberately a file in `main` rather than a release asset:
 **it has to be changeable without cutting a release**, because its most important
 job is stopping one.

@@ -46,7 +46,7 @@ const LOG_FILE = path.join(state.STATE_DIR, 'platform-update.log');
 // after a failure, and pruned before the next run.
 const HELPER_NAME = 'homebox-self-update';
 
-const REPO = process.env.HB_REPO || 'abeksis/HomeBox';
+const REPO = process.env.HB_REPO || 'abeksis/Podhouse';
 const GITHUB_MANIFEST_URL = `https://raw.githubusercontent.com/${REPO}/main/releases/manifest.json`;
 
 /**

@@ -6,7 +6,7 @@
 #
 # get.abeksis.net serves this file from main (a Cloudflare Worker that also
 # counts installs anonymously, infra/get-worker); the long form,
-# https://raw.githubusercontent.com/abeksis/HomeBox/main/scripts/bootstrap.sh, is the same bytes.
+# https://raw.githubusercontent.com/abeksis/Podhouse/main/scripts/bootstrap.sh, is the same bytes.
 #
 # This is the piece install.sh cannot be: install.sh configures a tree that is
 # already on disk, and something has to put it there first. This downloads the
@@ -28,7 +28,7 @@ set -euo pipefail
 # Override any of these to install from a fork, a branch, a tag, or — on a
 # network with no route to GitHub — a tarball you host yourself:
 #   HB_TARBALL=http://192.0.2.20/homebox.tar.gz sudo -E bash hb.sh
-HB_REPO="${HB_REPO:-abeksis/HomeBox}"
+HB_REPO="${HB_REPO:-abeksis/Podhouse}"
 
 # The release a NEW box starts on: whatever releases/manifest.json calls
 # stable — the same file every installed box reads to decide what it may

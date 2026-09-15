@@ -38,7 +38,7 @@ nothing stored per person — see [infra/get-worker](infra/get-worker)).
 The same script, straight from GitHub:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/abeksis/HomeBox/main/scripts/bootstrap.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/abeksis/Podhouse/main/scripts/bootstrap.sh | sudo bash
 ```
 
 </details>

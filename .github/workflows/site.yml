@@ -1,4 +1,4 @@
-# Builds homebox.abeksis.net from this repository and publishes it to GitHub Pages.
+# Builds podhouse.abeksis.net from this repository and publishes it to GitHub Pages.
 #
 # Runs on every push to main, so the app catalog follows the modules without
 # anyone remembering to rebuild. Not on tags: the github-pages environment only
@@ -44,6 +44,6 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: https://homebox.abeksis.net
+      url: https://podhouse.abeksis.net
     steps:
       - uses: actions/deploy-pages@v4

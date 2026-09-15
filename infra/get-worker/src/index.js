@@ -24,9 +24,9 @@
  * straight through.
  */
 
-const REPO = 'abeksis/HomeBox';
+const REPO = 'abeksis/Podhouse';
 const RAW = `https://raw.githubusercontent.com/${REPO}/main`;
-const SITE = 'https://homebox.abeksis.net';
+const SITE = 'https://podhouse.abeksis.net';
 
 const FILES = {
   '/install.sh': { path: 'scripts/bootstrap.sh', kind: 'install', type: 'text/x-shellscript; charset=utf-8' },

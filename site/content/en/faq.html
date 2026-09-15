@@ -8,7 +8,7 @@ order: 7
 
 <h2>Does Podhouse send anything about me anywhere?</h2>
 <p>No account, and nothing about you, your files or the apps you run. Podhouse does make two kinds of request on its own: it checks for a new Podhouse release, and it asks container registries whether your apps have updates. Apps you install may contact their own services, as they would anywhere.</p>
-<p>Two things are counted, anonymously, so the project knows whether a release reached anyone: each run of the install script adds one to a daily count per country, and the release check sends the HomeBox version your box is on. Neither stores an IP address or anything that identifies you or your box — a running box is recognised for one day only, by a salted hash that cannot be followed to the next day, and those rows are reduced to plain per-version totals within two days. The code is in <a href="https://github.com/abeksis/HomeBox/tree/main/infra/get-worker">infra/get-worker</a>.</p>
+<p>Two things are counted, anonymously, so the project knows whether a release reached anyone: each run of the install script adds one to a daily count per country, and the release check sends the HomeBox version your box is on. Neither stores an IP address or anything that identifies you or your box — a running box is recognised for one day only, by a salted hash that cannot be followed to the next day, and those rows are reduced to plain per-version totals within two days. The code is in <a href="https://github.com/abeksis/Podhouse/tree/main/infra/get-worker">infra/get-worker</a>.</p>
 <p>To opt out, add <code>HB_ANONYMOUS_STATS=off</code> to <code>/opt/homebox/.env</code> and run <code>sudo homebox up dashboard --yes</code>. The box then checks GitHub directly.</p>
 
 <h2>Is it free?</h2>

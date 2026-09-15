@@ -31,7 +31,7 @@ other people. This is the checklist.
    what `git describe` reports on a friend's box.
 
 5. **Write the release notes on GitHub.** The Updates card fetches them from
-   `api.github.com/repos/abeksis/HomeBox/releases/tags/v0.2.0` and shows them above the
+   `api.github.com/repos/abeksis/Podhouse/releases/tags/v0.2.0` and shows them above the
    button. This is the only thing a friend reads before deciding, so write it for them:
    what changed, what they will notice, whether anything needs their attention.
 
