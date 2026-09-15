@@ -100,20 +100,33 @@
   <!-- ==================== OVERVIEW ==================== -->
   <section id="screen-home" class="screen is-shown">
     <header class="welcome">
-      <div>
-        <h1 id="welcome-title">Hello</h1>
-        <p id="welcome-text">Reading the state of your server…</p>
-      </div>
+      <h1 id="welcome-title">Hello</h1>
     </header>
 
-    <!-- The one-line answer to "is my server OK?", above everything else. -->
-    <div class="health" id="health" data-level="unknown">
-      <span class="health-mark" id="health-mark" aria-hidden="true">•</span>
-      <div class="health-copy">
-        <div class="health-title" id="health-title">Reading the state of your server…</div>
-        <div class="health-text" id="health-text">This takes a second.</div>
+    <!-- Four numbers under the greeting. Status first: the answer to "is my
+         server OK?" comes before anything else, and carries the fix when not. -->
+    <div class="stat-strip">
+      <div class="stat stat-health" id="health" data-level="unknown">
+        <span class="stat-label">Status</span>
+        <strong class="stat-value" id="health-title">Reading…</strong>
+        <small class="stat-note" id="health-text">This takes a second.</small>
+        <div class="stat-action" id="health-action"></div>
       </div>
-      <div class="health-action" id="health-action"></div>
+      <a class="stat" href="#apps" data-page="apps">
+        <span class="stat-label">Apps</span>
+        <strong class="stat-value" id="stat-apps">--</strong>
+        <small class="stat-note" id="stat-apps-note"></small>
+      </a>
+      <a class="stat" href="#logs" data-page="logs">
+        <span class="stat-label">Containers</span>
+        <strong class="stat-value" id="stat-containers">--</strong>
+        <small class="stat-note" id="stat-containers-note"></small>
+      </a>
+      <a class="stat" href="#updates" data-page="updates" id="stat-updates">
+        <span class="stat-label">Updates</span>
+        <strong class="stat-value" id="stat-updates-value">--</strong>
+        <small class="stat-note" id="stat-updates-note"></small>
+      </a>
     </div>
 
     <div class="home-layout">

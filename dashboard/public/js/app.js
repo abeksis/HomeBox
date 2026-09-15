@@ -337,11 +337,19 @@ function renderBoxFacts(m) {
 
 function renderHealth(summary) {
   const banner = $('#health');
-  const { health } = summary;
+  const { health, counts } = summary;
   banner.dataset.level = health.level;
-  $('#health-mark').textContent = health.level === 'good' ? '✓' : health.level === 'warn' ? '!' : '×';
-  $('#health-title').textContent = health.title;
-  $('#health-text').textContent = health.sub;
+  // "Everything is running" does not fit a quarter of the row; the short form
+  // says the same. Problems keep their own title, which names what is wrong.
+  $('#health-title').textContent = health.level === 'good' ? 'All running' : health.title;
+  $('#health-text').textContent = health.level === 'good' ? 'nothing needs you right now' : health.sub;
+  banner.title = health.sub;
+
+  $('#stat-apps').textContent = String(counts.installed);
+  $('#stat-apps-note').textContent = `installed of ${counts.modules}`;
+  $('#stat-containers').textContent = `${counts.running} up`;
+  $('#stat-containers-note').textContent = !counts.containers ? 'none yet'
+    : counts.running === counts.containers ? 'all of them' : `of ${counts.containers}`;
 
   const action = $('#health-action');
   if (health.names && health.names.length) {
@@ -353,9 +361,6 @@ function renderHealth(summary) {
   }
 
   $('#welcome-title').textContent = greetingText();
-  $('#welcome-text').textContent = health.level === 'good'
-    ? `${summary.counts.installed} of ${summary.counts.modules} apps installed, ${summary.counts.running} containers up.`
-    : health.sub;
 }
 
 function renderLauncher(modules) {
@@ -3241,7 +3246,24 @@ async function refreshUpdateBadge() {
   } catch { /* leave the dot as it was */ }
 }
 
-function updateBadge(count, platformVersion = null) {
+// The last HomeBox release the platform check reported. The Updates page
+// refreshes the app count on its own and does not know this, so a call
+// without it keeps the previous answer instead of clearing it.
+let knownPlatformVersion = null;
+
+function updateBadge(count, platformVersion) {
+  if (platformVersion === undefined) platformVersion = knownPlatformVersion;
+  else knownPlatformVersion = platformVersion;
+  // The Overview's Updates number reads the same two facts as the dot.
+  const tile = $('#stat-updates');
+  if (tile) {
+    tile.classList.toggle('is-waiting', !!(count || platformVersion));
+    $('#stat-updates-value').textContent = platformVersion ? 'HomeBox'
+      : count ? `${count} waiting` : 'Up to date';
+    $('#stat-updates-note').textContent = platformVersion ? `${platformVersion} is available`
+      : count ? `app update${count === 1 ? '' : 's'}` : 'apps and HomeBox';
+  }
+
   const badge = $('#updates-dot');
   if (!badge) return;
 
