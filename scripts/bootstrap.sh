@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==========================================================================
-# HomeBox bootstrap — the one-liner.
+# Podhouse bootstrap — the one-liner.
 #
 #   curl -fsSL https://get.abeksis.net/install.sh | sudo bash
 #
@@ -12,7 +12,7 @@
 # already on disk, and something has to put it there first. This downloads the
 # repository, unpacks it to /opt/homebox, and hands over.
 #
-# GitHub is the single source. An earlier version had every running HomeBox
+# GitHub is the single source. An earlier version had every running Podhouse
 # serve its own copy over the LAN, which was removed on purpose: a box that had
 # drifted would hand out a tree nobody could reproduce, and it meant an
 # unauthenticated endpoint on every machine giving away the whole install.
@@ -99,9 +99,9 @@ if [ -t 1 ]; then
 else
   BOLD=''; DIM=''; RED=''; GREEN=''; YELLOW=''; RESET=''
 fi
-step() { printf '\n%s[HomeBox]%s %s%s%s\n' "$GREEN" "$RESET" "$BOLD" "$*" "$RESET"; }
-warn() { printf '%s[HomeBox]%s %s%s%s\n' "$YELLOW" "$RESET" "$YELLOW" "$*" "$RESET"; }
-die()  { printf '%s[HomeBox]%s %s%s%s\n' "$RED" "$RESET" "$RED" "$*" "$RESET" >&2; exit 1; }
+step() { printf '\n%s[Podhouse]%s %s%s%s\n' "$GREEN" "$RESET" "$BOLD" "$*" "$RESET"; }
+warn() { printf '%s[Podhouse]%s %s%s%s\n' "$YELLOW" "$RESET" "$YELLOW" "$*" "$RESET"; }
+die()  { printf '%s[Podhouse]%s %s%s%s\n' "$RED" "$RESET" "$RED" "$*" "$RESET" >&2; exit 1; }
 
 cat <<'BANNER'
 
@@ -147,7 +147,7 @@ done
 # Unpacking over it would not delete the file, but this is not an upgrade path
 # and pretending it is would be how someone loses a working box.
 if [ -e "$HB_ROOT/.env" ]; then
-  die "$HB_ROOT is already a HomeBox install.
+  die "$HB_ROOT is already a Podhouse install.
 To update it in place:      cd $HB_ROOT && git pull && sudo bash install.sh
 To start over, move it out of the way first:
   sudo mv $HB_ROOT ${HB_ROOT}.old"
@@ -166,7 +166,7 @@ fi
 # HB_TARBALL is still honoured for a network with no route to GitHub; that
 # path has no .git, and says so at the end.
 if [ "$HB_TARBALL_ASKED" -eq 1 ]; then
-  step "Downloading HomeBox"
+  step "Downloading Podhouse"
   printf '  %s\n' "$HB_TARBALL"
   TMP="$(mktemp -d)"
   trap 'rm -rf "$TMP"' EXIT

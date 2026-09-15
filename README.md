@@ -1,4 +1,4 @@
-# HomeBox
+# Podhouse
 
 A self-hosted app platform for one box. It installs and runs the apps itself —
 you pick something from a catalog, it pulls the images, creates the
@@ -47,7 +47,7 @@ curl -fsSL https://raw.githubusercontent.com/abeksis/HomeBox/main/scripts/bootst
 branch or tag. `HB_TARBALL=<url>` installs from anywhere else, for a network
 with no route to GitHub.
 
-### Updating HomeBox itself
+### Updating Podhouse itself
 
 **Open the Updates tab and press the button.** When a release is available the page
 says so, shows what changed, and updates the box — taking a backup first, and putting
@@ -154,7 +154,7 @@ should not follow the code around.
 
 ```
 /opt/homebox
-├── install.sh                  # clean Debian → running HomeBox
+├── install.sh                  # clean Debian → running Podhouse
 ├── homebox                     # the CLI
 ├── .env                        # generated secrets, mode 600
 ├── modules/
@@ -214,7 +214,7 @@ homebox list                    # everything available, and what is running
 homebox install monitoring      # seed, pull, start, mark enabled
 homebox info monitoring         # what it is, where it is, how to log in
 homebox secrets core            # the generated passwords for one module
-homebox status                  # every container HomeBox runs
+homebox status                  # every container Podhouse runs
 homebox remove git --yes        # stop and delete containers, keep the data
 homebox remove git --yes --purge  # ...and delete the data too
 ```
@@ -228,7 +228,7 @@ is installed.
 | Module | App | Default |
 |---|---|---|
 | `core` | Nginx Proxy Manager, Portainer | required |
-| `dashboard` | HomeBox itself | required |
+| `dashboard` | Podhouse itself | required |
 | `files` | File Browser | on |
 | `monitoring` | Uptime Kuma | on |
 | `dns` | AdGuard Home | on |
@@ -251,7 +251,7 @@ next refresh.
 - **One compose project per module** (`homebox-<id>`). A broken module can be
   rebuilt without touching anything else, and Docker's own project label is
   what maps a running container back to its module. Nothing is hand-maintained.
-- **Containers are named after the app** — `portainer`, `gitea`, `uptime-kuma`. No prefix: this box runs nothing but HomeBox, and the module that owns a container comes from its compose project label, not from its name.
+- **Containers are named after the app** — `portainer`, `gitea`, `uptime-kuma`. No prefix: this box runs nothing but Podhouse, and the module that owns a container comes from its compose project label, not from its name.
 - **Secrets are generated once** by `install.sh` into `.env` (mode 600) and
   never regenerated — an encryption key that changes is data you cannot read.
 - **Routing is Nginx Proxy Manager's job**, configured in its own UI on port

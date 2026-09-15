@@ -1,4 +1,4 @@
-# DNS — a HomeBox module
+# DNS — a Podhouse module
 #
 # AdGuard Home: network-wide ad blocking, and the DNS that makes the
 # *.home addresses in this install resolve.
@@ -8,7 +8,7 @@ x-homebox:
   added_at: "2026-09-05"
   title: "AdGuard Home"
   tagline: "Block ads for every device at once"
-  description: "A DNS server for the whole house. It filters ads and trackers before they are ever requested, on phones and TVs that cannot run an ad blocker, and it is where you point the *.home names HomeBox hands out."
+  description: "A DNS server for the whole house. It filters ads and trackers before they are ever requested, on phones and TVs that cannot run an ad blocker, and it is where you point the *.home names Podhouse hands out."
   icon: "adguard-home.png"
   category: "network"
   required: false
@@ -21,7 +21,7 @@ x-homebox:
   tips:
     - "Port 53 must be free first. On Debian check `ss -lntup | grep :53` — if systemd-resolved holds it, set DNSStubListener=no in /etc/systemd/resolved.conf and restart it"
     - "Setup wizard runs on 3054 the first time, then the UI lives on 3053"
-    - "Add a DNS rewrite for *.home pointing at this box and every HomeBox address resolves house-wide"
+    - "Add a DNS rewrite for *.home pointing at this box and every Podhouse address resolves house-wide"
   services:
     adguard:
       friendly_name: "AdGuard Home"

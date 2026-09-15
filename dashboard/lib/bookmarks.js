@@ -2,7 +2,7 @@
 /**
  * Quick Access: links to things that are not on this box.
  *
- * Trackers, a router, a NAS, anything with a URL. HomeBox cannot discover
+ * Trackers, a router, a NAS, anything with a URL. Podhouse cannot discover
  * these — no container owns them — so they are typed in once and kept.
  *
  * Stored on the SERVER, unlike the Launcher's custom items, which live in

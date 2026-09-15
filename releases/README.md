@@ -1,6 +1,6 @@
 # releases/
 
-`manifest.json` is the control plane for every HomeBox install in existence.
+`manifest.json` is the control plane for every Podhouse install in existence.
 
 Boxes fetch it from
 `https://raw.githubusercontent.com/abeksis/HomeBox/main/releases/manifest.json`

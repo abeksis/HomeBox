@@ -1,5 +1,5 @@
 /**
- * get.abeksis.net — the front door for installing and updating HomeBox.
+ * get.abeksis.net — the front door for installing and updating Podhouse.
  *
  *   /install.sh      scripts/bootstrap.sh on main
  *   /uninstall.sh    scripts/uninstall.sh on main
@@ -220,7 +220,7 @@ function statsHtml(s) {
       <td class="v">${Object.entries(d.versions).sort((a, b) => b[1] - a[1]).map(([v, n]) => `${esc(v)}×${n}`).join(' ')}</td></tr>`).reverse().join('');
   const list = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<li><span>${esc(k)}</span><b>${n}</b></li>`).join('') || '<li><span>—</span></li>';
   return `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>HomeBox · סטטיסטיקה</title><meta name="robots" content="noindex">
+<title>Podhouse · סטטיסטיקה</title><meta name="robots" content="noindex">
 <style>
 body{margin:0;background:#0b0b10;color:#f8fafc;font:15px/1.5 system-ui,Segoe UI,Arial,sans-serif;padding:32px 20px}
 .w{max-width:1000px;margin:auto}h1{margin:0 0 4px;font-size:28px}.m{color:#94a3b8;margin:0 0 24px}
@@ -232,7 +232,7 @@ h2{font-size:15px;color:#a78bfa;margin:0 0 8px}.t{overflow-x:auto}table{width:10
 th,td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:start;white-space:nowrap;font-size:13.5px}th{color:#94a3b8;font-weight:500}
 td{position:relative}.bar{position:absolute;inset-block:5px;inset-inline-start:0;opacity:.28;border-radius:3px}.bar.i{background:#a78bfa}.bar.b{background:#4ade80}.v{color:#94a3b8;direction:ltr;text-align:right}
 </style></head><body><div class="w">
-<h1>סטטיסטיקת HomeBox</h1><p class="m">${s.days} ימים אחרונים, מ-${esc(s.since)} · ספירה אנונימית, בלי כתובות IP</p>
+<h1>סטטיסטיקת Podhouse</h1><p class="m">${s.days} ימים אחרונים, מ-${esc(s.since)} · ספירה אנונימית, בלי כתובות IP</p>
 <div class="cards">
 <div class="c"><b>${s.installs}</b><span>הרצות של install.sh</span></div>
 <div class="c"><b>${s.active_boxes_latest_day}</b><span>מערכות פעילות${s.latest_day ? ` (${esc(s.latest_day)})` : ''}</span></div>

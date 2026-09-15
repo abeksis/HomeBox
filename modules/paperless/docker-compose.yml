@@ -1,4 +1,4 @@
-# Paperless — a HomeBox module
+# Paperless — a Podhouse module
 #
 # Scan it once, find it forever.
 
@@ -20,7 +20,7 @@ x-homebox:
   tips:
     - "Anything dropped in the consume folder is imported and then DELETED from it — that is by design, the original now lives in the archive"
     - "Set the OCR language in Settings if your documents are not English; it defaults to English and gets Hebrew badly wrong"
-    - "The admin account is created on the first start from the credentials HomeBox generated — `homebox secrets paperless` prints them"
+    - "The admin account is created on the first start from the credentials Podhouse generated — `homebox secrets paperless` prints them"
   env_vars:
     PAPERLESS_ADMIN_PASSWORD:
       label: "Admin password"
@@ -45,7 +45,7 @@ x-homebox:
       port_map: 8010
       container_port: 8000
       url_scheme: "http"
-      first_login: "Signs in with the admin account HomeBox generated at install."
+      first_login: "Signs in with the admin account Podhouse generated at install."
     paperless-db:
       friendly_name: "Paperless Database"
       description: "Postgres holding the index"

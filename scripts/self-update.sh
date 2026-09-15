@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Move this box to a HomeBox release.
+# Move this box to a Podhouse release.
 #
 # Runs ON THE HOST — launched either by the CLI (`homebox self-update`) or by
 # the dashboard, which reaches the host through a detached privileged container

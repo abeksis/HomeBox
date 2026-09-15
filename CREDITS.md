@@ -1,12 +1,12 @@
 # Credits
 
-HomeBox is an installer and a dashboard. It does not include the code of the apps it runs: each app is pulled as a container image from its own publisher when you install it, and stays under that project's own licence. The images each module uses are listed below; follow the image name to the project for its source and licence.
+Podhouse is an installer and a dashboard. It does not include the code of the apps it runs: each app is pulled as a container image from its own publisher when you install it, and stays under that project's own licence. The images each module uses are listed below; follow the image name to the project for its source and licence.
 
-HomeBox's own code is under the MIT licence (see [LICENSE](LICENSE)).
+Podhouse's own code is under the MIT licence (see [LICENSE](LICENSE)).
 
 ## Icons
 
-App icons in `dashboard/public/icons` come from [homarr-labs/dashboard-icons](https://github.com/homarr-labs/dashboard-icons) (fetched with `scripts/fetch-icons.sh`), apart from the HomeBox logo itself. The marks belong to their respective projects.
+App icons in `dashboard/public/icons` come from [homarr-labs/dashboard-icons](https://github.com/homarr-labs/dashboard-icons) (fetched with `scripts/fetch-icons.sh`), apart from the Podhouse logo itself. The marks belong to their respective projects.
 
 ## Apps
 
@@ -37,7 +37,7 @@ App icons in `dashboard/public/icons` come from [homarr-labs/dashboard-icons](ht
 | Gotify | `gotify/server` |
 | Headscale | `headscale/headscale`, `ghcr.io/gurucomputing/headscale-ui`, `nginx` |
 | Home Assistant | `homeassistant/home-assistant` |
-| HomeBox Dashboard | `homebox-dashboard` |
+| Podhouse Dashboard | `homebox-dashboard` |
 | Immich | `ghcr.io/immich-app/immich-server`, `ghcr.io/immich-app/immich-machine-learning`, `docker.io/valkey/valkey`, `ghcr.io/immich-app/postgres` |
 | Jellyfin | `lscr.io/linuxserver/jellyfin` |
 | Jellystat | `cyfershepard/jellystat`, `postgres` |

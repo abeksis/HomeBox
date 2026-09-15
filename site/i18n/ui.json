@@ -4,8 +4,8 @@
     "he": "האפליקציות שלך, על השרת שלך"
   },
   "meta_description": {
-    "en": "HomeBox installs and runs self-hosted apps on your own Linux box — photos, media, passwords, remote access — with one command, safe updates and encrypted backups.",
-    "he": "HomeBox מתקינה ומריצה אפליקציות על שרת לינוקס משלך — תמונות, מדיה, סיסמאות, גישה מרחוק — בפקודה אחת, עם עדכונים בטוחים וגיבויים מוצפנים."
+    "en": "Podhouse installs and runs self-hosted apps on your own Linux box — photos, media, passwords, remote access — with one command, safe updates and encrypted backups.",
+    "he": "Podhouse מתקינה ומריצה אפליקציות על שרת לינוקס משלך — תמונות, מדיה, סיסמאות, גישה מרחוק — בפקודה אחת, עם עדכונים בטוחים וגיבויים מוצפנים."
   },
   "lang_name": {
     "en": "English",
@@ -32,8 +32,8 @@
     "he": "דלג לתוכן"
   },
   "footer": {
-    "en": "HomeBox is open source. Nothing about you leaves your box.",
-    "he": "HomeBox בקוד פתוח. שום מידע עליך לא יוצא מהשרת."
+    "en": "Podhouse is open source. Nothing about you leaves your box.",
+    "he": "Podhouse בקוד פתוח. שום מידע עליך לא יוצא מהשרת."
   },
   "source": {
     "en": "Source on GitHub",
@@ -56,8 +56,8 @@
     "he": "האפליקציות שלך, על השרת שלך."
   },
   "hero_lead": {
-    "en": "One command turns a Debian or Ubuntu machine into a home server with a dashboard. Pick apps from a catalog, and HomeBox pulls them, starts them, and tells you where to log in.",
-    "he": "פקודה אחת הופכת מכונת Debian או Ubuntu לשרת ביתי עם לוח בקרה. בוחרים אפליקציות מקטלוג, ו-HomeBox מורידה אותן, מפעילה אותן, ואומרת לך איפה להתחבר."
+    "en": "One command turns a Debian or Ubuntu machine into a home server with a dashboard. Pick apps from a catalog, and Podhouse pulls them, starts them, and tells you where to log in.",
+    "he": "פקודה אחת הופכת מכונת Debian או Ubuntu לשרת ביתי עם לוח בקרה. בוחרים אפליקציות מקטלוג, ו-Podhouse מורידה אותן, מפעילה אותן, ואומרת לך איפה להתחבר."
   },
   "requirements": {
     "en": "Debian or Ubuntu · x86-64 or ARM64 · about 3 minutes",
@@ -84,8 +84,8 @@
     "he": "עדכונים עם דרך חזרה"
   },
   "f_updates_body": {
-    "en": "HomeBox checks for new releases in the background and puts a red dot on Updates. One button updates it — and if the new version does not come up healthy, it puts the previous one back by itself.",
-    "he": "HomeBox בודקת ברקע אם יש גרסה חדשה ומסמנת נקודה אדומה ליד Updates. כפתור אחד מעדכן — ואם הגרסה החדשה לא עולה תקינה, היא מחזירה את הקודמת לבד."
+    "en": "Podhouse checks for new releases in the background and puts a red dot on Updates. One button updates it — and if the new version does not come up healthy, it puts the previous one back by itself.",
+    "he": "Podhouse בודקת ברקע אם יש גרסה חדשה ומסמנת נקודה אדומה ליד Updates. כפתור אחד מעדכן — ואם הגרסה החדשה לא עולה תקינה, היא מחזירה את הקודמת לבד."
   },
   "f_backups_title": {
     "en": "Encrypted, proportionate backups",
@@ -252,8 +252,8 @@
     "he": "כל המדריכים ←"
   },
   "changelog_lead": {
-    "en": "Every HomeBox release, newest first.",
-    "he": "כל הגרסאות של HomeBox, מהחדשה לישנה."
+    "en": "Every Podhouse release, newest first.",
+    "he": "כל הגרסאות של Podhouse, מהחדשה לישנה."
   },
   "changelog_english": {
     "en": "",
@@ -316,8 +316,8 @@
     "he": "בוחרים מה שצריך. משאירים את השאר."
   },
   "apps_side": {
-    "en": "Each app is a module HomeBox knows how to install, update, back up and remove — photo libraries, media servers, password vaults, home automation and more.",
-    "he": "כל אפליקציה היא מודול ש-HomeBox יודעת להתקין, לעדכן, לגבות ולהסיר — ספריות תמונות, שרתי מדיה, כספות סיסמאות, בית חכם ועוד."
+    "en": "Each app is a module Podhouse knows how to install, update, back up and remove — photo libraries, media servers, password vaults, home automation and more.",
+    "he": "כל אפליקציה היא מודול ש-Podhouse יודעת להתקין, לעדכן, לגבות ולהסיר — ספריות תמונות, שרתי מדיה, כספות סיסמאות, בית חכם ועוד."
   },
   "more_in_catalog": {
     "en": "Browse all {n} apps",
@@ -352,8 +352,8 @@
     "he": "מה שלומו."
   },
   "hero_b_lead": {
-    "en": "One command turns a Debian or Ubuntu machine into HomeBox. Then you install apps, watch what they use, update them and back them up — from one page.",
-    "he": "פקודה אחת הופכת מכונת Debian או Ubuntu ל-HomeBox. משם מתקינים אפליקציות, רואים כמה הן צורכות, מעדכנים ומגבים — מדף אחד."
+    "en": "One command turns a Debian or Ubuntu machine into Podhouse. Then you install apps, watch what they use, update them and back them up — from one page.",
+    "he": "פקודה אחת הופכת מכונת Debian או Ubuntu ל-Podhouse. משם מתקינים אפליקציות, רואים כמה הן צורכות, מעדכנים ומגבים — מדף אחד."
   },
   "hero_b_meta": {
     "en": "no account",

@@ -5,7 +5,7 @@
  *
  *   node site/build.js
  *
- * No dependencies, like the rest of HomeBox. The app catalog and every app
+ * No dependencies, like the rest of Podhouse. The app catalog and every app
  * page are generated from modules/<id>/docker-compose.yml through the SAME
  * loader the dashboard uses (dashboard/lib/modules.js), so the website cannot
  * describe an app differently from the box that installs it. Add a module,
@@ -171,7 +171,7 @@ function loadReleases() {
     for (const r of out.split('\x1e').map((x) => x.trim()).filter(Boolean)) {
       const [tag, date, contents] = r.split('\x1f');
       const lines = (contents || '').split('\n');
-      // "HomeBox 0.4.18" is the subject; the notes are what follows.
+      // "Podhouse 0.4.18" is the subject; the notes are what follows.
       const body = lines.slice(1).join('\n').replace(/-----BEGIN PGP[\s\S]*$/, '').trim();
       byTag.set(tag, { tag, date, body });
     }
@@ -191,7 +191,7 @@ function loadReleases() {
 function layout({ lang, pagePath, title, description, body, current }) {
   const other = lang === 'he' ? 'en' : 'he';
   const dir = lang === 'he' ? 'rtl' : 'ltr';
-  const fullTitle = title ? `${title} · HomeBox` : `HomeBox — ${t(lang, 'tagline')}`;
+  const fullTitle = title ? `${title} · Podhouse` : `Podhouse — ${t(lang, 'tagline')}`;
   const nav = [
     ['home', '', t(lang, 'nav_home')],
     ['apps', 'apps/', t(lang, 'nav_apps')],
@@ -220,7 +220,7 @@ function layout({ lang, pagePath, title, description, body, current }) {
 <a class="skip" href="#main">${esc(t(lang, 'skip'))}</a>
 <header class="top">
   <div class="wrap top-in">
-    <a class="brand" href="${href(lang)}"><img src="/favicon.svg" alt="" width="26" height="26"><span>HomeBox</span></a>
+    <a class="brand" href="${href(lang)}"><img src="/favicon.svg" alt="" width="26" height="26"><span>Podhouse</span></a>
     <nav class="nav" aria-label="${esc(t(lang, 'nav_label'))}">${nav}</nav>
     <div class="top-end">
       <a class="lang" href="${href(other, pagePath)}" hreflang="${other}" lang="${other}">${esc(t(other, 'lang_name'))}</a>
@@ -318,7 +318,7 @@ const catLabel = (cat, lang) => (cat ? t(lang, `cat_${cat.id}`) : '');
 
 /* ----------------------------------------------------------------- pages */
 
-// Everything installable. The dashboard is HomeBox itself, not an app in its catalog.
+// Everything installable. The dashboard is Podhouse itself, not an app in its catalog.
 const catalogOf = (modules) => modules.filter((m) => m.id !== 'dashboard');
 
 /*

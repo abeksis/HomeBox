@@ -1,6 +1,6 @@
 'use strict';
 /* =========================================================================
-   HomeBox dashboard — front end.
+   Podhouse dashboard — front end.
 
    One SSE connection carries the whole live picture (host metrics, health
    verdict, container state) and everything on screen is a pure render of the
@@ -387,7 +387,7 @@ function renderLauncher(modules) {
     }
   }
   // Personal links sit in their own group at the end: they are not apps on
-  // this box, and mixing them into a category would imply HomeBox manages them.
+  // this box, and mixing them into a category would imply Podhouse manages them.
   for (const item of prefs.custom) {
     tiles.push({
       name: item.id,
@@ -803,7 +803,7 @@ function appActionButton(mod) {
     return '<span class="module-toggle is-busy" aria-live="polite"><span class="spinner"></span>working</span>';
   }
   if (mod.required) {
-    return '<span class="module-toggle is-locked" title="The rest of HomeBox depends on it">Base system</span>';
+    return '<span class="module-toggle is-locked" title="The rest of Podhouse depends on it">Base system</span>';
   }
   // Chosen but not applied yet. Clicking again takes the choice back.
   if (state.pending.has(mod.id)) {
@@ -974,7 +974,7 @@ const DOCKER_TS = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z) /;
  * container's TZ does not touch it. Left as-is it sits beside the app's own
  * "+03:00" stamp three hours apart, which reads as two clocks disagreeing.
  *
- * Converted here, in the box's timezone — the one HomeBox runs with, sent
+ * Converted here, in the box's timezone — the one Podhouse runs with, sent
  * alongside the logs — not the browser's: a phone abroad should still show
  * the same wall-clock time the apps printed. The exact UTC instant stays on
  * the element as a tooltip.
@@ -1208,7 +1208,7 @@ async function loadConfig() {
     return;
   }
   $('#config-file-note').innerHTML =
-    `Edited in place in <code class="mono">${escapeHtml(configSchema.file)}</code>. Comments and anything HomeBox does not know about are left alone. `
+    `Edited in place in <code class="mono">${escapeHtml(configSchema.file)}</code>. Comments and anything Podhouse does not know about are left alone. `
     + 'Most changes need the affected app restarted before they take effect.';
 
   $('#config-groups').innerHTML = configSchema.groups.map((group) => `
@@ -1262,7 +1262,7 @@ async function saveConfig() {
   const ok = await confirmDialog({
     title: 'Save settings?',
     body: `This rewrites ${keys.length} value${keys.length === 1 ? '' : 's'} in .env:\n${keys.join(', ')}\n\n`
-      + 'A container keeps the paths it was created with, so HomeBox will recreate any installed '
+      + 'A container keeps the paths it was created with, so Podhouse will recreate any installed '
       + 'app that uses one of these — briefly interrupting it.',
     confirmLabel: 'Save and apply',
   });
@@ -1347,7 +1347,7 @@ function renderBackups() {
   noKey.hidden = b.hasKey;
   if (!b.hasKey) {
     noKey.innerHTML = '<strong>No encryption key.</strong>'
-      + '<p class="help">An archive contains <code class="mono">.env</code>, so HomeBox will not write one unencrypted. '
+      + '<p class="help">An archive contains <code class="mono">.env</code>, so Podhouse will not write one unencrypted. '
       + 'Add <code class="mono">HB_BACKUP_KEY</code> to <code class="mono">/opt/homebox/.env</code> (or re-run <code class="mono">install.sh</code>) and restart the dashboard.</p>';
   }
   $('#backup-now').disabled = !b.hasKey || b.running;
@@ -1470,7 +1470,7 @@ function showLogin() {
   $('#gate').hidden = false;
   $('#frame').hidden = true;
 
-  $('#gate-title').textContent = first ? 'Claim this HomeBox' : 'HomeBox';
+  $('#gate-title').textContent = first ? 'Claim this Podhouse' : 'Podhouse';
   $('#gate-text').textContent = first
     ? `Paste the bootstrap token the installer printed, then pick a password (${authState.minPassword}+ characters).`
     : 'Sign in to manage this server.';
@@ -2028,7 +2028,7 @@ function renderSettings() {
     tree.textContent = [
       `${cfg.root}/`,
       '├── homebox              the CLI',
-      '├── install.sh           clean Debian to running HomeBox',
+      '├── install.sh           clean Debian to running Podhouse',
       '├── .env                 generated secrets, mode 600',
       '├── modules/<id>/',
       '│   ├── docker-compose.yml   services + x-homebox metadata',
@@ -2177,7 +2177,7 @@ function renderSettings() {
       'homebox update <module>         pull newer images and recreate',
       'homebox logs <module|container> [lines]',
       'homebox secrets <module>        print its generated passwords',
-      'homebox status                  every container HomeBox runs',
+      'homebox status                  every container Podhouse runs',
     ].join(NL);
   }
 }
@@ -2478,7 +2478,7 @@ function applySummary(summary) {
 
 function renderInstallInfo(summary) {
   $('#install-info').innerHTML = `
-    <dt>HomeBox</dt><dd>v${escapeHtml(summary.version)}</dd>
+    <dt>Podhouse</dt><dd>v${escapeHtml(summary.version)}</dd>
     <dt>Host</dt><dd>${escapeHtml(summary.host.name)} (${escapeHtml(summary.host.address)})</dd>
     <dt>Docker</dt><dd>${summary.docker ? escapeHtml(`${summary.docker.version} · API ${summary.docker.apiVersion}`) : 'socket unreachable'}</dd>
     <dt>Apps</dt><dd>${summary.counts.installed} installed of ${summary.counts.modules} available</dd>
@@ -2801,7 +2801,7 @@ async function submitStorageForm(event) {
 
   const ok = await confirmDialog({
     title: `Mount ${body.share || 'the share'}?`,
-    body: 'HomeBox writes a systemd automount on this box and mounts it now. Nothing on the NAS is '
+    body: 'Podhouse writes a systemd automount on this box and mounts it now. Nothing on the NAS is '
       + 'changed or written to. Afterwards, point Server Config → Media at the mountpoint — the apps '
       + 'keep the bind they were created with, so they are recreated for you when you save that.',
     confirmLabel: 'Mount',
@@ -2871,7 +2871,7 @@ async function detachStorage(mountpoint) {
 /**
  * "What is the username and password for this app?"
  *
- * HomeBox generates a password for every module that needs one and writes it
+ * Podhouse generates a password for every module that needs one and writes it
  * to .env — and until now the only way to read it was to SSH in and run
  * `homebox secrets <module>`. Installing the Media Stack handed you a
  * qBittorrent you could not sign in to without leaving the dashboard, which
@@ -2942,10 +2942,10 @@ async function firstLoginDialog(svc, mod) {
     ${svc.first_login ? `<p class="signin-hint">${escapeHtml(svc.first_login)}</p>` : ''}
     ${rows
       ? `<div class="signin-list">${rows}</div>
-         <p class="signin-note">Created by HomeBox when the app was installed. You can find them again under
+         <p class="signin-note">Created by Podhouse when the app was installed. You can find them again under
             Settings → Passwords, or on the server with
             <code class="mono">homebox secrets ${escapeHtml(mod.id)}</code>.</p>`
-      : `<p class="signin-note">HomeBox did not create a login for this app. Whatever
+      : `<p class="signin-note">Podhouse did not create a login for this app. Whatever
             ${escapeHtml(svc.friendly_name)} asks for the first time, you choose.</p>`}
     <label class="signin-skip">
       <input type="checkbox" id="signin-skip-box">
@@ -3090,7 +3090,7 @@ function whenText(iso) {
  * small tile, then the name and what it is. Two cards in the same band should
  * read as the same kind of object, and an icon is what anchors a row.
  *
- * The icon files already ship in public/icons — these are HomeBox's own
+ * The icon files already ship in public/icons — these are Podhouse's own
  * modules, so there is nothing to download or configure.
  */
 function liveHead(icon, title, sub) {
@@ -3294,7 +3294,7 @@ let updatesState = { available: [], lastCheck: null, applying: false };
  *
  * Two kinds, and they are not the same news:
  *   app images  — optional rebuilds, accent dot
- *   HomeBox     — a new release of the thing itself, RED
+ *   Podhouse     — a new release of the thing itself, RED
  */
 async function refreshUpdateBadge() {
   try {
@@ -3306,7 +3306,7 @@ async function refreshUpdateBadge() {
   } catch { /* leave the dot as it was */ }
 }
 
-// The last HomeBox release the platform check reported. The Updates page
+// The last Podhouse release the platform check reported. The Updates page
 // refreshes the app count on its own and does not know this, so a call
 // without it keeps the previous answer instead of clearing it.
 let knownPlatformVersion = null;
@@ -3318,22 +3318,22 @@ function updateBadge(count, platformVersion) {
   const tile = $('#stat-updates');
   if (tile) {
     tile.classList.toggle('is-waiting', !!(count || platformVersion));
-    $('#stat-updates-value').textContent = platformVersion ? 'HomeBox'
+    $('#stat-updates-value').textContent = platformVersion ? 'Podhouse'
       : count ? `${count} waiting` : 'Up to date';
     $('#stat-updates-note').textContent = platformVersion ? `${platformVersion} is available`
-      : count ? `app update${count === 1 ? '' : 's'}` : 'apps and HomeBox';
+      : count ? `app update${count === 1 ? '' : 's'}` : 'apps and Podhouse';
   }
 
   const badge = $('#updates-dot');
   if (!badge) return;
 
-  // A HomeBox release outranks any number of image rebuilds, and says so in a
+  // A Podhouse release outranks any number of image rebuilds, and says so in a
   // different colour. Rebuilds are housekeeping; this is a new version of the
   // thing the box IS.
   badge.classList.toggle('is-platform', !!platformVersion);
   if (platformVersion) {
     badge.hidden = false;
-    badge.title = `HomeBox ${platformVersion} is available`;
+    badge.title = `Podhouse ${platformVersion} is available`;
     return;
   }
   // A dot, not a number. These are optional rebuilds, and a red "12" reads
@@ -3348,12 +3348,12 @@ function updateBadge(count, platformVersion) {
     : '';
 }
 
-/* ---------------------------------------------------- HomeBox itself ---- */
+/* ---------------------------------------------------- Podhouse itself ---- */
 
 let platformPoll = null;
 
 /**
- * The card for updating HomeBox, as opposed to the apps it runs.
+ * The card for updating Podhouse, as opposed to the apps it runs.
  *
  * Four states, and only one of them has a button: an update is available; the
  * maintainer has paused updates; this box is too old to jump automatically; an
@@ -3409,7 +3409,7 @@ function renderPlatform(data) {
   }
 
   if (data.reason) {
-    card.innerHTML = `${head(`HomeBox ${data.latest || ''} is available`, 'It cannot be installed from here.')}
+    card.innerHTML = `${head(`Podhouse ${data.latest || ''} is available`, 'It cannot be installed from here.')}
       <p class="release-reason">${escapeHtml(data.reason)}</p>`;
     return;
   }
@@ -3429,14 +3429,14 @@ function renderPlatform(data) {
 
   // Version-to-version on one line, rather than a sentence.
   //
-  // "HomeBox 0.3.5 is available / This box is on 0.3.4" makes you read two
+  // "Podhouse 0.3.5 is available / This box is on 0.3.4" makes you read two
   // lines and hold both numbers to work out the direction. `0.3.4 → 0.3.5`
   // is the same fact in one glance, and it is what every updater worth
   // copying does.
   card.innerHTML = `
     <div class="block-head">
       <div>
-        <h2>HomeBox</h2>
+        <h2>Podhouse</h2>
         <small class="release-versions">
           Current version <b>${escapeHtml(data.current)}</b>
           <span class="release-arrow">→</span>
@@ -3445,7 +3445,7 @@ function renderPlatform(data) {
       </div>
       <div class="release-actions">
         <button type="button" class="button is-small" id="platform-check">Check</button>
-        <button type="button" class="button is-small is-primary" id="platform-go">Update HomeBox</button>
+        <button type="button" class="button is-small is-primary" id="platform-go">Update Podhouse</button>
       </div>
     </div>
     <p class="release-reassure">Takes about a minute. Your apps keep running and their data is not touched, and if the new version does not start, this box puts ${escapeHtml(data.current)} back on its own.<br>
@@ -3470,12 +3470,12 @@ function renderPlatform(data) {
 
 async function startPlatformUpgrade(data) {
   const ok = await confirmDialog({
-    title: `Update HomeBox to ${data.latest}?`,
+    title: `Update Podhouse to ${data.latest}?`,
     body: 'The dashboard restarts partway through and is unreachable for about a minute. '
       + 'Your apps keep running, and nothing in their data is changed. '
       + 'If the new version fails to start, this box puts itself back on '
       + `${data.current} on its own.`,
-    confirmLabel: 'Update HomeBox',
+    confirmLabel: 'Update Podhouse',
   });
   if (!ok) return;
 
@@ -3490,7 +3490,7 @@ async function startPlatformUpgrade(data) {
     // The same dialog an image upgrade uses. A button that goes quiet for a
     // minute while the page it is on restarts needs to show its work.
     platformShown = 0;
-    openProgress(`Updating HomeBox to ${data.latest}`);
+    openProgress(`Updating Podhouse to ${data.latest}`);
     pollPlatform();
   } catch (err) {
     toast(`Could not start the update: ${err.message}`, 'error', 8000);
@@ -3576,7 +3576,7 @@ async function loadPlatform() {
       // read rather than skipped. Without the dialog, progressLine has nowhere
       // to write and every line is silently dropped.
       platformShown = 0;
-      openProgress(`Updating HomeBox to ${data.progress ? data.progress.to : ''}`);
+      openProgress(`Updating Podhouse to ${data.progress ? data.progress.to : ''}`);
       pollPlatform();
     }
   } catch { /* the card simply stays hidden */ }
@@ -3744,7 +3744,7 @@ async function upgradeVersion(container, from, to) {
       come back healthy, the previous version is put straight back.</p>
       <p class="signin-note"><strong>Worth knowing:</strong> a new version can migrate its database on
       first start, and putting the old version back does not undo a migration. That is what the
-      backup is for. The version is recorded in HomeBox's own state, so a later
+      backup is for. The version is recorded in Podhouse's own state, so a later
       <code class="mono">git pull</code> will not conflict.</p>`,
     confirmLabel: `Upgrade to ${to}`,
     danger: true,
@@ -3792,7 +3792,7 @@ async function runUpdateCheck({ quiet = false } = {}) {
   if (btn) { btn.disabled = true; btn.textContent = 'Checking…'; }
   if (!quiet) $('#update-state').textContent = 'Asking each registry for the newest build…';
 
-  // HomeBox itself, alongside the images.
+  // Podhouse itself, alongside the images.
   //
   // "Check now" used to ask the registries and nothing else, so a box whose
   // cached platform answer was stale had no way to refresh it from the
@@ -3838,7 +3838,7 @@ async function applyUpdate(which) {
     : which;
   const ok = await confirmDialog({
     title: many ? 'Update everything?' : `Update ${which}?`,
-    body: `HomeBox will back up the module's config, pull the new image and recreate ${target} `
+    body: `Podhouse will back up the module's config, pull the new image and recreate ${target} `
       + 'one at a time, waiting for each to come back healthy. Anything that does not come back '
       + 'is put straight back on the image it was running. Expect a brief outage per app.',
     confirmLabel: many ? 'Update all' : 'Update',
@@ -4288,7 +4288,7 @@ document.addEventListener('click', async (event) => {
       retention: Number($('#schedule-keep').value),
     }, () => {
       toast($('#schedule-on').checked
-        ? 'Schedule saved — HomeBox will take config backups on its own.'
+        ? 'Schedule saved — Podhouse will take config backups on its own.'
         : 'Automatic backups turned off.', 'success');
       loadBackups();
     });

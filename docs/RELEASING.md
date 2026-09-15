@@ -1,6 +1,6 @@
-# Releasing HomeBox
+# Releasing Podhouse
 
-Since HomeBox runs on machines you do not own, a release is a thing that happens to
+Since Podhouse runs on machines you do not own, a release is a thing that happens to
 other people. This is the checklist.
 
 ## The model
@@ -24,7 +24,7 @@ other people. This is the checklist.
 
 4. **Tag it, annotated:**
    ```
-   git tag -a v0.2.0 -m "HomeBox 0.2.0"
+   git tag -a v0.2.0 -m "Podhouse 0.2.0"
    git push origin v0.2.0
    ```
    Annotated, not lightweight — an annotated tag carries a date and a message, and is

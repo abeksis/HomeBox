@@ -6,13 +6,13 @@ order: 7
 <h2>What hardware do I need?</h2>
 <p>Any x86-64 or ARM64 machine running Debian or Ubuntu. A mini PC with 8 GB of memory runs a comfortable set of apps; photo recognition, transcoding and local AI want more. Each app page lists roughly how much memory the app uses.</p>
 
-<h2>Does HomeBox send anything about me anywhere?</h2>
-<p>No account, and nothing about you, your files or the apps you run. HomeBox does make two kinds of request on its own: it checks for a new HomeBox release, and it asks container registries whether your apps have updates. Apps you install may contact their own services, as they would anywhere.</p>
+<h2>Does Podhouse send anything about me anywhere?</h2>
+<p>No account, and nothing about you, your files or the apps you run. Podhouse does make two kinds of request on its own: it checks for a new Podhouse release, and it asks container registries whether your apps have updates. Apps you install may contact their own services, as they would anywhere.</p>
 <p>Two things are counted, anonymously, so the project knows whether a release reached anyone: each run of the install script adds one to a daily count per country, and the release check sends the HomeBox version your box is on. Neither stores an IP address or anything that identifies you or your box — a running box is recognised for one day only, by a salted hash that cannot be followed to the next day, and those rows are reduced to plain per-version totals within two days. The code is in <a href="https://github.com/abeksis/HomeBox/tree/main/infra/get-worker">infra/get-worker</a>.</p>
 <p>To opt out, add <code>HB_ANONYMOUS_STATS=off</code> to <code>/opt/homebox/.env</code> and run <code>sudo homebox up dashboard --yes</code>. The box then checks GitHub directly.</p>
 
 <h2>Is it free?</h2>
-<p>Yes. HomeBox is open source, and every app in the catalog is the real upstream project.</p>
+<p>Yes. Podhouse is open source, and every app in the catalog is the real upstream project.</p>
 
 <h2>Where is my data?</h2>
 <ul>
@@ -22,7 +22,7 @@ order: 7
 </ul>
 
 <h2>Can my media live on a NAS?</h2>
-<p>Yes. Point the media folder at a NAS mount and the media apps, File Browser and the rest read and write there. Uninstalling HomeBox never touches storage outside <code>/opt/homebox</code>.</p>
+<p>Yes. Point the media folder at a NAS mount and the media apps, File Browser and the rest read and write there. Uninstalling Podhouse never touches storage outside <code>/opt/homebox</code>.</p>
 
 <h2>I forgot the dashboard password.</h2>
 <p>Remove the account and claim the box again from a terminal on it:</p>

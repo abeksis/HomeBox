@@ -312,7 +312,7 @@ function retag(imageId, ref) {
  *
  * So the work is handed to a container that outlives us: a detached, throwaway
  * sibling running the same image (guaranteed present — we are running it),
- * holding the Docker socket and the HomeBox tree, whose only job is that one
+ * holding the Docker socket and the Podhouse tree, whose only job is that one
  * compose command. Docker keeps it alive after this container is gone.
  *
  * Returns once the helper has been STARTED, not once the recreate is done —

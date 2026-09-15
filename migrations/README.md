@@ -45,7 +45,7 @@ needs the dashboard's libraries cannot be a migration.
 
 ## Changing a value in .env
 
-`install.sh` defines `env_force` for values HomeBox owns outright. A migration that needs
+`install.sh` defines `env_force` for values Podhouse owns outright. A migration that needs
 to change something a *person* might have customised should not use it: check the value
 is still the shipped default first, and leave a deliberate customisation alone.
 

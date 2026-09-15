@@ -56,7 +56,7 @@ echo "media: pool ready at $MEDIA_ROOT ($DOWNLOADS, $MOVIES, $TV) — all mounte
 # restarts, whatever you found there stops working. Anyone who had not
 # discovered that gets a flat "Unauthorized" and no idea why.
 #
-# Every other app in HomeBox is seeded with a generated password at install.
+# Every other app in Podhouse is seeded with a generated password at install.
 # This makes qBittorrent behave the same way: the password lives in .env, the
 # dashboard's Live activity card reads it from there, and `homebox secrets
 # media` prints it.
@@ -77,7 +77,7 @@ seed_qbittorrent_login() {
   #
   # On a fresh install that is not a problem: setup.sh runs before `compose
   # up`. Re-running it against a live stack is the case that needs saying out
-  # loud, because a silent no-op here reads as "HomeBox cannot do this".
+  # loud, because a silent no-op here reads as "Podhouse cannot do this".
   if command -v docker >/dev/null 2>&1 && [ -n "$(docker ps -q --filter name='^qbittorrent$' 2>/dev/null)" ]; then
     echo "media: qBittorrent is running — it would overwrite this file on shutdown, so the login was NOT seeded."
     echo "media: stop it first if you want the account written:  docker stop qbittorrent && bash $HB_ROOT/modules/media/setup.sh && docker start qbittorrent"

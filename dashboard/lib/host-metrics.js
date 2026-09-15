@@ -72,7 +72,7 @@ async function disk() {
     const st = await fsp.statfs(HOST_ROOT);
     const total = st.blocks * st.bsize;
     // bavail, not bfree: bfree includes blocks reserved for root, which df
-    // also excludes. Using bfree makes HomeBox disagree with df on the box.
+    // also excludes. Using bfree makes Podhouse disagree with df on the box.
     const free = st.bavail * st.bsize;
     const used = total - st.bfree * st.bsize;
     return { total, used, free, percent: total ? Math.round((used / total) * 100) : null, path: HOST_ROOT };

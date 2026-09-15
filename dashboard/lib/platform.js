@@ -1,14 +1,14 @@
 'use strict';
 /**
- * "Is there a newer HomeBox, and may this box take it?"
+ * "Is there a newer Podhouse, and may this box take it?"
  *
  * lib/updates.js answers that question for the CONTAINER IMAGES an app runs on.
- * This file answers it for HomeBox itself — the dashboard, the CLI, the module
+ * This file answers it for Podhouse itself — the dashboard, the CLI, the module
  * definitions, everything tracked in git.
  *
  * WHY THIS EXISTS AT ALL
  *
- * A HomeBox given to someone else is a product with an install base. The update
+ * A Podhouse given to someone else is a product with an install base. The update
  * path used to be `git pull && sudo bash install.sh` typed over SSH, which is
  * fine for whoever wrote it and unusable for anyone else. Worse, tracking `main`
  * means every push lands on their box, including the twenty minutes between
@@ -232,7 +232,7 @@ async function check({ force = false } = {}) {
       // handed back whole.
       //
       // A box logged this every fifteen minutes while running 0.4.8:
-      //   [homebox] HomeBox 0.4.8 is available (on 0.4.6)
+      //   [homebox] Podhouse 0.4.8 is available (on 0.4.6)
       // and would have kept logging it until somebody, somewhere, published
       // an unrelated release.
       //
@@ -456,7 +456,7 @@ async function upgrade({ to = null } = {}) {
   //
   // The dialog shows the log file, and the script truncates it when it starts
   // — but a run that never starts never truncates anything. A box was left
-  // showing "Updating HomeBox to 0.4.4" above the finished output of the
+  // showing "Updating Podhouse to 0.4.4" above the finished output of the
   // PREVIOUS update, last line "done  Now on 0.4.3". Every word on screen was
   // true of a different run.
   try {

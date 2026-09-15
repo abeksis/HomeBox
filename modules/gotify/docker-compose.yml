@@ -1,4 +1,4 @@
-# Gotify — a HomeBox module
+# Gotify — a Podhouse module
 #
 # Push notifications to your own phone, from your own server.
 
@@ -35,7 +35,7 @@ x-homebox:
       port_map: 8880
       container_port: 80
       url_scheme: "http"
-      first_login: "Signs in as admin with the password HomeBox generated at install."
+      first_login: "Signs in as admin with the password Podhouse generated at install."
 
 services:
   gotify:

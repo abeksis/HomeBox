@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>HomeBox</title>
+  <title>Podhouse</title>
   <meta name="color-scheme" content="dark light">
   <link rel="icon" href="icons/homebox.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/homebox.css?v=__V__">
@@ -17,7 +17,7 @@
 <div class="gate" id="gate" hidden>
   <div class="gate-card">
     <img class="gate-logo" src="icons/homebox.svg" alt="">
-    <h1 class="gate-title" id="gate-title">HomeBox</h1>
+    <h1 class="gate-title" id="gate-title">Podhouse</h1>
     <p class="gate-text" id="gate-text">One moment&hellip;</p>
 
     <form id="gate-form" autocomplete="on">
@@ -53,7 +53,7 @@
   <a class="side-brand" href="#home" data-page="home">
     <img src="icons/homebox.svg" alt="" width="30" height="30">
     <span class="side-brand-text">
-      <strong>HomeBox</strong>
+      <strong>Podhouse</strong>
       <small class="mono" id="side-version">—</small>
     </span>
   </a>
@@ -262,7 +262,7 @@
         <h2 class="panel-title">Containers without a module</h2>
         <span class="panel-note mono" id="orphans-count"></span>
       </div>
-      <p class="help">Docker runs these on this box, but HomeBox did not create them, so no module manages them.</p>
+      <p class="help">Docker runs these on this box, but Podhouse did not create them, so no module manages them.</p>
       <div class="orphan-list" id="orphan-list"></div>
     </section>
   </section>
@@ -301,7 +301,7 @@
     <header class="screen-head with-action">
       <div>
         <h1>Updates</h1>
-        <p>New HomeBox releases and updates for your apps. Nothing changes until you confirm it.</p>
+        <p>New Podhouse releases and updates for your apps. Nothing changes until you confirm it.</p>
         <p class="screen-meta" id="update-state">Loading…</p>
       </div>
       <button type="button" class="button" id="check-updates">Check now</button>
@@ -309,7 +309,7 @@
 
     <div class="summary-strip">
       <div class="summary-box">
-        <span>HomeBox</span>
+        <span>Podhouse</span>
         <strong id="updates-homebox">--</strong>
         <small id="updates-homebox-note">checking</small>
       </div>
@@ -325,8 +325,8 @@
       </div>
     </div>
 
-    <!-- HomeBox itself. Hidden unless there is something to say. See renderPlatform(). -->
-    <section class="block" id="platform-card" aria-label="HomeBox releases" hidden></section>
+    <!-- Podhouse itself. Hidden unless there is something to say. See renderPlatform(). -->
+    <section class="block" id="platform-card" aria-label="Podhouse releases" hidden></section>
 
     <!-- Every app update in one list; each row says what kind it is. See renderUpdates(). -->
     <section class="block" aria-label="App updates">
@@ -413,7 +413,7 @@
               <span><strong>Upcoming releases</strong><small>Films and episodes you follow that come out in the next three weeks.</small></span>
             </label>
             <p class="help">
-              Radarr and Sonarr work without setup — HomeBox reads the API key they write to disk.
+              Radarr and Sonarr work without setup — Podhouse reads the API key they write to disk.
               qBittorrent keeps no such file, so its web login is entered under
               <a href="#settings" data-stab="server">Configuration → Media Stack</a>.
             </p>
@@ -440,7 +440,7 @@
           <span class="panel-note mono" id="quick-editor-summary"></span>
         </div>
         <p class="help">Shortcuts to things that are not on this box — a router, a NAS, a tracker.
-          HomeBox cannot discover these, so you add them once.
+          Podhouse cannot discover these, so you add them once.
           <strong>Saved on the server</strong>, so every device shows the same list.</p>
 
         <div class="list-editor" id="quick-editor-list"></div>
@@ -471,7 +471,7 @@
           <h2 class="panel-title">What "Your apps" shows</h2>
           <span class="panel-note mono" id="launcher-editor-summary"></span>
         </div>
-        <p class="help">Rename or hide the apps HomeBox found, or add your own shortcuts.
+        <p class="help">Rename or hide the apps Podhouse found, or add your own shortcuts.
           Hiding an app does not stop it.
           <strong>These choices are kept in this browser only</strong> — another device keeps its own.</p>
 
@@ -588,7 +588,7 @@
           </div>
           <p class="help">
             A library on a NAS must be mounted on this box before apps can use it — a container
-            cannot mount a network share by itself. HomeBox writes a systemd automount instead of an
+            cannot mount a network share by itself. Podhouse writes a systemd automount instead of an
             fstab line, so an app never starts against an empty folder and decides its library is gone.
             Once mounted, set <a href="#settings" data-stab="server">Configuration → Media</a> to it.
           </p>
@@ -809,7 +809,7 @@
             <span class="panel-note mono" id="reset-meta"></span>
           </div>
           <p class="help">
-            This does not show a password — HomeBox does not know accounts you created inside an app,
+            This does not show a password — Podhouse does not know accounts you created inside an app,
             and should not. It puts the app back in a state where you can set a <strong>new</strong> one.
             Only apps this version knows how to unlock are listed.
           </p>

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==========================================================================
-# Remove HomeBox from this machine.
+# Remove Podhouse from this machine.
 #
 #   sudo bash /opt/homebox/scripts/uninstall.sh              # asks first
 #   curl -fsSL https://get.abeksis.net/uninstall.sh | sudo bash   # same, asks first
@@ -8,13 +8,13 @@
 #   sudo bash /opt/homebox/scripts/uninstall.sh --keep-data  # keep data/ + backups/
 #
 # For starting over on a test box, and for getting a machine back to how it
-# was. It removes the containers HomeBox created, its networks, and the tree
+# was. It removes the containers Podhouse created, its networks, and the tree
 # at /opt/homebox. Docker itself stays — it was probably wanted anyway, and
 # uninstalling it would take other people's containers with it.
 #
 # What it will NOT do, ever:
 #
-#   - touch anything outside $HB_ROOT and HomeBox's own Docker objects
+#   - touch anything outside $HB_ROOT and Podhouse's own Docker objects
 #   - follow HB_DATA_DIR or HB_MEDIA_ROOT off this box. A media library on a
 #     NAS is the one thing here that cannot be regenerated, and "uninstall the
 #     dashboard" must never mean "delete the films".
@@ -67,7 +67,7 @@ VOLUMES=""
 DECLARED=""
 if [ "${#DOCKER[@]}" -gt 0 ] && docker info >/dev/null 2>&1; then
   # By compose project label, not by name: the label is what actually ties a
-  # container to a HomeBox module, and names have no prefix by design.
+  # container to a Podhouse module, and names have no prefix by design.
   # No -q: docker refuses to honour --format when --quiet is also set
   # ("Ignoring custom format, because both --format and --quiet are set"), so
   # this listed bare IDs and the filter below matched nothing — the inventory
@@ -83,7 +83,7 @@ if [ "${#DOCKER[@]}" -gt 0 ] && docker info >/dev/null 2>&1; then
   # volume with a 64-hex name, and `docker rm` leaves it behind — it needs
   # -v. Six of them survived a full uninstall on the test box, which is
   # exactly the kind of thing "it left residue" means. Read from the
-  # containers themselves so only HomeBox's own are ever touched: a bare
+  # containers themselves so only Podhouse's own are ever touched: a bare
   # `volume prune` would take somebody else's stopped container's data.
   for c in $CONTAINERS; do
     VOLUMES="$VOLUMES$(docker inspect "$c" \
@@ -95,8 +95,8 @@ if [ "${#DOCKER[@]}" -gt 0 ] && docker info >/dev/null 2>&1; then
   #
   # `homebox-*` only ever matched the dashboard's own build. Everything
   # pulled — Radarr, Sonarr, the proxy, FlareSolverr — stayed, which on the
-  # test box was 5GB of "removed" HomeBox. The list comes from the module
-  # files so it can never include an image HomeBox did not ask for.
+  # test box was 5GB of "removed" Podhouse. The list comes from the module
+  # files so it can never include an image Podhouse did not ask for.
   if [ -d "$HB_ROOT/modules" ]; then
     # A tag built from ${HB_VERSION:-local} leaves "homebox-dashboard:" once
     # the variable is stripped, so anything without a real tag is dropped —
@@ -182,7 +182,7 @@ if [ -n "$CONTAINERS" ]; then
 fi
 
 # Anything -v could not take, usually because it was still referenced when
-# the container went. Only the ones this script inventoried from HomeBox's
+# the container went. Only the ones this script inventoried from Podhouse's
 # own containers, never a blanket prune.
 if [ -n "$VOLUMES" ] && [ "$KEEP_DATA" -ne 1 ]; then
   step "Removing anonymous volumes"
@@ -234,7 +234,7 @@ fi
 
 # ------------------------------------------------- 4. the last of the debris
 #
-# Removing HomeBox's own objects still leaves three kinds of rubbish that
+# Removing Podhouse's own objects still leaves three kinds of rubbish that
 # belong to nobody:
 #
 #   - anonymous volumes ORPHANED by an earlier uninstall. Once their
@@ -247,7 +247,7 @@ fi
 # A blanket prune is only safe when nothing else on this machine uses Docker,
 # so that is checked rather than assumed: if any container or tagged image
 # survives, this is skipped entirely and says what it found instead. Someone
-# running HomeBox next to their own stacks does not lose their leftovers to
+# running Podhouse next to their own stacks does not lose their leftovers to
 # an uninstall of something else.
 if [ "${#DOCKER[@]}" -gt 0 ] && docker info >/dev/null 2>&1 && [ "$KEEP_DATA" -ne 1 ] && [ "$KEEP_IMAGES" -ne 1 ]; then
   others_c="$(docker ps -aq 2>/dev/null | grep -c . || true)"
@@ -268,18 +268,18 @@ if [ "${#DOCKER[@]}" -gt 0 ] && docker info >/dev/null 2>&1 && [ "$KEEP_DATA" -n
 fi
 
 # The systemd units scripts/mount-remote.sh writes are deliberately left in
-# place: they mount a NAS, which has nothing to do with HomeBox being here,
+# place: they mount a NAS, which has nothing to do with Podhouse being here,
 # and removing them would unmount a share other things may be using.
 if ls /etc/systemd/system/*.automount >/dev/null 2>&1; then
-  if grep -lq 'HomeBox remote storage' /etc/systemd/system/*.mount 2>/dev/null; then
+  if grep -lqE '(HomeBox|Podhouse) remote storage' /etc/systemd/system/*.mount 2>/dev/null; then
     warn "the NAS mount units from mount-remote.sh are still installed — remove them by hand if you want them gone:"
-    grep -l 'HomeBox remote storage' /etc/systemd/system/*.mount 2>/dev/null | sed 's/^/     /'
+    grep -lE '(HomeBox|Podhouse) remote storage' /etc/systemd/system/*.mount 2>/dev/null | sed 's/^/     /'
   fi
 fi
 
 step "Done"
 cat <<EOF
-  HomeBox is gone. Docker was left installed.
+  Podhouse is gone. Docker was left installed.
 
   To install again:
     ${BOLD}curl -fsSL https://get.abeksis.net/install.sh | sudo bash${RESET}

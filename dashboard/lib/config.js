@@ -33,7 +33,7 @@ const BASE_GROUPS = [
   {
     id: 'paths',
     title: 'Paths and identity',
-    description: 'Where HomeBox keeps things, and which user owns the files it writes.',
+    description: 'Where Podhouse keeps things, and which user owns the files it writes.',
     keys: [
       { key: 'HB_ROOT', label: 'Install root', readonly: true, hint: 'Set at install time. Moving it means reinstalling.' },
       { key: 'HB_DATA_DIR', label: 'Data pool', hint: 'The root every media path below defaults into.' },

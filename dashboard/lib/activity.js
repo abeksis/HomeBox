@@ -58,7 +58,7 @@ class Activity {
   }
 
   /**
-   * Record something HomeBox itself did (installing a module, say). Docker's
+   * Record something Podhouse itself did (installing a module, say). Docker's
    * event stream reports the containers that appear as a result, but not the
    * intent behind them, and "you installed Monitoring" is the line a person
    * actually wants to read afterwards.

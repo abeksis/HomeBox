@@ -37,7 +37,7 @@ if [ -f "$CONFIG" ]; then
 fi
 
 cat > "$CONFIG" <<'YAML'
-# Written by HomeBox at install. Frigate will not start without this file.
+# Written by Podhouse at install. Frigate will not start without this file.
 #
 # It is deliberately camera-less: Frigate runs, the UI opens, and you add
 # cameras below. A camera block needs the RTSP URL your camera actually

@@ -10,7 +10,7 @@
  *
  * WHAT THIS DOES NOT DO
  *
- * It does not reveal or recover a password. HomeBox does not know an account
+ * It does not reveal or recover a password. Podhouse does not know an account
  * you created inside an app, and it should not — that would mean the
  * dashboard holding the credentials of everything it runs. What it does is
  * open a door: put the app back into a state where you can set a NEW password
@@ -199,7 +199,7 @@ const STRATEGIES = {
    * qBittorrent, which is a different problem: it has no reset at all.
    *
    * Left without a stored password it invents a temporary one on every boot
-   * and prints it to its log. HomeBox already generates one and seeds the
+   * and prints it to its log. Podhouse already generates one and seeds the
    * bcrypt hash into qBittorrent.conf at install — so a reset here is simply
    * running that seeding again, which the module's setup.sh already does
    * correctly and idempotently.
@@ -209,7 +209,7 @@ const STRATEGIES = {
    * instance is erased three seconds later.
    */
   qbittorrent: {
-    label: 'Write the password HomeBox generated back into qBittorrent',
+    label: 'Write the password Podhouse generated back into qBittorrent',
     async detail(moduleId, service) {
       const file = configPath(moduleId, service, 'qBittorrent/qBittorrent.conf');
       return {
@@ -333,7 +333,7 @@ async function list(containers) {
       const name = svc.reset_login;
       const strategy = name && STRATEGIES[name];
       // An unknown strategy name is silently absent rather than an error: a
-      // module from a newer HomeBox should not break an older dashboard.
+      // module from a newer Podhouse should not break an older dashboard.
       if (!strategy) continue;
       if (!running.has(`${mod.id}/${svc.name}`)) continue;
 

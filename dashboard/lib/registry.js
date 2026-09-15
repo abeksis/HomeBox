@@ -18,7 +18,7 @@
  *
  *   Moving a module from 2026.07.2 to some future 2026.09.x is a different
  *   thing entirely: it is a change to a file in git, it may need a config
- *   migration, and it arrives with a HomeBox release. That is deliberately
+ *   migration, and it arrives with a Podhouse release. That is deliberately
  *   NOT something a dashboard button does behind your back.
  */
 

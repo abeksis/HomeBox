@@ -1,6 +1,6 @@
 'use strict';
 /**
- * HomeBox dashboard server.
+ * Podhouse dashboard server.
  *
  * No framework and no npm dependencies: the image builds on a box with
  * nothing but a node base image, and there is no dependency tree to audit
@@ -219,7 +219,7 @@ async function serveStatic(res, urlPath) {
   }
 }
 
-/** Containers HomeBox runs for itself, which are not apps and are not news. */
+/** Containers Podhouse runs for itself, which are not apps and are not news. */
 const PLATFORM_CONTAINERS = new Set(['homebox-self-update']);
 
 /** Container names are a closed set; never interpolate a client string blind. */
@@ -235,12 +235,12 @@ async function resolveContainerName(name) {
  * because a stopped container is usually stopped on purpose.
  */
 function healthVerdict(all, metrics, dockerOk) {
-  // HomeBox's own machinery is not one of your apps.
+  // Podhouse's own machinery is not one of your apps.
   //
   // `homebox-self-update` is deliberately not `--rm`: a failed update has to
   // stay readable afterwards. The cost is that it sits there stopped, and the
   // box then greeted every successful update with "1 container is stopped" —
-  // HomeBox reporting its own tooling to you as a fault, every single time.
+  // Podhouse reporting its own tooling to you as a fault, every single time.
   //
   // It stays visible in the Logs picker, which is the whole reason it is kept.
   const containers = all.filter((c) => !PLATFORM_CONTAINERS.has(c.name));
@@ -849,7 +849,7 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    // --- HomeBox itself ---
+    // --- Podhouse itself ---
     //
     // GET  /api/platform          cached answer + progress + history
     // POST /api/platform/check    ask the release manifest now
@@ -1189,7 +1189,7 @@ function scheduleUpdateChecks() {
       .catch((err) => console.log(`[homebox] update check skipped: ${err.message}`));
   };
 
-  // HomeBox itself. One outbound request to a static JSON file, and it is what
+  // Podhouse itself. One outbound request to a static JSON file, and it is what
   // puts the dot in the nav without anybody opening the Updates tab to go
   // looking for it.
   //
@@ -1205,7 +1205,7 @@ function scheduleUpdateChecks() {
   const runPlatform = () => platform.check({ force: true })
     .then((r) => {
       if (r.frozen) console.log(`[homebox] platform updates paused: ${r.reason}`);
-      else if (r.updateAvailable) console.log(`[homebox] HomeBox ${r.latest} is available (on ${r.current})`);
+      else if (r.updateAvailable) console.log(`[homebox] Podhouse ${r.latest} is available (on ${r.current})`);
     })
     .catch((err) => console.log(`[homebox] platform check skipped: ${err.message}`));
 

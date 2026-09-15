@@ -54,7 +54,7 @@ if [ -f "$CONFIG" ]; then
   echo "authelia: configuration.yml already present, leaving it alone"
 else
   cat > "$CONFIG" <<YAML
-# Written by HomeBox at install. Edit freely — it is never rewritten.
+# Written by Podhouse at install. Edit freely — it is never rewritten.
 #
 # Secrets are NOT here. They come from the environment
 # (AUTHELIA_SESSION_SECRET and friends) so this file stays readable.
@@ -133,7 +133,7 @@ if [ -z "$hash" ]; then
 fi
 
 cat > "$USERS" <<YAML
-# Written by HomeBox at install. Add people by copying the block below.
+# Written by Podhouse at install. Add people by copying the block below.
 # Generate a hash with:
 #   docker run --rm ${IMAGE} authelia crypto hash generate argon2 --password 'theirs'
 users:

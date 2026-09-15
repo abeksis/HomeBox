@@ -1,5 +1,5 @@
 <!--
-title: Install HomeBox
+title: Install Podhouse
 summary: From a clean Debian or Ubuntu machine to a running dashboard, in about three minutes.
 order: 1
 -->
@@ -8,16 +8,16 @@ order: 1
   <li><strong>Debian or Ubuntu</strong>, freshly installed or close to it. Other distributions may work, but the package steps are written for these.</li>
   <li><strong>x86-64 or ARM64</strong> — a mini PC, an old laptop, a virtual machine or a VPS.</li>
   <li>A user with <code>sudo</code>, and a connection to the internet.</li>
-  <li>Disk space for the apps you plan to run. HomeBox itself is small; photo libraries and media are not.</li>
+  <li>Disk space for the apps you plan to run. Podhouse itself is small; photo libraries and media are not.</li>
 </ul>
 
 <h2>Run the installer</h2>
 <p>Open a terminal on the machine and paste:</p>
 {{install}}
-<p>It installs Docker if it is missing, downloads HomeBox into <code>/opt/homebox</code>, generates this machine's own passwords, and starts the reverse proxy and the dashboard. It installs the current <strong>release</strong>, not the development branch.</p>
+<p>It installs Docker if it is missing, downloads Podhouse into <code>/opt/homebox</code>, generates this machine's own passwords, and starts the reverse proxy and the dashboard. It installs the current <strong>release</strong>, not the development branch.</p>
 
 <div class="callout">
-  <p>It refuses to run over an existing install rather than half-upgrading one. To update a box that already has HomeBox, use the <a href="../updates/">Updates tab</a>.</p>
+  <p>It refuses to run over an existing install rather than half-upgrading one. To update a box that already has Podhouse, use the <a href="../updates/">Updates tab</a>.</p>
 </div>
 
 <h3>Prefer to read it first?</h3>
@@ -28,7 +28,7 @@ sudo bash hb.sh</code></pre>
 
 <h2>Claim your box</h2>
 <p>When it finishes, the installer prints the dashboard address and a one-time <strong>claim token</strong>:</p>
-<pre><code>HomeBox is up.
+<pre><code>Podhouse is up.
 
   Dashboard   http://192.168.1.50:8443
 

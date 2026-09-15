@@ -96,7 +96,7 @@ YAML
   echo "headscale: wrote a starting config.yaml — set server_url before enrolling devices"
 fi
 
-# The proxy config is HomeBox's, not the user's: it wires two containers
+# The proxy config is Podhouse's, not the user's: it wires two containers
 # together and there is nothing in it to tune. Rewritten every time so a
 # module update can fix it.
 cat > "$CONF/nginx.conf" <<'NGINX'

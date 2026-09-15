@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==========================================================================
-# Mount a NAS share on this box so HomeBox can point its media paths at it.
+# Mount a NAS share on this box so Podhouse can point its media paths at it.
 #
 #   sudo scripts/mount-remote.sh nfs  192.0.2.10:/mnt/media/media_disk /mnt/media_disk
 #   sudo scripts/mount-remote.sh cifs //192.0.2.10/media /mnt/media_disk user
@@ -158,7 +158,7 @@ fi
 step "Writing /etc/systemd/system/$UNIT"
 cat > "/etc/systemd/system/$UNIT" <<EOF
 [Unit]
-Description=HomeBox remote storage at $MOUNTPOINT
+Description=Podhouse remote storage at $MOUNTPOINT
 After=network-online.target
 Wants=network-online.target
 
@@ -193,7 +193,7 @@ if systemctl cat docker.service >/dev/null 2>&1; then
   step "Ordering docker.service after $AUTOMOUNT"
   mkdir -p "$(dirname "$DROPIN")"
   cat > "$DROPIN" <<EOF
-# Written by HomeBox scripts/mount-remote.sh.
+# Written by Podhouse scripts/mount-remote.sh.
 # A bind mount is resolved when the container is CREATED; if dockerd gets there
 # first, the source is an empty directory on the root disk and the app starts
 # against an empty library. Ordering only, so an unreachable NAS cannot stop
@@ -211,7 +211,7 @@ systemctl start "$UNIT"
 
 if mountpoint -q "$MOUNTPOINT"; then
   printf '\n%smounted%s  %s\n' "$GREEN" "$RESET" "$(findmnt -no SOURCE,SIZE,USED "$MOUNTPOINT")"
-  printf '\nNow point HomeBox at it — Settings > Server Config > Advanced, or:\n'
+  printf '\nNow point Podhouse at it — Settings > Server Config > Advanced, or:\n'
   printf '  %sHB_DATA_DIR=%s%s   (one mount for everything, hardlinks intact)\n' "$BOLD" "$MOUNTPOINT" "$RESET"
   printf '\nA container keeps the bind it was CREATED with, so restarting is not\n'
   printf 'enough — the containers have to be replaced:\n'

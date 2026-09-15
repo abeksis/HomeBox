@@ -1,12 +1,12 @@
-# Dashboard — a HomeBox module
+# Dashboard — a Podhouse module
 #
-# The HomeBox dashboard: reads the module tree, installs and controls
+# The Podhouse dashboard: reads the module tree, installs and controls
 # modules, and serves the UI on 8443.
 
 x-homebox:
   id: dashboard
   added_at: "2026-09-05"
-  title: "HomeBox Dashboard"
+  title: "Podhouse Dashboard"
   tagline: "Install apps and see how the box is doing"
   description: "One page for the whole box: install a module with a click, start and stop what is running, watch host CPU, memory and disk, and read any container's logs without opening a shell."
   icon: "homebox.svg"
@@ -24,7 +24,7 @@ x-homebox:
     - "Reachable at http://<box>:8443 even before DNS points a hostname here"
   services:
     dashboard:
-      friendly_name: "HomeBox"
+      friendly_name: "Podhouse"
       color: "#8b5cf6"
       description: "The dashboard you are looking at"
       icon: "homebox.svg"

@@ -9,7 +9,7 @@
 # permanent dependency on somebody else's server for a 3KB file.
 #
 # The -light preference is not cosmetic. dashboard-icons ships the plain name
-# as black artwork meant for light UIs; HomeBox is dark, so tailscale.svg
+# as black artwork meant for light UIs; Podhouse is dark, so tailscale.svg
 # renders black on black while tailscale-light.svg is the readable one.
 #
 # Usage: scripts/fetch-icons.sh <name> [<name>...]

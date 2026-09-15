@@ -174,7 +174,7 @@ async function loadAll() {
  *   unhealthy    — a container's healthcheck is failing
  */
 /**
- * HomeBox's own update helper, which is not one of your apps.
+ * Podhouse's own update helper, which is not one of your apps.
  *
  * `homebox-self-update` is launched with `docker run` FROM THE DASHBOARD'S
  * IMAGE — and Docker copies an image's labels onto the container it creates.
@@ -183,8 +183,8 @@ async function loadAll() {
  * compose label counts it as a second dashboard.
  *
  * It is not `--rm` on purpose, so a failed update stays readable. The result
- * was that after any successful update the HomeBox card read
- * "1/2 running · partial" forever — HomeBox reporting itself as half broken.
+ * was that after any successful update the Podhouse card read
+ * "1/2 running · partial" forever — Podhouse reporting itself as half broken.
  *
  * Excluded here, at the one place module membership is decided, so the card,
  * the counts and Your apps all agree. It stays visible in the Logs picker,

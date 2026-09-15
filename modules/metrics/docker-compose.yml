@@ -1,4 +1,4 @@
-# Metrics — a HomeBox module
+# Metrics — a Podhouse module
 #
 # Beszel: what every machine is actually doing, on one page.
 
@@ -20,7 +20,7 @@ x-homebox:
   tips:
     - "The hub creates its admin account on the first visit, like Uptime Kuma — nothing is generated for you here"
     - "The agent on this box is added in the hub as HOST:45876, using the box's LAN address rather than localhost: the hub is in a container and localhost there means the container"
-    - "The agent needs the hub's public key, which the hub only creates on its first start. Install, open the hub, copy the key it shows when adding a system, and HomeBox picks it up from Settings"
+    - "The agent needs the hub's public key, which the hub only creates on its first start. Install, open the hub, copy the key it shows when adding a system, and Podhouse picks it up from Settings"
     - "The whole hub is one directory — config/beszel — so moving a Beszel from another machine is a file copy, not an export"
   env_vars:
     BESZEL_AGENT_KEY:

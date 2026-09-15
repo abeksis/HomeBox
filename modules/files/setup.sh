@@ -22,7 +22,7 @@ cat > "$CONFIG" <<'YAML'
 server:
   port: 80
   baseURL: "/"
-  # /folder is the whole HomeBox data pool, bind-mounted by the compose file.
+  # /folder is the whole Podhouse data pool, bind-mounted by the compose file.
   sources:
     - path: "/folder"
       name: "HomeBox"

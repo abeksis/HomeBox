@@ -23,11 +23,11 @@ else
   BOLD=''; DIM=''; RED=''; GREEN=''; YELLOW=''; RESET=''
 fi
 
-die() { printf '%s[HomeBox]%s %s%s%s\n' "$RED" "$RESET" "$RED" "$*" "$RESET" >&2; exit 1; }
+die() { printf '%s[Podhouse]%s %s%s%s\n' "$RED" "$RESET" "$RED" "$*" "$RESET" >&2; exit 1; }
 info() { printf '%s\n' "$*"; }
 # Same prefix as install.sh: the two run one after the other during an install,
 # and two different styles read as two different programs taking turns.
-step() { printf '%s[HomeBox]%s %s\n' "$GREEN" "$RESET" "$*"; }
+step() { printf '%s[Podhouse]%s %s\n' "$GREEN" "$RESET" "$*"; }
 
 # Decide once whether docker needs sudo. Probing per call is slower and, for
 # commands that print to stdout, a failed probe leaks a stray blank line into
@@ -191,7 +191,7 @@ cmd_list() {
     printf '%-14s %-24s %-13s %b%-13s%b %s\n' \
       "$id" "${title:0:24}" "$category" "$colour" "$state" "$RESET" "$ram"
   done
-  printf '\n%s%s modules · HomeBox v%s%s\n' "$DIM" "$(module_ids | wc -l)" "$VERSION" "$RESET"
+  printf '\n%s%s modules · Podhouse v%s%s\n' "$DIM" "$(module_ids | wc -l)" "$VERSION" "$RESET"
 }
 
 cmd_info() {
@@ -617,7 +617,7 @@ cmd_validate() {
   printf '\n%sall modules parse and compose accepts them%s\n' "$GREEN" "$RESET"
 }
 
-# Update HomeBox itself — the same script the dashboard button runs.
+# Update Podhouse itself — the same script the dashboard button runs.
 #
 # One code path on purpose. Two would drift, and the SSH one is the path that
 # has to work on the day the dashboard is the thing that broke.
@@ -638,7 +638,7 @@ cmd_self_update() {
         if (r.error) { console.log("could not check: " + r.error); return; }
         if (r.frozen) { console.log("updates are paused: " + r.reason); return; }
         if (r.reason) { console.log(r.reason); return; }
-        if (r.updateAvailable) console.log(`HomeBox ${r.latest} is available (this box is on ${r.current})`);
+        if (r.updateAvailable) console.log(`Podhouse ${r.latest} is available (this box is on ${r.current})`);
         else console.log(`up to date on ${r.current}`);
       }).catch((e) => { console.error(e.message); process.exit(1); });
     ' "$HB_ROOT"
@@ -658,7 +658,7 @@ cmd_self_update() {
   fi
 
   [ -n "$target" ] || die "nothing to update to"
-  step "Updating HomeBox to $target"
+  step "Updating Podhouse to $target"
   # Runs in the foreground here, unlike the dashboard's detached launch: an
   # SSH session is not about to be restarted by its own request, so the
   # operator may as well watch it happen.
@@ -666,7 +666,7 @@ cmd_self_update() {
 }
 
 cmd_doctor() {
-  printf '%sHomeBox v%s%s\n' "$BOLD" "$VERSION" "$RESET"
+  printf '%sPodhouse v%s%s\n' "$BOLD" "$VERSION" "$RESET"
   printf 'root        %s\n' "$HB_ROOT"
   printf 'modules     %s found\n' "$(module_ids | wc -l)"
   printf 'node        %s\n' "$(node --version 2>/dev/null || echo 'MISSING - the CLI needs node')"
@@ -692,13 +692,13 @@ ${BOLD}homebox${RESET} v$VERSION - apps live in $MODULES_DIR
 
   ${BOLD}list${RESET}                    every module and whether it is running
   ${BOLD}info${RESET} <module>           what it is, where its apps are, first-login notes
-  ${BOLD}status${RESET}                  every container HomeBox runs
+  ${BOLD}status${RESET}                  every container Podhouse runs
   ${BOLD}secrets${RESET} <module>        print the generated passwords for one module
 
   ${BOLD}install${RESET} <module>        seed, pull, start, mark enabled - the whole thing
   ${BOLD}remove${RESET} <module> --yes   stop and delete containers (--purge drops config too)
   ${BOLD}update${RESET} <module>         pull newer images and recreate
-  ${BOLD}self-update${RESET} [--check]   update HomeBox itself to the latest release
+  ${BOLD}self-update${RESET} [--check]   update Podhouse itself to the latest release
 
   ${BOLD}up${RESET} <module> --yes       start without the install steps
   ${BOLD}down${RESET} <module> --yes     stop, keep everything defined

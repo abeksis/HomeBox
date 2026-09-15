@@ -16,7 +16,7 @@
  * is why lib/registry.js asks the registry for the digest instead of trusting
  * `docker compose pull` to notice.
  *
- * Moving to a genuinely newer version is a HomeBox release — `git pull` and
+ * Moving to a genuinely newer version is a Podhouse release — `git pull` and
  * `homebox update`, with the compose file, the config migration and the
  * release note all arriving together.
  *
@@ -140,7 +140,7 @@ function builtServices(moduleId) {
 }
 
 /**
- * Every service this box runs that HomeBox owns, paired with the image its
+ * Every service this box runs that Podhouse owns, paired with the image its
  * container is actually running.
  *
  * Scoped to `homebox-*` compose projects: containers someone started by hand
@@ -310,7 +310,7 @@ async function check() {
 
     // Versions that exist and are deliberately not offered. Shown rather than
     // hidden: a database sitting on an old major version is worth knowing
-    // about, and "HomeBox never mentioned it" is how a box quietly ages. What
+    // about, and "Podhouse never mentioned it" is how a box quietly ages. What
     // it must not have is a button.
     const heldBack = results
       .filter((r) => r.blockedVersion)

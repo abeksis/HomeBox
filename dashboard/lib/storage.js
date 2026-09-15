@@ -174,7 +174,7 @@ async function hostAddresses() {
 
 /* ---------------------------------------------------------------- mount */
 
-/** What HomeBox has mounted, read from the units it wrote. */
+/** What Podhouse has mounted, read from the units it wrote. */
 async function list() {
   let out;
   try {
@@ -255,7 +255,7 @@ async function mount(input, { onLine = null } = {}) {
 }
 
 /**
- * Detach a share and remove the units HomeBox wrote for it.
+ * Detach a share and remove the units Podhouse wrote for it.
  *
  * The docker.service drop-in goes too. Leaving an ordering dependency on an
  * automount that no longer exists is how a box takes an extra 90 seconds to

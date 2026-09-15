@@ -1,4 +1,4 @@
-# Backup — a HomeBox module
+# Backup — a Podhouse module
 #
 # Duplicati: the copy that lives somewhere else.
 
@@ -7,7 +7,7 @@ x-homebox:
   added_at: "2026-09-09"
   title: "Duplicati"
   tagline: "The copy that is not in this room"
-  description: "Scheduled, encrypted, incremental backups to somewhere off this box — a NAS, S3, Backblaze, Google Drive, another machine over SFTP. Encrypted before it leaves, so the destination never sees your files. HomeBox's own `homebox backup` protects its config; this is for everything else, and for getting it out of the building."
+  description: "Scheduled, encrypted, incremental backups to somewhere off this box — a NAS, S3, Backblaze, Google Drive, another machine over SFTP. Encrypted before it leaves, so the destination never sees your files. Podhouse's own `homebox backup` protects its config; this is for everything else, and for getting it out of the building."
   icon: "duplicati.svg"
   category: "system"
   required: false
@@ -35,7 +35,7 @@ x-homebox:
       port_map: 8200
       container_port: 8200
       url_scheme: "http"
-      first_login: "Signs in with the password HomeBox generated at install — `homebox secrets backup` prints it."
+      first_login: "Signs in with the password Podhouse generated at install — `homebox secrets backup` prints it."
 
 services:
   backup:

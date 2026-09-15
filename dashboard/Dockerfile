@@ -1,4 +1,4 @@
-# HomeBox dashboard.
+# Podhouse dashboard.
 #
 # The server itself has no npm dependencies — node builtins only — so this
 # image builds on a box with no registry access beyond the base image, and

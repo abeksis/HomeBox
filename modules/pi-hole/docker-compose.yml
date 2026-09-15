@@ -1,4 +1,4 @@
-# Pi-hole — a HomeBox module
+# Pi-hole — a Podhouse module
 #
 # Added from Settings > App Store contents, then completed by hand: the
 # generated template gives every app one TCP port and one /config volume,
@@ -40,7 +40,7 @@ x-homebox:
       port_map: 8053
       container_port: 80
       url_scheme: "http"
-      first_login: "Log in at /admin. There is no username — just the password HomeBox generated."
+      first_login: "Log in at /admin. There is no username — just the password Podhouse generated."
 
 services:
   pihole:

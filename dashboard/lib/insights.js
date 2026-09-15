@@ -13,7 +13,7 @@
  *   Radarr        what is downloading, what is released and still missing
  *   Sonarr        the same, plus what airs in the next few days
  *
- * THREE RULES, because this file talks to software HomeBox does not control:
+ * THREE RULES, because this file talks to software Podhouse does not control:
  *
  * 1. **Every source fails on its own.** One app being down, slow or
  *    mid-restart must never blank the card or hold up the others, so each
@@ -27,7 +27,7 @@
  * 3. **Credentials are read, never stored here.** The *arr apps keep an API
  *    key in their own config.xml and that is where it is read from, so there
  *    is nothing for anyone to set up. qBittorrent has no such file, so its
- *    login comes from .env like every other HomeBox secret.
+ *    login comes from .env like every other Podhouse secret.
  *
  * Addressed by container name on homebox_proxy (`http://radarr:7878`), not by
  * the LAN address: the ports a service publishes are for people, and a

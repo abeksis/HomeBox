@@ -2,7 +2,7 @@
 .env
 .env.bak-*
 
-# Per-install state, not part of HomeBox: the enabled list, the activity log,
+# Per-install state, not part of Podhouse: the enabled list, the activity log,
 # UI preferences, App Store text edits and downloaded icons.
 state/*
 !state/.gitignore

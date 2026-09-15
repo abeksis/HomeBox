@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==========================================================================
-# HomeBox installer — turns a clean Debian box into a HomeBox host.
+# Podhouse installer — turns a clean Debian box into a Podhouse host.
 #
 #   curl -fsSL .../install.sh | bash      (or just: sudo bash install.sh)
 #
@@ -51,10 +51,10 @@ fi
 
 # One prefix on every line this script writes, so its own words stay
 # distinguishable from the output of apt, docker and compose running underneath.
-say()  { printf '%s[HomeBox]%s %s\n' "$GREEN" "$RESET" "$*"; }
-step() { printf '\n%s[HomeBox]%s %s%s%s\n' "$GREEN" "$RESET" "$BOLD" "$*" "$RESET"; }
-warn() { printf '%s[HomeBox]%s %s%s%s\n' "$YELLOW" "$RESET" "$YELLOW" "$*" "$RESET"; }
-die()  { printf '%s[HomeBox]%s %s%s%s\n' "$RED" "$RESET" "$RED" "$*" "$RESET" >&2; exit 1; }
+say()  { printf '%s[Podhouse]%s %s\n' "$GREEN" "$RESET" "$*"; }
+step() { printf '\n%s[Podhouse]%s %s%s%s\n' "$GREEN" "$RESET" "$BOLD" "$*" "$RESET"; }
+warn() { printf '%s[Podhouse]%s %s%s%s\n' "$YELLOW" "$RESET" "$YELLOW" "$*" "$RESET"; }
+die()  { printf '%s[Podhouse]%s %s%s%s\n' "$RED" "$RESET" "$RED" "$*" "$RESET" >&2; exit 1; }
 rule() { printf '%s============================================================%s\n' "$DIM" "$RESET"; }
 
 SUDO=""
@@ -215,7 +215,7 @@ $SUDO mkdir -p \
 #
 # This was a plain `chown -R` for a long time and did not visibly hurt, because
 # install.sh ran rarely. Once every platform update began running it, it started
-# reassigning Immich's Postgres data — which runs as uid 999 — to the HomeBox
+# reassigning Immich's Postgres data — which runs as uid 999 — to the Podhouse
 # user on every single update. Postgres then refuses to open its own catalog:
 #
 #   FATAL: could not open file "global/pg_filenode.map": Permission denied
@@ -255,7 +255,7 @@ set_env() {
   printf '%s=%s\n' "$key" "$value" >> "$ENV_FILE"
 }
 
-# The deliberate exception to the rule above: a value HomeBox OWNS, which has
+# The deliberate exception to the rule above: a value Podhouse OWNS, which has
 # to track the code rather than whatever it was on the day this box was built.
 #
 # There is exactly one so far — HB_VERSION — and the bar for adding another is
@@ -448,7 +448,7 @@ done <<EOF
 $(declared_defaults | sort -u)
 EOF
 # Created after the chown -R above, so it needs its own: without this the
-# HomeBox user cannot read the secrets the installer just generated.
+# Podhouse user cannot read the secrets the installer just generated.
 $SUDO chown "$HB_USER:$HB_USER" "$ENV_FILE"
 chmod 600 "$ENV_FILE"
 printf '  %s secrets, mode 600\n' "$(grep -c '=' "$ENV_FILE")"
@@ -552,7 +552,7 @@ printf '  %s
 ADDRESS="$(hostname -I 2>/dev/null | awk '{print $1}')"
 cat <<EOF
 
-${GREEN}${BOLD}HomeBox is up.${RESET}
+${GREEN}${BOLD}Podhouse is up.${RESET}
 
   Dashboard   http://${ADDRESS:-localhost}:8443
   Modules     $HB_ROOT/modules

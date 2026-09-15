@@ -15,12 +15,12 @@ if [ -z "${CLOUDFLARE_TUNNEL_TOKEN:-}" ]; then
   cat >&2 <<'MSG'
 tunnel: no token yet, so there is nothing to connect to.
 
-Cloudflare issues the token; HomeBox cannot generate it. To get one:
+Cloudflare issues the token; Podhouse cannot generate it. To get one:
 
   1. one.dash.cloudflare.com -> Networks -> Tunnels -> Create a tunnel
   2. Pick "Cloudflared", name it, and copy the token out of the install
      command it shows you (the long string after --token)
-  3. Paste it into HomeBox: Settings -> Configuration -> Cloudflare Tunnel
+  3. Paste it into Podhouse: Settings -> Configuration -> Cloudflare Tunnel
   4. Install this app again
 
 Then add a Public Hostname in that same Cloudflare page pointing at the app

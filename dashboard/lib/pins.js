@@ -4,7 +4,7 @@
  *
  * The obvious way to apply a version update from a button is to rewrite the
  * `image:` line in modules/<id>/docker-compose.yml. It is also the wrong way:
- * that file is tracked, `git pull` is how HomeBox itself updates, and a
+ * that file is tracked, `git pull` is how Podhouse itself updates, and a
  * locally edited tracked file turns the next upgrade into a merge conflict on
  * somebody's home server. The feature would work once and then quietly break
  * the thing it lives inside.
@@ -65,7 +65,7 @@ async function writeOverride(moduleId, pins) {
   }
 
   const lines = [
-    '# Written by HomeBox. Do not edit.',
+    '# Written by Podhouse. Do not edit.',
     '#',
     '# Version pins chosen from Settings, applied as a compose override so the',
     '# module file this sits beside stays exactly as shipped and `git pull`',

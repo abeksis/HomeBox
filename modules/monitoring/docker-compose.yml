@@ -1,4 +1,4 @@
-# Monitoring — a HomeBox module
+# Monitoring — a Podhouse module
 #
 # Uptime Kuma: know a service is down before someone in the house tells you.
 
@@ -18,7 +18,7 @@ x-homebox:
     color: "#5cdd8b"
     bg: "rgba(92,221,139,0.12)"
   tips:
-    - "Start with a monitor for the HomeBox dashboard itself, then add apps from there"
+    - "Start with a monitor for the Podhouse dashboard itself, then add apps from there"
     - "For another app on this same box use the box's LAN IP and the app's port — `localhost` from inside this container means the container itself"
     - "Pinned to an exact patch on purpose: 2.x migrates its history on first start and will not open it again on 1.x"
   services:
